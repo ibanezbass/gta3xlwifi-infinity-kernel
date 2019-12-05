@@ -27,3 +27,4 @@
 	gpu_temp_throttling_level_num = <6>;
 	gpu_temp_throttling = <845000 676000 450000 343000 343000 343000>;
 };
+
