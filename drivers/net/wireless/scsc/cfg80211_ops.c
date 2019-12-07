@@ -17,6 +17,7 @@
 #include "mib.h"
 
 #include "scsc_wifilogger_rings.h"
+#include "nl80211_vendor.h"
 
 #define SLSI_MAX_CHAN_2G_BAND          14
 
@@ -451,7 +452,20 @@ int slsi_scan(struct wiphy *wiphy, struct net_device *dev,
 		r = -EBUSY;
 		goto exit;
 	}
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+	if (ndev_vif->is_wips_running && (ndev_vif->vif_type == FAPI_VIFTYPE_STATION) &&
+	    (ndev_vif->sta.vif_status == SLSI_VIF_STATUS_CONNECTED)) {
+		int ret = 0;
 
+		SLSI_NET_DBG3(dev, SLSI_CFG80211, "Scan invokes DRIVER_BCN_ABORT\n");
+		ret = slsi_mlme_set_forward_beacon(sdev, dev, FAPI_ACTION_STOP);
+
+		if (!ret) {
+			ret = slsi_send_forward_beacon_abort_vendor_event(sdev,
+									  SLSI_FORWARD_BEACON_ABORT_REASON_SCANNING);
+		}
+	}
+#endif
 	SLSI_NET_DBG3(dev, SLSI_CFG80211, "channels:%d, ssids:%d, ie_len:%d, vif_index:%d\n", request->n_channels,
 		      request->n_ssids, (int)request->ie_len, ndev_vif->ifnum);
 

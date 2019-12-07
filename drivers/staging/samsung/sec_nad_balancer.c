@@ -334,19 +334,28 @@ static ssize_t store_nad_balancer(struct device *dev,
 	char nad_cmd[BALANCER_CMD][NAD_BUFF_SIZE];
 	char *nad_ptr, *string;
 	int i, idx = 0, ret = -1, expire_time, domain_num;
+	unsigned int len = 0;
 
 	/* Copy buf to nad cmd */
-	strncpy(cmd_temp, buf, NAD_BUFF_SIZE);
+	len = (unsigned int)min(count, sizeof(cmd_temp) - 1);
+	strncpy(cmd_temp, buf, len);
+	cmd_temp[len] = '\0';
 	string = cmd_temp;
+
 
 	/* get qos domain number */
 	domain_num = info->pdata->nQos;
 
 	/* Parse AT CMD */
-	while (idx < domain_num + 2) {
+	while (idx < BALANCER_CMD) {
 		nad_ptr = strsep(&string, ",");
+		if (nad_ptr ==  NULL || strlen(nad_ptr) >= NAD_BUFF_SIZE) {
+				NAD_PRINT(" %s: invalid input\n",__func__);
+				return -EINVAL;	
+		}
 		strcpy(nad_cmd[idx++], nad_ptr);
 	}
+
 
 	/* Get thread expire time */
 	ret = sscanf(nad_cmd[1], "%d\n", &expire_time);

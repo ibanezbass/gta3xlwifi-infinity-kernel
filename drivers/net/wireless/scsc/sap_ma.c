@@ -87,21 +87,17 @@ static int sap_ma_version_supported(u16 version)
 	return -EINVAL;
 }
 
-static int slsi_rx_amsdu_deaggregate(struct net_device *dev, struct sk_buff *skb)
+static int slsi_rx_amsdu_deaggregate(struct net_device *dev, struct sk_buff *skb, struct sk_buff_head *msdu_list)
 {
 	unsigned int msdu_len;
 	unsigned int subframe_len;
 	int padding;
 	struct sk_buff *subframe = NULL;
-	struct netdev_vif *ndev_vif = netdev_priv(dev);
-	enum slsi_traffic_q trafic_q = slsi_frame_priority_to_ac_queue(fapi_get_u16(skb, u.ma_unitdata_ind.priority));
 	const unsigned char mac_0[ETH_ALEN] = { 0 };
 	bool skip_frame = false;
 	struct ethhdr *mh;
 
 	SLSI_NET_DBG3(dev, SLSI_RX, "A-MSDU received, length = %d\n", skb->len);
-
-	skb_pull(skb, fapi_get_siglen(skb));
 
 	while (skb != subframe) {
 		msdu_len = (skb->data[ETH_ALEN * 2] << 8) | skb->data[(ETH_ALEN * 2) + 1];
@@ -173,176 +169,15 @@ static int slsi_rx_amsdu_deaggregate(struct net_device *dev, struct sk_buff *skb
 			continue;
 		}
 
-		/* Prepare the skb */
-		subframe->dev = dev;
-		subframe->ip_summed = CHECKSUM_NONE;
-		ndev_vif->stats.rx_bytes += subframe->len;
-		ndev_vif->stats.rx_packets++;
-		ndev_vif->rx_packets[trafic_q]++;
-
-		dev->last_rx = jiffies;
-		subframe->protocol = eth_type_trans(subframe, dev);
-
-#ifdef CONFIG_SCSC_WLAN_RX_NAPI
-		slsi_rx_msdu_napi(dev, subframe);
-#else
-		slsi_dbg_untrack_skb(subframe);
-		netif_rx_ni(subframe);
-#endif
+		__skb_queue_tail(msdu_list, subframe);
 	}
 
 	return 0;
 }
 
-static int slsi_rx_data_process_skb(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb, bool from_ba)
+static inline bool slsi_rx_is_amsdu(struct sk_buff *skb)
 {
-	struct netdev_vif *ndev_vif = netdev_priv(dev);
-	struct slsi_peer *peer = NULL;
-	struct ethhdr *ehdr = (struct ethhdr *)fapi_get_data(skb);
-	u16 seq_num;
-	bool skip_ba = from_ba;
-	u8 trafic_q = slsi_frame_priority_to_ac_queue(fapi_get_u16(skb, u.ma_unitdata_ind.priority));
-
-	SLSI_NET_DBG_HEX(dev, SLSI_RX, skb->data, skb->len < 64 ? skb->len : 64, "\n");
-
-	if (!((fapi_get_u16(skb, u.ma_unitdata_ind.data_unit_descriptor) == FAPI_DATAUNITDESCRIPTOR_IEEE802_3_FRAME) ||
-	      (fapi_get_u16(skb, u.ma_unitdata_ind.data_unit_descriptor) == FAPI_DATAUNITDESCRIPTOR_AMSDU))) {
-		WARN_ON(1);
-		slsi_kfree_skb(skb);
-		return -ENOTSUPP;
-	}
-
-	seq_num = fapi_get_u16(skb, u.ma_unitdata_ind.sequence_number);
-	SLSI_NET_DBG4(dev, SLSI_RX, "ma_unitdata_ind(vif:%d, %pM, datatype:%d, s:%d)\n",
-		      fapi_get_vif(skb),
-		      ehdr->h_source,
-		      fapi_get_u16(skb, u.ma_unitdata_ind.data_unit_descriptor),
-		      (seq_num & SLSI_RX_SEQ_NUM_MASK));
-
-	peer = slsi_get_peer_from_mac(sdev, dev, ehdr->h_source);
-	if (!peer) {
-		SLSI_NET_DBG1(dev, SLSI_RX, "Packet dropped, peer not found\n");
-		/* Race in Data plane (Shows up in fw test mode) */
-		slsi_kfree_skb(skb);
-		return -EINVAL;
-	}
-
-	/* discard data frames if received before key negotiations are completed */
-	if ((ndev_vif->vif_type == FAPI_VIFTYPE_AP) && (peer->connected_state != SLSI_STA_CONN_STATE_CONNECTED)) {
-		SLSI_NET_DBG1(dev, SLSI_RX, "Packet dropped, peer connection not complete (state: %u)\n", peer->connected_state);
-		slsi_kfree_skb(skb);
-		return -EINVAL;
-	}
-
-	/* When TDLS connection has just been closed a few last frame may still arrive from the closed connection.
-	 * This frames must not be injected in to the block session with the AP as the sequence numbers are different
-	 * that will confuse the BA process. Therefore we have to skip BA for those frames.
-	 */
-	if ((ndev_vif->vif_type == FAPI_VIFTYPE_STATION) && (peer->aid < SLSI_TDLS_PEER_INDEX_MIN) && (seq_num & SLSI_RX_VIA_TDLS_LINK)) {
-		SLSI_NET_WARN(dev, "Packet received from TDLS but no TDLS exists (seq: %x) Skip BA\n", seq_num);
-		skip_ba = true;
-	}
-
-	/* TDLS is enabled for the PEER but still packet is received through the AP. Process this packet with the AP PEER */
-	if ((ndev_vif->vif_type == FAPI_VIFTYPE_STATION) && (peer->aid >= SLSI_TDLS_PEER_INDEX_MIN) && (!(seq_num & SLSI_RX_VIA_TDLS_LINK))) {
-		SLSI_NET_DBG2(dev, SLSI_TDLS, "Packet received from TDLS peer through the AP(seq: %x)\n", seq_num);
-		peer = slsi_get_peer_from_qs(sdev, dev, SLSI_STA_PEER_QUEUESET);
-		if (!peer) {
-			SLSI_NET_DBG1(dev, SLSI_RX, "Packet dropped AP peer not found\n");
-			slsi_kfree_skb(skb);
-			return -EINVAL;
-		}
-	}
-
-	if (!skip_ba && (slsi_ba_check(peer, fapi_get_u16(skb, u.ma_unitdata_ind.priority))))
-		if (!slsi_ba_process_frame(dev, peer, skb, (seq_num & SLSI_RX_SEQ_NUM_MASK),
-					   fapi_get_u16(skb, u.ma_unitdata_ind.priority)))
-			return 1;
-
-	/* A-MSDU deaggregation */
-	if (fapi_get_u16(skb, u.ma_unitdata_ind.data_unit_descriptor) == FAPI_DATAUNITDESCRIPTOR_AMSDU) {
-		/* This function will consume the skb */
-		if (slsi_rx_amsdu_deaggregate(dev, skb)) {
-			ndev_vif->stats.rx_dropped++;
-			if (peer)
-				peer->sinfo.rx_dropped_misc++;
-		} else {
-			if (peer)
-				ndev_vif->rx_packets[trafic_q]++;
-			slsi_wakelock_timeout(&sdev->wlan_wl_to, SLSI_RX_WAKELOCK_TIME);
-		}
-		return 1;
-	}
-
-	/* strip signal and any signal/bulk roundings/offsets */
-	skb_pull(skb, fapi_get_siglen(skb));
-
-	skb->dev = dev;
-	skb->ip_summed = CHECKSUM_NONE;
-
-	/* In STA mode, the AP relays back our multicast traffic.
-	 * Receiving these frames and passing it up confuses some
-	 * protocols and applications, notably IPv6 Duplicate
-	 * Address Detection.
-	 *
-	 * So these frames are dropped instead of passing it further.
-	 * No need to update the drop statistics as these frames are
-	 * locally generated and should not be accounted in reception.
-	 */
-	if (ndev_vif->vif_type == FAPI_VIFTYPE_STATION) {
-		struct ethhdr *ehdr = (struct ethhdr *)(skb->data);
-
-		if (is_multicast_ether_addr(ehdr->h_dest) &&
-		    !compare_ether_addr(ehdr->h_source, dev->dev_addr)) {
-			SLSI_NET_DBG2(dev, SLSI_RX, "drop locally generated multicast frame relayed back by AP\n");
-			slsi_kfree_skb(skb);
-			return -EINVAL;
-		}
-	}
-
-	if (peer)
-		peer->sinfo.rx_bytes += skb->len;
-
-	ndev_vif->stats.rx_packets++;
-	ndev_vif->stats.rx_bytes += skb->len;
-	dev->last_rx = jiffies;
-	ndev_vif->rx_packets[trafic_q]++;
-
-	/* Intra BSS */
-	if (ndev_vif->vif_type == FAPI_VIFTYPE_AP && ndev_vif->peer_sta_records) {
-		struct ethhdr *ehdr = (struct ethhdr *)(skb->data);
-
-		if (is_multicast_ether_addr(ehdr->h_dest)) {
-			struct sk_buff *rebroadcast_skb = slsi_skb_copy(skb, GFP_KERNEL);
-
-			skb->protocol = eth_type_trans(skb, dev);
-			if (!rebroadcast_skb) {
-				SLSI_WARN(sdev, "Intra BSS: failed to alloc new SKB for broadcast\n");
-				return 0;
-			}
-			SLSI_DBG3(sdev, SLSI_RX, "Intra BSS: multicast %pM\n", ehdr->h_dest);
-			rebroadcast_skb->dev = dev;
-			rebroadcast_skb->protocol = cpu_to_be16(ETH_P_802_3);
-			slsi_dbg_untrack_skb(rebroadcast_skb);
-			skb_reset_network_header(rebroadcast_skb);
-			skb_reset_mac_header(rebroadcast_skb);
-			dev_queue_xmit(rebroadcast_skb);
-			return 0;
-		}
-
-		peer = slsi_get_peer_from_mac(sdev, dev, ehdr->h_dest);
-		if (peer && peer->authorized) {
-			SLSI_DBG3(sdev, SLSI_RX, "Intra BSS: unicast %pM\n", ehdr->h_dest);
-			skb->protocol = cpu_to_be16(ETH_P_802_3);
-			slsi_dbg_untrack_skb(skb);
-			skb_reset_network_header(skb);
-			skb_reset_mac_header(skb);
-			dev_queue_xmit(skb);
-			return 1;
-		}
-	}
-	skb->protocol = eth_type_trans(skb, dev);
-	return 0;
+	return (fapi_get_u16(skb, u.ma_unitdata_ind.data_unit_descriptor) == FAPI_DATAUNITDESCRIPTOR_AMSDU);
 }
 
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
@@ -365,15 +200,189 @@ int slsi_rx_data_napi(struct slsi_dev *sdev, struct net_device *dev, struct sk_b
 }
 #endif
 
-int slsi_rx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb, bool from_ba)
+void slsi_rx_data_deliver_skb(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
 {
-	if (slsi_rx_data_process_skb(sdev, dev, skb, from_ba) == 0) {
-		slsi_dbg_untrack_skb(skb);
-		SLSI_DBG4(sdev, SLSI_RX, "pass %u bytes to local stack\n", skb->len);
-		netif_rx_ni(skb);
+	struct netdev_vif *ndev_vif = netdev_priv(dev);
+	struct sk_buff_head msdu_list;
+	struct slsi_peer *peer = NULL;
+	struct ethhdr *eth_hdr;
+	bool is_amsdu = slsi_rx_is_amsdu(skb);
+	u8 trafic_q = slsi_frame_priority_to_ac_queue(fapi_get_u16(skb, u.ma_unitdata_ind.priority));
+
+	__skb_queue_head_init(&msdu_list);
+
+	skb_pull(skb, fapi_get_siglen(skb));
+
+	eth_hdr = (struct ethhdr *)skb->data;
+	peer = slsi_get_peer_from_mac(sdev, dev, eth_hdr->h_source);
+	if (!peer) {
+		SLSI_NET_WARN(dev, "Packet dropped (no peer records)\n");
+		slsi_kfree_skb(skb);
+		return;
+	}
+
+	/* A-MSDU deaggregation */
+	if (is_amsdu) {
+		if (slsi_rx_amsdu_deaggregate(dev, skb, &msdu_list)) {
+			ndev_vif->stats.rx_dropped++;
+			if (peer)
+				peer->sinfo.rx_dropped_misc++;
+			return;
+		}
+	} else {
+		__skb_queue_tail(&msdu_list, skb);
+	}
+
+	while (!skb_queue_empty(&msdu_list)) {
+		struct sk_buff *rx_skb;
+
+		rx_skb = __skb_dequeue(&msdu_list);
+
+		/* In STA mode, the AP relays back our multicast traffic.
+		 * Receiving these frames and passing it up confuses some
+		 * protocols and applications, notably IPv6 Duplicate
+		 * Address Detection.
+		 *
+		 * So these frames are dropped instead of passing it further.
+		 * No need to update the drop statistics as these frames are
+		 * locally generated and should not be accounted in reception.
+		 */
+		if (ndev_vif->vif_type == FAPI_VIFTYPE_STATION) {
+			struct ethhdr *ehdr = (struct ethhdr *)(rx_skb->data);
+
+			if (is_multicast_ether_addr(ehdr->h_dest) &&
+				!compare_ether_addr(ehdr->h_source, dev->dev_addr)) {
+				SLSI_NET_DBG2(dev, SLSI_RX, "drop locally generated multicast frame relayed back by AP\n");
+				slsi_kfree_skb(rx_skb);
+				continue;
+			}
+		}
+
+		/* Intra BSS */
+		if (ndev_vif->vif_type == FAPI_VIFTYPE_AP && ndev_vif->peer_sta_records) {
+			struct slsi_peer *peer = NULL;
+			struct ethhdr *ehdr = (struct ethhdr *)(rx_skb->data);
+
+			if (is_multicast_ether_addr(ehdr->h_dest)) {
+				struct sk_buff *rebroadcast_skb = slsi_skb_copy(rx_skb, GFP_KERNEL);
+
+				if (!rebroadcast_skb) {
+					SLSI_WARN(sdev, "Intra BSS: failed to alloc new SKB for broadcast\n");
+				} else {
+					SLSI_DBG3(sdev, SLSI_RX, "Intra BSS: multicast %pM\n", ehdr->h_dest);
+					rebroadcast_skb->dev = dev;
+					rebroadcast_skb->protocol = cpu_to_be16(ETH_P_802_3);
+					slsi_dbg_untrack_skb(rebroadcast_skb);
+					skb_reset_network_header(rebroadcast_skb);
+					skb_reset_mac_header(rebroadcast_skb);
+					dev_queue_xmit(rebroadcast_skb);
+				}
+			} else {
+				peer = slsi_get_peer_from_mac(sdev, dev, ehdr->h_dest);
+				if (peer && peer->authorized) {
+					SLSI_DBG3(sdev, SLSI_RX, "Intra BSS: unicast %pM\n", ehdr->h_dest);
+					rx_skb->dev = dev;
+					rx_skb->protocol = cpu_to_be16(ETH_P_802_3);
+					slsi_dbg_untrack_skb(rx_skb);
+					skb_reset_network_header(rx_skb);
+					skb_reset_mac_header(rx_skb);
+					dev_queue_xmit(rx_skb);
+					continue;
+				}
+			}
+		}
+
+		if (peer) {
+			peer->sinfo.rx_packets++;
+			peer->sinfo.rx_bytes += rx_skb->len;
+		}
+		ndev_vif->stats.rx_packets++;
+		ndev_vif->stats.rx_bytes += rx_skb->len;
+		ndev_vif->rx_packets[trafic_q]++;
+
+		rx_skb->dev = dev;
+		rx_skb->ip_summed = CHECKSUM_NONE;
+		rx_skb->protocol = eth_type_trans(rx_skb, dev);
+
+		slsi_dbg_untrack_skb(rx_skb);
+
+		SLSI_DBG4(sdev, SLSI_RX, "pass %u bytes to local stack\n", rx_skb->len);
+		netif_rx_ni(rx_skb);
 		slsi_wakelock_timeout(&sdev->wlan_wl_to, SLSI_RX_WAKELOCK_TIME);
 	}
-	return 0;
+}
+
+static void slsi_rx_data_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
+{
+	struct netdev_vif *ndev_vif = netdev_priv(dev);
+	struct slsi_peer *peer = NULL;
+	struct ethhdr *eth_hdr = (struct ethhdr *)fapi_get_data(skb);
+	u16 seq_num;
+
+	if (!((fapi_get_u16(skb, u.ma_unitdata_ind.data_unit_descriptor) == FAPI_DATAUNITDESCRIPTOR_IEEE802_3_FRAME) ||
+	    (fapi_get_u16(skb, u.ma_unitdata_ind.data_unit_descriptor) == FAPI_DATAUNITDESCRIPTOR_IEEE802_11_FRAME) ||
+	    (fapi_get_u16(skb, u.ma_unitdata_ind.data_unit_descriptor) == FAPI_DATAUNITDESCRIPTOR_AMSDU))) {
+		WARN_ON(1);
+		slsi_kfree_skb(skb);
+		return;
+	}
+
+	seq_num = fapi_get_u16(skb, u.ma_unitdata_ind.sequence_number);
+	SLSI_NET_DBG4(dev, SLSI_RX, "ma_unitdata_ind(vif:%d, dest:%pM, src:%pM, datatype:%d, priority:%d, s:%d)\n",
+		      fapi_get_vif(skb),
+		      eth_hdr->h_dest,
+		      eth_hdr->h_source,
+		      fapi_get_u16(skb, u.ma_unitdata_ind.data_unit_descriptor),
+		      fapi_get_u16(skb, u.ma_unitdata_ind.priority),
+		      (seq_num & SLSI_RX_SEQ_NUM_MASK));
+
+	peer = slsi_get_peer_from_mac(sdev, dev, eth_hdr->h_source);
+	if (!peer) {
+		SLSI_NET_DBG1(dev, SLSI_RX, "Packet dropped, peer not found\n");
+		/* Race in Data plane (Shows up in fw test mode) */
+		slsi_kfree_skb(skb);
+		return;
+	}
+
+	/* discard data frames if received before key negotiations are completed */
+	if (ndev_vif->vif_type == FAPI_VIFTYPE_AP && peer->connected_state != SLSI_STA_CONN_STATE_CONNECTED) {
+		SLSI_NET_WARN(dev, "Packet dropped (peer connection not complete (state:%u))\n", peer->connected_state);
+		slsi_kfree_skb(skb);
+		return;
+	}
+
+	/* When TDLS connection has just been closed a few last frame may still arrive from the closed connection.
+	 * This frames must not be injected in to the block session with the AP as the sequence numbers are different
+	 * that will confuse the BA process. Therefore we have to skip BA for those frames.
+	 */
+	if (ndev_vif->vif_type == FAPI_VIFTYPE_STATION && peer->aid < SLSI_TDLS_PEER_INDEX_MIN && (seq_num & SLSI_RX_VIA_TDLS_LINK)) {
+		if (printk_ratelimit())
+			SLSI_NET_WARN(dev, "Packet received from TDLS but no TDLS exists (seq: %x) Skip BA\n", seq_num);
+
+		/* Skip BA reorder and pass the frames Up */
+		slsi_rx_data_deliver_skb(sdev, dev, skb);
+		return;
+	}
+
+	/* TDLS is enabled for the PEER but still packet is received through the AP. Process this packet with the AP PEER */
+	if (ndev_vif->vif_type == FAPI_VIFTYPE_STATION && peer->aid >= SLSI_TDLS_PEER_INDEX_MIN && (!(seq_num & SLSI_RX_VIA_TDLS_LINK))) {
+		SLSI_NET_DBG2(dev, SLSI_TDLS, "Packet received from TDLS peer through the AP(seq: %x)\n", seq_num);
+		peer = slsi_get_peer_from_qs(sdev, dev, SLSI_STA_PEER_QUEUESET);
+		if (!peer) {
+			SLSI_NET_WARN(dev, "Packet dropped (AP peer not found)\n");
+			slsi_kfree_skb(skb);
+			return;
+		}
+	}
+
+	/* If frame belongs to a negotiated BA, BA will consume the frame */
+	if (slsi_ba_check(peer, fapi_get_u16(skb, u.ma_unitdata_ind.priority)))
+		if (!slsi_ba_process_frame(dev, peer, skb, (seq_num & SLSI_RX_SEQ_NUM_MASK),
+					   fapi_get_u16(skb, u.ma_unitdata_ind.priority)))
+			return;
+
+	/* Pass to next receive process */
+	slsi_rx_data_deliver_skb(sdev, dev, skb);
 }
 
 static int slsi_rx_data_cfm(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
@@ -426,7 +435,7 @@ void slsi_rx_netdev_data_work(struct work_struct *work)
 		slsi_debug_frame(sdev, dev, skb, "RX");
 		switch (fapi_get_u16(skb, id)) {
 		case MA_UNITDATA_IND:
-			(void)slsi_rx_data(sdev, dev, skb, false);
+			slsi_rx_data_ind(sdev, dev, skb);
 			break;
 		case MA_UNITDATA_CFM:
 			(void)slsi_rx_data_cfm(sdev, dev, skb);

@@ -81,16 +81,23 @@ ssize_t knox_kap_write(struct file *file, const char __user *buffer, size_t size
 
 	unsigned long mode;
 	char *string;
+	int rc;
 
 	printk(KERN_ERR " %s\n", __FUNCTION__);
 
+	if(size == 0 || size+1 == 0)
+		return 0;
 	string = kmalloc(size + sizeof(char), GFP_KERNEL);
 	if (string == NULL) {
 		printk(KERN_ERR "%s failed kmalloc\n", __func__);
 		return size;
 	}
 
-	memcpy(string, buffer, size);
+	//memcpy(string, buffer, size);
+	rc = copy_from_user(string, buffer, size);
+	if(rc){
+		printk(KERN_ERR "%s copy_from_user failed rc=%d\n",__func__,rc);
+	}
 	string[size] = '\0';
 
 	if(kstrtoul(string, 0, &mode)) {

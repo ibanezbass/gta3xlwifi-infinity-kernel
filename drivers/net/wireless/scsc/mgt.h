@@ -511,6 +511,11 @@ void slsi_update_supported_channels_regd_flags(struct slsi_dev *sdev);
 #ifdef CONFIG_SCSC_WLAN_HANG_TEST
 int slsi_test_send_hanged_vendor_event(struct net_device *dev);
 #endif
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+int slsi_send_forward_beacon_vendor_event(struct slsi_dev *sdev, const u8 *ssid, const int ssid_len, const u8 *bssid,
+					  u8 channel, const u16 beacon_int, const u64 timestamp, const u64 sys_time);
+int slsi_send_forward_beacon_abort_vendor_event(struct slsi_dev *sdev, u16 reason_code);
+#endif
 void slsi_wlan_dump_public_action_subtype(struct slsi_dev *sdev, struct ieee80211_mgmt *mgmt, bool tx);
 void slsi_reset_channel_flags(struct slsi_dev *sdev);
 

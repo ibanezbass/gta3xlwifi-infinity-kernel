@@ -1,6 +1,6 @@
 /*****************************************************************************
  *
- * Copyright (c) 2017 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2019 Samsung Electronics Co., Ltd. All rights reserved
  *
  *****************************************************************************/
 #include <net/cfg80211.h>
@@ -113,6 +113,10 @@ int slsi_fw_test_signal_with_udi_header(struct slsi_dev *sdev, struct slsi_fw_te
 			break;
 		case MLME_ROAMED_IND:
 			SLSI_DBG2(sdev, SLSI_FW_TEST, "0x%p: Process MLME_ROAMED_IND(0x%.4X, vif:%d)\n", skb, le16_to_cpu(fapi_header->id), le16_to_cpu(fapi_header->vif));
+			slsi_fw_test_process_frame(sdev, fwtest, skb, true);
+			break;
+		case MLME_TDLS_PEER_IND:
+			SLSI_DBG2(sdev, SLSI_FW_TEST, "0x%p: Process MLME_TDLS_PEER_IND(0x%.4X, vif:%d)\n", skb, le16_to_cpu(fapi_header->id), le16_to_cpu(fapi_header->vif));
 			slsi_fw_test_process_frame(sdev, fwtest, skb, true);
 			break;
 		case MLME_CONNECT_CFM:
@@ -572,8 +576,11 @@ static void slsi_fw_test_disconnect_station(struct slsi_dev *sdev, struct net_de
 		return;
 
 	netif_carrier_off(dev);
-	if (peer)
+	if (peer) {
+		slsi_spinlock_lock(&ndev_vif->peer_lock);
 		slsi_peer_remove(sdev, dev, peer);
+		slsi_spinlock_unlock(&ndev_vif->peer_lock);
+	}
 	slsi_vif_deactivated(sdev, dev);
 }
 
@@ -594,8 +601,11 @@ static void slsi_fw_test_disconnect_network(struct slsi_dev *sdev, struct net_de
 
 	SLSI_NET_DBG1(dev, SLSI_FW_TEST, "Network Peer Disconnect(vif:%d)\n", ndev_vif->ifnum);
 
-	if (peer)
+	if (peer) {
+		slsi_spinlock_lock(&ndev_vif->peer_lock);
 		slsi_peer_remove(sdev, dev, peer);
+		slsi_spinlock_unlock(&ndev_vif->peer_lock);
+	}
 }
 
 static void slsi_fw_test_disconnected_ind(struct slsi_dev *sdev, struct net_device *dev, struct slsi_fw_test *fwtest, struct sk_buff *skb)
@@ -634,6 +644,114 @@ static void slsi_fw_test_disconnected_ind(struct slsi_dev *sdev, struct net_devi
 	SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
 
 out:
+	slsi_kfree_skb(skb);
+}
+
+static void slsi_fw_test_tdls_event_connected(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
+{
+	struct slsi_peer  *peer = NULL;
+	struct netdev_vif *ndev_vif = netdev_priv(dev);
+	u16				  peer_index = fapi_get_u16(skb, u.mlme_tdls_peer_ind.peer_index);
+
+	SLSI_MUTEX_LOCK(ndev_vif->vif_mutex);
+	ndev_vif->sta.tdls_enabled = true;
+	SLSI_NET_DBG1(dev, SLSI_FW_TEST, "TDLS connect (vif:%d, peer_index:%d, mac:%pM)\n", fapi_get_vif(skb), peer_index, fapi_get_buff(skb, u.mlme_tdls_peer_ind.peer_sta_address));
+
+	if ((ndev_vif->sta.tdls_peer_sta_records) + 1 > SLSI_TDLS_PEER_CONNECTIONS_MAX) {
+		SLSI_NET_ERR(dev, "max TDLS limit reached (peer_index:%d)\n", peer_index);
+		goto out;
+	}
+
+	if (peer_index < SLSI_TDLS_PEER_INDEX_MIN || peer_index > SLSI_TDLS_PEER_INDEX_MAX) {
+		SLSI_NET_ERR(dev, "incorrect index (peer_index:%d)\n", peer_index);
+		goto out;
+	}
+
+	peer = slsi_peer_add(sdev, dev, fapi_get_buff(skb, u.mlme_tdls_peer_ind.peer_sta_address), peer_index);
+	if (!peer) {
+		SLSI_NET_ERR(dev, "peer add failed\n");
+		goto out;
+	}
+
+	/* QoS is mandatory for TDLS - enable QoS for TDLS peer by default */
+	peer->qos_enabled = true;
+	slsi_ps_port_control(sdev, dev, peer, SLSI_STA_CONN_STATE_CONNECTED);
+
+	/* move TDLS packets from STA Q to TDLS Q */
+	slsi_tdls_move_packets(sdev, dev, ndev_vif->peer_sta_record[SLSI_STA_PEER_QUEUESET], peer, true);
+
+out:
+	SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
+}
+
+static void slsi_fw_test_tdls_event_disconnected(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
+{
+	struct slsi_peer  *peer = NULL;
+	struct netdev_vif *ndev_vif = netdev_priv(dev);
+
+	SLSI_MUTEX_LOCK(ndev_vif->vif_mutex);
+	SLSI_NET_DBG1(dev, SLSI_MLME, "TDLS dis-connect (vif:%d, mac:%pM)\n", ndev_vif->ifnum, fapi_get_buff(skb, u.mlme_tdls_peer_ind.peer_sta_address));
+
+	slsi_spinlock_lock(&ndev_vif->peer_lock);
+	peer = slsi_get_peer_from_mac(sdev, dev, fapi_get_buff(skb, u.mlme_tdls_peer_ind.peer_sta_address));
+	if (!peer || (peer->aid == 0)) {
+		WARN_ON(!peer || (peer->aid == 0));
+		SLSI_NET_DBG1(dev, SLSI_MLME, "can't find peer by MAC address\n");
+		goto out;
+	}
+
+	slsi_ps_port_control(sdev, dev, peer, SLSI_STA_CONN_STATE_DISCONNECTED);
+
+	/* move TDLS packets from TDLS Q to STA Q */
+	slsi_tdls_move_packets(sdev, dev, ndev_vif->peer_sta_record[SLSI_STA_PEER_QUEUESET], peer, false);
+	slsi_peer_remove(sdev, dev, peer);
+out:
+	slsi_spinlock_unlock(&ndev_vif->peer_lock);
+	SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
+}
+
+static void slsi_fw_test_tdls_peer_ind(struct slsi_dev *sdev, struct net_device *dev, struct slsi_fw_test *fwtest, struct sk_buff *skb)
+{
+	struct netdev_vif *ndev_vif = netdev_priv(dev);
+	struct sk_buff    *add_vif_req;
+	u16               vif_type = 0;
+	u16 tdls_event;
+
+	if (!ndev_vif->is_fw_test) {
+		slsi_kfree_skb(skb);
+		return;
+	}
+	if (WARN(!ndev_vif->activated, "Not Activated")) {
+		slsi_kfree_skb(skb);
+		return;
+	}
+	slsi_spinlock_lock(&fwtest->fw_test_lock);
+	add_vif_req = fwtest->mlme_add_vif_req[ndev_vif->ifnum];
+	if (add_vif_req)
+		vif_type = fapi_get_u16(add_vif_req, u.mlme_add_vif_req.virtual_interface_type);
+	slsi_spinlock_unlock(&fwtest->fw_test_lock);
+
+	if (WARN(vif_type != FAPI_VIFTYPE_STATION, "Not STA VIF")) {
+		slsi_kfree_skb(skb);
+		return;
+	}
+
+	tdls_event =  fapi_get_u16(skb, u.mlme_tdls_peer_ind.tdls_event);
+	SLSI_NET_DBG1(dev, SLSI_MLME, "TDLS peer(vif:%d tdls_event:%d)\n", ndev_vif->ifnum, tdls_event);
+	switch (tdls_event) {
+	case FAPI_TDLSEVENT_CONNECTED:
+		slsi_fw_test_tdls_event_connected(sdev, dev, skb);
+		break;
+	case FAPI_TDLSEVENT_DISCONNECTED:
+		slsi_fw_test_tdls_event_disconnected(sdev, dev, skb);
+		break;
+	case FAPI_TDLSEVENT_DISCOVERED:
+		/* nothing to do */
+		break;
+	default:
+		SLSI_NET_DBG1(dev, SLSI_FW_TEST, "vif:%d tdls_event:%d not supported\n", ndev_vif->ifnum, tdls_event);
+		break;
+	}
 	slsi_kfree_skb(skb);
 }
 
@@ -780,6 +898,9 @@ void slsi_fw_test_work(struct work_struct *work)
 		case MLME_DISCONNECT_IND:
 		case MLME_DISCONNECTED_IND:
 			slsi_fw_test_disconnected_ind(sdev, dev, fw_test, skb);
+			break;
+		case MLME_TDLS_PEER_IND:
+			slsi_fw_test_tdls_peer_ind(sdev, dev, fw_test, skb);
 			break;
 		case MLME_START_CFM:
 			slsi_fw_test_start_cfm(sdev, dev, fw_test, skb);

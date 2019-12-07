@@ -11,6 +11,8 @@
 #include "hip.h"
 #include "mgt.h"
 #include "scsc_wifilogger_rings.h"
+#include "nl80211_vendor.h"
+#include "mlme.h"
 
 #define SUPPORTED_OLD_VERSION   0
 
@@ -30,6 +32,9 @@ static struct sap_api sap_mlme = {
 static int sap_mlme_notifier(struct slsi_dev *sdev, unsigned long event)
 {
 	int i;
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+	struct net_device *dev;
+#endif
 	struct netdev_vif *ndev_vif;
 
 	SLSI_INFO_NODEV("Notifier event received: %lu\n", event);
@@ -64,6 +69,22 @@ static int sap_mlme_notifier(struct slsi_dev *sdev, unsigned long event)
 		break;
 
 	case SCSC_WIFI_RESUME:
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+		dev = slsi_get_netdev(sdev, SLSI_NET_INDEX_WLAN);
+		ndev_vif = netdev_priv(dev);
+		SLSI_MUTEX_LOCK(ndev_vif->vif_mutex);
+
+		if ((ndev_vif->is_wips_running) && (ndev_vif->activated) &&
+		    (ndev_vif->vif_type == FAPI_VIFTYPE_STATION) &&
+		    (ndev_vif->sta.vif_status == SLSI_VIF_STATUS_CONNECTED)) {
+			ndev_vif->is_wips_running = false;
+
+			slsi_send_forward_beacon_abort_vendor_event(sdev, SLSI_FORWARD_BEACON_ABORT_REASON_SUSPENDED);
+			SLSI_INFO_NODEV("FORWARD_BEACON: SUSPEND_RESUMED!! send abort event\n");
+		}
+
+		SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
+#endif
 		break;
 
 	default:
@@ -154,12 +175,6 @@ static int slsi_rx_netdev_mlme(struct slsi_dev *sdev, struct net_device *dev, st
 		slsi_kfree_skb(skb);
 		break;
 #ifdef CONFIG_SCSC_WLAN_GSCAN_ENABLE
-	case MLME_AP_LOSS_IND:
-		slsi_hotlist_ap_lost_indication(sdev, dev, skb);
-		break;
-	case MLME_SIGNIFICANT_CHANGE_IND:
-		slsi_rx_significant_change_ind(sdev, dev, skb);
-		break;
 	case MLME_RSSI_REPORT_IND:
 		slsi_rx_rssi_report_ind(sdev, dev, skb);
 		break;
@@ -186,6 +201,11 @@ static int slsi_rx_netdev_mlme(struct slsi_dev *sdev, struct net_device *dev, st
 	case MLME_NAN_SERVICE_IND:
 		slsi_nan_service_ind(sdev, dev, skb);
 		slsi_kfree_skb(skb);
+		break;
+#endif
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+	case MLME_BEACON_REPORTING_EVENT_IND:
+		slsi_rx_beacon_reporting_event_ind(sdev, dev, skb);
 		break;
 #endif
 	default:
@@ -328,11 +348,6 @@ static int sap_mlme_rx_handler(struct slsi_dev *sdev, struct sk_buff *skb)
 			}
 			return slsi_rx_action_enqueue_netdev_mlme(sdev, skb, vif);
 #ifdef CONFIG_SCSC_WLAN_GSCAN_ENABLE
-		case MLME_AP_LOSS_IND:
-			return slsi_rx_enqueue_netdev_mlme(sdev, skb,  SLSI_NET_INDEX_WLAN);
-		case MLME_SIGNIFICANT_CHANGE_IND:
-			return slsi_rx_enqueue_netdev_mlme(sdev, skb, SLSI_NET_INDEX_WLAN);
-
 		case MLME_NAN_EVENT_IND:
 		case MLME_NAN_FOLLOWUP_IND:
 		case MLME_NAN_SERVICE_IND:
@@ -348,6 +363,30 @@ static int sap_mlme_rx_handler(struct slsi_dev *sdev, struct sk_buff *skb)
 		case MLME_EVENT_LOG_IND:
 			return slsi_rx_enqueue_netdev_mlme(sdev, skb, SLSI_NET_INDEX_WLAN);
 #endif
+		case MLME_ROAMED_IND:
+			if (vif == 0) {
+				SLSI_WARN(sdev, "Received MLME_ROAMED_IND on VIF 0, return error\n");
+				goto err;
+			} else {
+				struct net_device *dev;
+				struct netdev_vif *ndev_vif;
+
+				rcu_read_lock();
+				dev = slsi_get_netdev_rcu(sdev, vif);
+				if (WARN_ON(!dev)) {
+					rcu_read_unlock();
+					return -ENODEV;
+				}
+				ndev_vif = netdev_priv(dev);
+				if (atomic_read(&ndev_vif->sta.drop_roamed_ind)) {
+					/* If roam cfm is not received for the req, ignore this roamed indication. */
+					slsi_kfree_skb(skb);
+					rcu_read_unlock();
+					return 0;
+				}
+				rcu_read_unlock();
+				return slsi_rx_enqueue_netdev_mlme(sdev, skb, vif);
+			}
 		default:
 			if (vif == 0) {
 				SLSI_WARN(sdev, "Received signal 0x%04x on VIF 0, return error\n", fapi_get_sigid(skb));

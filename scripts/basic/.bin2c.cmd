@@ -5,28 +5,22 @@ source_scripts/basic/bin2c := scripts/basic/bin2c.c
 deps_scripts/basic/bin2c := \
   /usr/include/stdc-predef.h \
   /usr/include/stdio.h \
-  /usr/include/bits/libc-header-start.h \
   /usr/include/features.h \
-  /usr/include/sys/cdefs.h \
-  /usr/include/bits/wordsize.h \
-  /usr/include/bits/long-double.h \
-  /usr/include/gnu/stubs.h \
-  /usr/include/gnu/stubs-64.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/include/stddef.h \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/include/stdarg.h \
-  /usr/include/bits/types.h \
-  /usr/include/bits/timesize.h \
-  /usr/include/bits/typesizes.h \
-  /usr/include/bits/time64.h \
-  /usr/include/bits/types/__fpos_t.h \
-  /usr/include/bits/types/__mbstate_t.h \
-  /usr/include/bits/types/__fpos64_t.h \
-  /usr/include/bits/types/__FILE.h \
-  /usr/include/bits/types/FILE.h \
-  /usr/include/bits/types/struct_FILE.h \
-  /usr/include/bits/stdio_lim.h \
-  /usr/include/bits/sys_errlist.h \
-  /usr/include/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
+  /usr/lib/gcc/x86_64-linux-gnu/4.8/include/stddef.h \
+  /usr/include/x86_64-linux-gnu/bits/types.h \
+  /usr/include/x86_64-linux-gnu/bits/typesizes.h \
+  /usr/include/libio.h \
+  /usr/include/_G_config.h \
+  /usr/include/wchar.h \
+  /usr/lib/gcc/x86_64-linux-gnu/4.8/include/stdarg.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/sys_errlist.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
 
 scripts/basic/bin2c: $(deps_scripts/basic/bin2c)
 

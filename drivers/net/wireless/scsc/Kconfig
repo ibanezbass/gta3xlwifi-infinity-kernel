@@ -229,3 +229,10 @@ config SCSC_WIFI_NAN_ENABLE
         default n
         ---help---
           This option tells whether WiFi NAN is enabled or not.
+
+config SLSI_WLAN_STA_FWD_BEACON
+        bool "Forwarding beacon support"
+        default y
+        ---help---
+          This option tells if beacon forwarding in STA mode is enabled or not.
+          When it is enabled, Driver deliver beacon info of connected AP to Supplicant.

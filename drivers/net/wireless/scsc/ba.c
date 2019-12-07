@@ -101,7 +101,7 @@ void slsi_ba_process_complete(struct net_device *dev)
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
 		slsi_rx_data_napi(ndev_vif->sdev, dev, skb, true);
 #else
-		slsi_rx_data(ndev_vif->sdev, dev, skb, true);
+		slsi_rx_data_deliver_skb(ndev_vif->sdev, dev, skb);
 #endif
 	}
 }

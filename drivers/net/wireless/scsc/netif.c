@@ -603,7 +603,6 @@ void slsi_tdls_move_packets(struct slsi_dev *sdev, struct net_device *dev,
 		slsi_spinlock_unlock(&tcp_ack->lock);
 	}
 
-	slsi_spinlock_lock(&netdev_vif->peer_lock);
 	/**
 	 * For TDLS connection set PEER valid to true. After this ndo_select_queue() will select TDLSQ instead of STAQ
 	 * For TDLS teardown set PEER valid to false. After this ndo_select_queue() will select STAQ instead of TDLSQ
@@ -691,8 +690,6 @@ void slsi_tdls_move_packets(struct slsi_dev *sdev, struct net_device *dev,
 		SLSI_NET_DBG2(dev, SLSI_TDLS, "NETQ%d: After : tdlsq_len = %d, staq_len = %d\n",
 			      i, skb_queue_len(&dev->_tx[tdlsq + i].qdisc->q), skb_queue_len(&dev->_tx[staq + i].qdisc->q));
 	}
-
-	slsi_spinlock_unlock(&netdev_vif->peer_lock);
 
 	/* Teardown - after teardown there should not be any packet in TDLS queues */
 	if (!connection)

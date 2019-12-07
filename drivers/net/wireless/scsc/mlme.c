@@ -22,11 +22,6 @@
 #define SLSI_SCAN_CHANNEL_DESCRIPTOR_SIZE	3
 #define SLSI_CHANN_INFO_HT_SCB  0x0100
 
-#ifdef CONFIG_SCSC_WLAN_GSCAN_ENABLE
-#define SLSI_FW_MAX_BSSID_PER_TRACKING_IE   (20)
-#define SLSI_FW_BSSID_DESCRIPTOR_BSS_SIZE   (10)
-#endif
-
 #define SLSI_NOA_CONFIG_REQUEST_ID          (1)
 #define SLSI_MLME_ARP_DROP_FREE_SLOTS_COUNT 16
 
@@ -890,6 +885,47 @@ void slsi_mlme_del_vif(struct slsi_dev *sdev, struct net_device *dev)
 	slsi_kfree_skb(cfm);
 }
 
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+int slsi_mlme_set_forward_beacon(struct slsi_dev *sdev, struct net_device *dev, int action)
+{
+	struct netdev_vif *ndev_vif = netdev_priv(dev);
+	struct sk_buff    *req;
+	struct sk_buff    *cfm;
+
+	if (slsi_is_test_mode_enabled()) {
+		SLSI_NET_INFO(dev, "wlanlite does not support mlme_forward_bacon_req\n");
+		return -EOPNOTSUPP;
+	}
+
+	SLSI_NET_DBG2(dev, SLSI_MLME, "mlme_forward_beacon_req(action = %s(%d))\n", action ? "start" : "stop", action);
+
+	req = fapi_alloc(mlme_forward_beacon_req, MLME_FORWARD_BEACON_REQ, ndev_vif->ifnum, 0);
+	if (!req) {
+		SLSI_NET_ERR(dev, "fapi alloc for mlme_forward_beacon_req is failed\n");
+		return -ENOMEM;
+	}
+
+	fapi_set_u16(req, u.mlme_forward_beacon_req.wips_action, action);
+
+	cfm = slsi_mlme_req_cfm(sdev, dev, req, MLME_FORWARD_BEACON_CFM);
+	if (!cfm) {
+		SLSI_NET_ERR(dev, "receiving mlme_forward_beacon_cfm is failed\n");
+		return -EIO;
+	}
+
+	if (fapi_get_u16(cfm, u.mlme_forward_beacon_cfm.result_code) != FAPI_RESULTCODE_HOST_REQUEST_SUCCESS) {
+		SLSI_NET_ERR(dev, "mlme_forward_beacon_cfm(result:0x%04x) ERROR\n",
+			     fapi_get_u16(cfm, u.mlme_forward_beacon_cfm.result_code));
+		return -EINVAL;
+	}
+
+	ndev_vif->is_wips_running = (action ? true : false);
+
+	slsi_kfree_skb(cfm);
+	return 0;
+}
+#endif
+
 int slsi_mlme_set_channel(struct slsi_dev *sdev, struct net_device *dev, struct ieee80211_channel *chan, u16 duration, u16 interval, u16 count)
 {
 	struct netdev_vif *ndev_vif = netdev_priv(dev);
@@ -982,81 +1018,6 @@ static bool slsi_scan_cfm_validate(struct slsi_dev *sdev, struct net_device *dev
 }
 
 #ifdef CONFIG_SCSC_WLAN_GSCAN_ENABLE
-int slsi_mlme_set_bssid_hotlist_req(struct slsi_dev *sdev, struct net_device *dev, struct slsi_nl_hotlist_param *nl_hotlist_param)
-{
-	struct sk_buff *req;
-	struct sk_buff *cfm;
-	int            i;
-	int            num_desc;
-	int            alloc_data_size;
-	int            remaining_ap;
-	u8             bssid_desc[] = { 0xdd,             /* Element ID */
-					0x00,             /* Length */
-					0x00, 0x16, 0x32, /* Samsung OUI */
-					0x01,             /* OUI Type: Scan Parameters */
-					0x05,             /* OUI Subtype: BSSID Descriptor */
-					0x00,             /* AP Lost Threshold */
-	};
-
-	if (nl_hotlist_param) {
-		/* One BSSID descriptor can contain SLSI_GSCAN_MAX_BSSID_PER_IE AP information */
-		num_desc =  (nl_hotlist_param->num_bssid / SLSI_GSCAN_MAX_BSSID_PER_IE);
-		if (nl_hotlist_param->num_bssid % SLSI_GSCAN_MAX_BSSID_PER_IE)
-			num_desc++;
-
-		alloc_data_size = (num_desc * sizeof(bssid_desc)) + (nl_hotlist_param->num_bssid * SLSI_FW_BSSID_DESCRIPTOR_BSS_SIZE);
-		req = fapi_alloc(mlme_set_bssid_hotlist_req, MLME_SET_BSSID_HOTLIST_REQ, 0, alloc_data_size);
-		if (!req) {
-			SLSI_NET_ERR(dev, "Failed to allocate memory\n");
-			return -ENOMEM;
-		}
-
-		remaining_ap = nl_hotlist_param->num_bssid;
-		bssid_desc[7] = nl_hotlist_param->lost_ap_sample_size;
-		for (i = 0; i < nl_hotlist_param->num_bssid; i++) {
-			if ((i % SLSI_GSCAN_MAX_BSSID_PER_IE) == 0) {
-				if (remaining_ap > SLSI_GSCAN_MAX_BSSID_PER_IE) {
-					bssid_desc[1] = sizeof(bssid_desc) - 2 + (SLSI_GSCAN_MAX_BSSID_PER_IE * SLSI_FW_BSSID_DESCRIPTOR_BSS_SIZE); /* Length */
-					remaining_ap -= SLSI_GSCAN_MAX_BSSID_PER_IE;
-				} else {
-					bssid_desc[1] = sizeof(bssid_desc) - 2 + (remaining_ap * SLSI_FW_BSSID_DESCRIPTOR_BSS_SIZE); /* Length */
-				}
-
-				fapi_append_data(req, bssid_desc, sizeof(bssid_desc));
-			}
-
-			fapi_append_data(req, (u8 *)&nl_hotlist_param->ap[i].bssid[0], ETH_ALEN);
-
-			nl_hotlist_param->ap[i].low = cpu_to_le16(nl_hotlist_param->ap[i].low);
-			fapi_append_data(req, (u8 *)&nl_hotlist_param->ap[i].low, 2);
-
-			nl_hotlist_param->ap[i].high = cpu_to_le16(nl_hotlist_param->ap[i].high);
-			fapi_append_data(req, (u8 *)&nl_hotlist_param->ap[i].high, 2);
-		}
-	} else {
-		req = fapi_alloc(mlme_set_bssid_hotlist_req, MLME_SET_BSSID_HOTLIST_REQ, 0, 0);
-		if (!req) {
-			SLSI_NET_ERR(dev, "Failed to allocate memory\n");
-			return -ENOMEM;
-		}
-	}
-
-	cfm = slsi_mlme_req_cfm(sdev, NULL, req, MLME_SET_BSSID_HOTLIST_CFM);
-	if (!cfm)
-		return -EIO;
-
-	SLSI_DBG2(sdev, SLSI_GSCAN, "mlme_set_bssid_hotlist_cfm(datalen:%u)\n", fapi_get_datalen(cfm));
-	if (fapi_get_u16(cfm, u.mlme_set_bssid_hotlist_cfm.result_code) != FAPI_RESULTCODE_SUCCESS) {
-		SLSI_NET_ERR(dev, "mlme_set_bssid_hotlist_cfm(result:0x%04x) ERROR\n",
-			     fapi_get_u16(cfm, u.mlme_set_bssid_hotlist_cfm.result_code));
-		slsi_kfree_skb(cfm);
-		return -EINVAL;
-	}
-
-	slsi_kfree_skb(cfm);
-	return 0;
-}
-
 int slsi_mlme_append_gscan_channel_list(struct slsi_dev             *sdev,
 					struct net_device           *dev,
 					struct sk_buff              *req,
@@ -1241,6 +1202,7 @@ static inline int slsi_set_scan_params(
 	return 0;
 }
 
+#define SLSI_MAX_SSID_DESC_IN_SSID_FILTER_ELEM 7
 int slsi_mlme_add_sched_scan(struct slsi_dev                    *sdev,
 			     struct net_device                  *dev,
 			     struct cfg80211_sched_scan_request *request,
@@ -1252,7 +1214,8 @@ int slsi_mlme_add_sched_scan(struct slsi_dev                    *sdev,
 	struct sk_buff                     *rx;
 	int                                r = 0;
 	size_t                             alloc_data_size = 0;
-	u32                                i;
+	u32                                i, j;
+	u32                                num_ssid_filter_elements = 0;
 
 	/* Scan Timing IE: default values */
 	u8 scan_timing_ie[] = {
@@ -1286,19 +1249,18 @@ int slsi_mlme_add_sched_scan(struct slsi_dev                    *sdev,
 
 	WARN_ON(!SLSI_MUTEX_IS_LOCKED(ndev_vif->scan_mutex));
 
-	alloc_data_size += sizeof(scan_timing_ie) +
-					ies_len +
-					SLSI_SCAN_PRIVATE_IE_SSID_FILTER_HEADER_LEN +
-					(SLSI_SCAN_PRIVATE_IE_CHANNEL_LIST_HEADER_LEN + (request->n_channels * SLSI_SCAN_CHANNEL_DESCRIPTOR_SIZE));
+	alloc_data_size += sizeof(scan_timing_ie) + ies_len + SLSI_SCAN_PRIVATE_IE_CHANNEL_LIST_HEADER_LEN +
+					(request->n_channels * SLSI_SCAN_CHANNEL_DESCRIPTOR_SIZE);
 
 	for (i = 0; i < request->n_ssids; i++) {
 		/* 2 bytes for SSID EID and length field +  variable length SSID */
 		alloc_data_size += (2 + request->ssids[i].ssid_len);
 	}
 
-	for (i = 0; i < request->n_match_sets; i++) {
-		/* 1 byte for SSID_length field + variable length SSID */
-		alloc_data_size += (1 + request->match_sets[i].ssid.ssid_len);
+	if (request->n_match_sets) {
+		num_ssid_filter_elements = (request->n_match_sets / SLSI_MAX_SSID_DESC_IN_SSID_FILTER_ELEM) + 1;
+		/* EID(1) + len(1) + oui(3) + type/subtype(2) + 7 ssid descriptors(7 * 33) */
+		alloc_data_size += 238 * num_ssid_filter_elements;
 	}
 
 	req = fapi_alloc(mlme_add_scan_req, MLME_ADD_SCAN_REQ, 0, alloc_data_size);
@@ -1324,18 +1286,24 @@ int slsi_mlme_add_sched_scan(struct slsi_dev                    *sdev,
 
 	if (request->n_match_sets) {
 		struct cfg80211_match_set *match_sets = request->match_sets;
-		u8 *ssid_filter_ie = fapi_append_data(req, ssid_filter_ie_hdr, sizeof(ssid_filter_ie_hdr));
+		u8 *ssid_filter_ie;
 
-		if  (!ssid_filter_ie) {
-			slsi_kfree_skb(req);
-			SLSI_ERR(sdev, "ssid_filter_ie append failed\n");
-			return -EIO;
-		}
-		for (i = 0; i < request->n_match_sets; i++, match_sets++) {
-			SLSI_NET_DBG2(dev, SLSI_MLME, "SSID: %.*s",  match_sets->ssid.ssid_len,  match_sets->ssid.ssid);
-			ssid_filter_ie[1] += (1 + match_sets->ssid.ssid_len);
-			fapi_append_data(req, &match_sets->ssid.ssid_len, 1);
-			fapi_append_data(req, match_sets->ssid.ssid, match_sets->ssid.ssid_len);
+		for (j = 0; j < num_ssid_filter_elements; j++) {
+			ssid_filter_ie = fapi_append_data(req, ssid_filter_ie_hdr, sizeof(ssid_filter_ie_hdr));
+			if  (!ssid_filter_ie) {
+				slsi_kfree_skb(req);
+				SLSI_ERR(sdev, "ssid_filter_ie append failed\n");
+				return -EIO;
+			}
+			for (i = 0; i < SLSI_MAX_SSID_DESC_IN_SSID_FILTER_ELEM; i++, match_sets++) {
+				if ((j * SLSI_MAX_SSID_DESC_IN_SSID_FILTER_ELEM) + i >= request->n_match_sets)
+					break;
+				SLSI_NET_DBG2(dev, SLSI_MLME, "SSID: %.*s",
+					      match_sets->ssid.ssid_len, match_sets->ssid.ssid);
+				ssid_filter_ie[1] += (1 + match_sets->ssid.ssid_len);
+				fapi_append_data(req, &match_sets->ssid.ssid_len, 1);
+				fapi_append_data(req, match_sets->ssid.ssid, match_sets->ssid.ssid_len);
+			}
 		}
 	}
 
@@ -3229,8 +3197,9 @@ int slsi_mlme_roam(struct slsi_dev *sdev, struct net_device *dev, const u8 *bssi
 		return -ENOMEM;
 	fapi_set_memcpy(req, u.mlme_roam_req.bssid, bssid);
 	fapi_set_u16(req, u.mlme_roam_req.channel_frequency, SLSI_FREQ_HOST_TO_FW(freq));
-
+	atomic_set(&ndev_vif->sta.drop_roamed_ind, 1);
 	cfm = slsi_mlme_req_cfm(sdev, dev, req, MLME_ROAM_CFM);
+	atomic_set(&ndev_vif->sta.drop_roamed_ind, 0);
 	if (!cfm)
 		return -EIO;
 	if (fapi_get_u16(cfm, u.mlme_roam_cfm.result_code) != FAPI_RESULTCODE_SUCCESS) {
@@ -3647,153 +3616,14 @@ void slsi_mlme_reassociate_resp(struct slsi_dev *sdev, struct net_device *dev)
 	WARN_ON(cfm);
 }
 
-#ifdef CONFIG_SCSC_WLAN_GSCAN_ENABLE
-int slsi_mlme_gscan_append_tracking_channels(struct slsi_dev   *sdev,
-					     struct net_device *dev,
-					     struct sk_buff    *skb,
-					     struct slsi_gscan *gscan)
-{
-	u32 n_channels = 0;
-	int len = 0;
-
-	if (gscan->nl_bucket.band == WIFI_BAND_UNSPECIFIED)
-		n_channels = gscan->nl_bucket.num_channels;
-	else
-		n_channels = 1;
-
-	SLSI_DBG3(sdev, SLSI_GSCAN, "num chan: %d", n_channels);
-	if (skb) {
-		int r = slsi_mlme_append_gscan_channel_list(sdev, dev, skb, &gscan->nl_bucket);
-
-		if (r) {
-			SLSI_ERR(sdev, "Error appending channel list [%d]\n", r);
-			return r;
-		}
-	} else {
-		len = SLSI_SCAN_PRIVATE_IE_CHANNEL_LIST_HEADER_LEN + (n_channels * SLSI_SCAN_CHANNEL_DESCRIPTOR_SIZE);
-	}
-	return len;
-}
-
-int slsi_mlme_significant_change_set(struct slsi_dev *sdev, struct net_device *dev,
-				     struct slsi_nl_significant_change_params *significant_param_ptr)
-{
-	struct sk_buff    *req;
-	struct sk_buff    *rx;
-	int               r = 0;
-	size_t            alloc_data_size;
-	u32               i, j;
-	u32               num_bssid_descriptor_ies;
-	struct slsi_gscan *gscan = sdev->gscan;
-
-	u8                scan_timing_ie[] = {
-		0xdd,				/* Element ID: Vendor Specific */
-		0x11,				/* Length */
-		0x00, 0x16, 0x32,		/* OUI: Samsung Electronics Co. */
-		0x01,				/* OUI Type: Scan parameters */
-		0x01,				/* OUI Subtype: Scan timing */
-		0x00, 0x00, 0x00, 0x00,		/* Min_Period:  filled later in the function */
-		0x00, 0x00, 0x00, 0x00,		/* Max_Period:  filled later in the function */
-		0x00,				/* Exponent */
-		0x00,				/* Step count */
-		0x00, 0x00			/* Skip first period: false */
-	};
-
-	u8                change_tracking_ie[] = {  /* wifi change tracking ie*/
-		0xdd, 0x07,                         /* VENDOR_SPECIFIC, LEN */
-		0x00, 0x16, 0x32,                   /* OUI */
-		0x01, 0x06,                         /* OUI Type, OUI sub-type */
-		0x00,                               /* The number of samples needed for averaging RSSI */
-		0x00                                /* Min num of APs breaching low_RSSI_Threshold that are needed before informing the host */
-	};
-
-	u8                bssid_descriptor_ie[] = {                 /* Bssid descriptor list ie*/
-		0xdd, 6 + (SLSI_FW_MAX_BSSID_PER_TRACKING_IE * SLSI_FW_BSSID_DESCRIPTOR_BSS_SIZE), /* VENDOR_SPECIFIC, LEN(update later) */
-		0x00, 0x16, 0x32,                                   /* OUI */
-		0x01, 0x05,                                         /* OUI Type, OUI sub-type */
-		0x00,                                               /* ap lost threshold */
-	};
-
-	if (slsi_is_test_mode_enabled()) {
-		SLSI_NET_INFO(dev, "Skip sending signal, WlanLite FW does not support MLME_ADD_SCAN.request\n");
-		return -EOPNOTSUPP;
-	}
-
-	if (WARN_ON(!(dev->dev_addr)))
-		return -EINVAL;
-
-	change_tracking_ie[7] = (u8)significant_param_ptr->rssi_sample_size;
-	change_tracking_ie[8] = (u8)significant_param_ptr->min_breaching;
-	num_bssid_descriptor_ies = significant_param_ptr->num_bssid / SLSI_FW_MAX_BSSID_PER_TRACKING_IE;
-	if (significant_param_ptr->num_bssid % SLSI_FW_MAX_BSSID_PER_TRACKING_IE)
-		num_bssid_descriptor_ies++;
-
-	alloc_data_size = sizeof(scan_timing_ie) + sizeof(change_tracking_ie)
-			  + sizeof(bssid_descriptor_ie) * num_bssid_descriptor_ies
-			  + SLSI_FW_BSSID_DESCRIPTOR_BSS_SIZE * significant_param_ptr->num_bssid
-			  + slsi_mlme_gscan_append_tracking_channels(sdev, dev, NULL, gscan);
-
-	req = fapi_alloc(mlme_add_scan_req, MLME_ADD_SCAN_REQ, 0, alloc_data_size);
-	if (!req)
-		return -ENOMEM;
-
-	fapi_set_u16(req, u.mlme_add_scan_req.scan_id, gscan->bucket[0]->scan_id);
-	fapi_set_u16(req, u.mlme_add_scan_req.scan_type, FAPI_SCANTYPE_GSCAN);
-	fapi_set_memcpy(req, u.mlme_add_scan_req.device_address, dev->dev_addr);
-	fapi_set_u16(req, u.mlme_add_scan_req.report_mode_bitmap, FAPI_REPORTMODE_REAL_TIME);
-
-	r = slsi_mlme_gscan_append_tracking_channels(sdev, dev, req, gscan);
-	if (r != 0) {
-		slsi_kfree_skb(req);
-		return r;
-	}
-
-	SLSI_U32_TO_BUFF_LE((gscan->nl_bucket.period * 1000), &scan_timing_ie[7]);
-	fapi_append_data(req, scan_timing_ie, sizeof(scan_timing_ie));
-	fapi_append_data(req, change_tracking_ie, sizeof(change_tracking_ie));
-
-	bssid_descriptor_ie[7] = significant_param_ptr->lost_ap_sample_size;
-	for (i = 0; i < num_bssid_descriptor_ies; i++) {
-		u8 bss_num = significant_param_ptr->num_bssid - (i * SLSI_FW_MAX_BSSID_PER_TRACKING_IE);
-
-		if (bss_num < SLSI_FW_MAX_BSSID_PER_TRACKING_IE)
-			bssid_descriptor_ie[1] = 6 + (SLSI_FW_BSSID_DESCRIPTOR_BSS_SIZE * bss_num);
-		else
-			bss_num = SLSI_FW_MAX_BSSID_PER_TRACKING_IE;
-
-		fapi_append_data(req, bssid_descriptor_ie, sizeof(bssid_descriptor_ie));
-		for (j = i * SLSI_FW_MAX_BSSID_PER_TRACKING_IE; j < (i * SLSI_FW_MAX_BSSID_PER_TRACKING_IE + bss_num); j++) {
-			fapi_append_data(req, significant_param_ptr->ap[j].bssid, ETH_ALEN);
-			fapi_append_data(req, (u8 *)&significant_param_ptr->ap[j].low, 2);
-			fapi_append_data(req, (u8 *)&significant_param_ptr->ap[j].high, 2);
-		}
-	}
-
-	/* Use the Global sig_wait not the Interface specific for Scan Req */
-	rx = slsi_mlme_req_cfm(sdev, NULL, req, MLME_ADD_SCAN_CFM);
-	if (!rx) {
-		gscan->bucket[0]->for_change_tracking = false;
-		return -EIO;
-	} else if (fapi_get_u16(rx, u.mlme_add_scan_cfm.result_code) != FAPI_RESULTCODE_SUCCESS) {
-		gscan->bucket[0]->for_change_tracking = false;
-		SLSI_NET_ERR(dev, "mlme_add_scan_cfm(ERROR:0x%04x)", fapi_get_u16(rx, u.mlme_add_scan_cfm.result_code));
-		r = -EINVAL;
-	} else {
-		gscan->bucket[0]->for_change_tracking = true;
-	}
-	slsi_kfree_skb(rx);
-
-	return r;
-}
-
 int slsi_mlme_add_range_req(struct slsi_dev *sdev, u8 count,
-			    struct slsi_rtt_config *nl_rtt_params, u16 rtt_id, u16 vif_idx)
+			    struct slsi_rtt_config *nl_rtt_params, u16 rtt_id, u16 vif_idx, u8 *source_addr)
 {
 	struct sk_buff *req;
 	struct sk_buff *rx;
 	int            r = 0, i;
 	size_t         alloc_data_size = 0;
-	u8             fapi_ie_generic[] = { 0xdd, 0x24, 0x00, 0x16, 0x32, 0x0a, 0x01 };
+	u8             fapi_ie_generic[] = { 0xdd, 0x1c, 0x00, 0x16, 0x32, 0x0a, 0x01 };
 	/* calculate data size */
 	alloc_data_size += count * (fapi_ie_generic[1] + 2);
 
@@ -3802,17 +3632,17 @@ int slsi_mlme_add_range_req(struct slsi_dev *sdev, u8 count,
 		SLSI_ERR(sdev, "failed to alloc %zd\n", alloc_data_size);
 		return -ENOMEM;
 	}
-	SLSI_DBG2(sdev, SLSI_MLME, "count-->%d allocated data size: %d\n", count, alloc_data_size);
+	SLSI_DBG2(sdev, SLSI_MLME, "count:%d allocated data size: %d, source_addr:%pM\n",
+		  count, alloc_data_size, source_addr);
 	/*fill the data */
 	fapi_set_u16(req, u.mlme_add_range_req.vif, vif_idx);
 	fapi_set_u16(req, u.mlme_add_range_req.rtt_id, rtt_id);
+	fapi_set_memcpy(req, u.mlme_add_range_req.device_address, source_addr);
 	for (i = 0; i < count; i++) {
 		fapi_append_data(req, fapi_ie_generic, sizeof(fapi_ie_generic));
-		fapi_append_data(req, nl_rtt_params[i].source_addr, ETH_ALEN);
 		fapi_append_data(req, nl_rtt_params[i].peer_addr, ETH_ALEN);
 		fapi_append_data(req, (u8 *)&nl_rtt_params[i].type, 2);
 		fapi_append_data(req, (u8 *)&nl_rtt_params[i].channel_freq, 2);
-		fapi_append_data(req, (u8 *)&nl_rtt_params[i].channel_info, 2);
 		fapi_append_data(req, (u8 *)&nl_rtt_params[i].burst_period, 1);
 		fapi_append_data(req, (u8 *)&nl_rtt_params[i].num_burst, 1);
 		fapi_append_data(req, (u8 *)&nl_rtt_params[i].num_frames_per_burst, 1);
@@ -3892,6 +3722,7 @@ int slsi_mlme_del_range_req(struct slsi_dev *sdev, struct net_device *dev, u16 c
 	return r;
 }
 
+#ifdef CONFIG_SCSC_WLAN_GSCAN_ENABLE
 #define SLSI_FAPI_EPNO_NETWORK_MIN_SIZE (3)
 int slsi_mlme_set_pno_list(struct slsi_dev *sdev, int count,
 			   struct slsi_epno_param *epno_param, struct slsi_epno_hs2_param *epno_hs2_param)

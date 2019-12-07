@@ -287,6 +287,7 @@ struct slsi_scan_result {
 	struct sk_buff *probe_resp;
 	struct sk_buff *beacon;
 	struct slsi_scan_result *next;
+	int band;
 };
 
 /* Per Interface Scan Data
@@ -310,6 +311,7 @@ struct slsi_ssid_map {
 	u8 ssid[32];
 	u8 ssid_len;
 	u8 age;
+	int band;
 };
 
 struct slsi_peer {
@@ -520,9 +522,13 @@ struct slsi_vif_sta {
 	struct list_head        network_map;
 
 	struct slsi_wmm_ac wmm_ac[4];
+
 	/*This structure is used to store last disconnected bss info and valid even when vif is deactivated. */
 	struct slsi_last_connected_bss last_connected_bss;
-	bool                      nd_offload_enabled;
+	bool                    nd_offload_enabled;
+
+	/* Variable to indicate if roamed_ind needs to be dropped in driver, to maintain roam synchronization. */
+	atomic_t                drop_roamed_ind;
 };
 
 struct slsi_vif_unsync {
@@ -647,7 +653,9 @@ struct netdev_vif {
 	atomic_t                    is_registered;         /* Has the net dev been registered */
 	bool                        is_available;          /* Has the net dev been opened AND is usable */
 	bool                        is_fw_test;            /* Is the device in use as a test device via UDI */
-
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+	bool                        is_wips_running;
+#endif
 	/* Structure can be accessed by cfg80211 ops, procfs/ioctls and as a result
 	 * of receiving MLME indications e.g. MLME-CONNECT-IND that can affect the
 	 * status of the interface eg. STA connect failure will delete the VIF.
@@ -1114,7 +1122,7 @@ struct llc_snap_hdr {
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
 int slsi_rx_data_napi(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb, bool from_ba);
 #endif
-int slsi_rx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb, bool from_ba);
+void slsi_rx_data_deliver_skb(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_rx_dbg_sap_work(struct work_struct *work);
 void slsi_rx_netdev_data_work(struct work_struct *work);
 void slsi_rx_netdev_mlme_work(struct work_struct *work);

@@ -1843,6 +1843,92 @@ int slsi_send_hanged_vendor_event(struct slsi_dev *sdev, u16 scsc_panic_code)
 	return 0;
 }
 
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+int slsi_send_forward_beacon_vendor_event(struct slsi_dev *sdev, const u8 *ssid, const int ssid_len, const u8 *bssid,
+					  u8 channel, const u16 beacon_int, const u64 timestamp, const u64 sys_time)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+	struct sk_buff *skb;
+	u8 err = 0;
+	struct net_device *dev;
+	struct netdev_vif *ndev_vif;
+
+	dev = slsi_get_netdev(sdev, SLSI_NET_INDEX_WLAN);
+	ndev_vif = netdev_priv(dev);
+
+	SLSI_DBG2(sdev, SLSI_CFG80211, "Sending SLSI_NL80211_VENDOR_FORWARD_BEACON\n");
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
+	skb = cfg80211_vendor_event_alloc(sdev->wiphy, &ndev_vif->wdev, NLMSG_DEFAULT_SIZE,
+					  SLSI_NL80211_VENDOR_FORWARD_BEACON, GFP_KERNEL);
+#else
+	skb = cfg80211_vendor_event_alloc(sdev->wiphy, NLMSG_DEFAULT_SIZE,
+					  SLSI_NL80211_VENDOR_FORWARD_BEACON, GFP_KERNEL);
+#endif
+	if (!skb) {
+		SLSI_ERR_NODEV("Failed to allocate SKB for vendor forward_beacon event\n");
+		return -ENOMEM;
+	}
+
+	err |= nla_put(skb, SLSI_WLAN_VENDOR_ATTR_FORWARD_BEACON_SSID, ssid_len, ssid);
+	err |= nla_put(skb, SLSI_WLAN_VENDOR_ATTR_FORWARD_BEACON_BSSID, ETH_ALEN, bssid);
+	err |= nla_put_u8(skb, SLSI_WLAN_VENDOR_ATTR_FORWARD_BEACON_CHANNEL, channel);
+	err |= nla_put_u16(skb, SLSI_WLAN_VENDOR_ATTR_FORWARD_BEACON_BCN_INTERVAL, beacon_int);
+	err |= nla_put_u32(skb, SLSI_WLAN_VENDOR_ATTR_FORWARD_BEACON_TIME_STAMP1, (timestamp & 0x00000000FFFFFFFF));
+	err |= nla_put_u32(skb, SLSI_WLAN_VENDOR_ATTR_FORWARD_BEACON_TIME_STAMP2,
+			   ((timestamp >> 32) & 0x00000000FFFFFFFF));
+	err |= nla_put_u64(skb, SLSI_WLAN_VENDOR_ATTR_FORWARD_BEACON_SYS_TIME, sys_time);
+
+	if (err) {
+		SLSI_ERR_NODEV("Failed nla_put for forward_beacon\n");
+		slsi_kfree_skb(skb);
+		return -EINVAL;
+	}
+	cfg80211_vendor_event(skb, GFP_KERNEL);
+
+#endif
+	return 0;
+}
+
+int slsi_send_forward_beacon_abort_vendor_event(struct slsi_dev *sdev, u16 reason_code)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+	struct sk_buff *skb;
+	u8 err = 0;
+	struct net_device *dev;
+	struct netdev_vif *ndev_vif;
+
+	dev = slsi_get_netdev(sdev, SLSI_NET_INDEX_WLAN);
+	ndev_vif = netdev_priv(dev);
+
+	SLSI_INFO(sdev, "Sending SLSI_NL80211_VENDOR_FORWARD_BEACON_ABORT\n");
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
+	skb = cfg80211_vendor_event_alloc(sdev->wiphy, &ndev_vif->wdev, sizeof(reason_code),
+					  SLSI_NL80211_VENDOR_FORWARD_BEACON_ABORT, GFP_KERNEL);
+#else
+	skb = cfg80211_vendor_event_alloc(sdev->wiphy, sizeof(reason_code),
+					  SLSI_NL80211_VENDOR_FORWARD_BEACON_ABORT, GFP_KERNEL);
+#endif
+	if (!skb) {
+		SLSI_ERR_NODEV("Failed to allocate SKB for vendor forward_beacon_abort event\n");
+		return -ENOMEM;
+	}
+
+	err = nla_put_u16(skb, SLSI_WLAN_VENDOR_ATTR_FORWARD_BEACON_ABORT, reason_code);
+
+	if (err) {
+		SLSI_ERR_NODEV("Failed nla_put for beacon_recv_abort\n");
+		slsi_kfree_skb(skb);
+		return -EINVAL;
+	}
+	cfg80211_vendor_event(skb, GFP_KERNEL);
+
+#endif
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_SCSC_WLAN_HANG_TEST
 int slsi_test_send_hanged_vendor_event(struct net_device *dev)
 {
@@ -2007,11 +2093,6 @@ int slsi_peer_remove(struct slsi_dev *sdev, struct net_device *dev, struct slsi_
 
 	slsi_rx_ba_stop_all(dev, peer);
 
-	/* Take the peer lock to protect the transmit data path
-	 * when accessing peer records.
-	 */
-	slsi_spinlock_lock(&ndev_vif->peer_lock);
-
 	/* The information is no longer valid so first update the flag to ensure that
 	 * another process doesn't try to use it any more.
 	 */
@@ -2023,8 +2104,6 @@ int slsi_peer_remove(struct slsi_dev *sdev, struct net_device *dev, struct slsi_
 		ndev_vif->sta.tdls_peer_sta_records--;
 	else
 		ndev_vif->peer_sta_records--;
-
-	slsi_spinlock_unlock(&ndev_vif->peer_lock);
 
 	ndev_vif->cfg80211_sinfo_generation++;
 
@@ -2103,6 +2182,9 @@ void slsi_vif_deactivated(struct slsi_dev *sdev, struct net_device *dev)
 			ndev_vif->sta.sta_bss = NULL;
 		}
 		ndev_vif->sta.tdls_enabled = false;
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+		ndev_vif->is_wips_running = false;
+#endif
 	}
 
 	/* MUST be done first to ensure that other code doesn't treat the VIF as still active */
@@ -2115,7 +2197,10 @@ void slsi_vif_deactivated(struct slsi_dev *sdev, struct net_device *dev)
 		if (peer && peer->valid) {
 			if (ndev_vif->vif_type == FAPI_VIFTYPE_AP && peer->assoc_ie)
 				cfg80211_del_sta(dev, peer->address, GFP_KERNEL);
+			
+			slsi_spinlock_lock(&ndev_vif->peer_lock);
 			slsi_peer_remove(sdev, dev, peer);
+			slsi_spinlock_unlock(&ndev_vif->peer_lock);
 		}
 	}
 
@@ -2583,7 +2668,9 @@ int slsi_handle_disconnect(struct slsi_dev *sdev, struct net_device *dev, u8 *pe
 		if ((peer->connected_state == SLSI_STA_CONN_STATE_CONNECTED) || (peer->connected_state == SLSI_STA_CONN_STATE_DOING_KEY_CONFIG))
 			cfg80211_del_sta(dev, peer->address, GFP_KERNEL);
 
+		slsi_spinlock_lock(&ndev_vif->peer_lock);
 		slsi_peer_remove(sdev, dev, peer);
+		slsi_spinlock_unlock(&ndev_vif->peer_lock);
 
 		/* If last client disconnects (after WPA2 handshake) then take wakelock till group is removed
 		 * to avoid possibility of delay in group removal if platform suspends at this point.
@@ -5212,6 +5299,7 @@ void slsi_scan_ind_timeout_handle(struct work_struct *work)
 	struct netdev_vif *ndev_vif = container_of((struct delayed_work *)work, struct netdev_vif, scan_timeout_work);
 	struct net_device *dev = slsi_get_netdev(ndev_vif->sdev, ndev_vif->ifnum);
 
+	SLSI_MUTEX_LOCK(ndev_vif->vif_mutex);
 	SLSI_MUTEX_LOCK(ndev_vif->scan_mutex);
 	if (ndev_vif->scan[SLSI_SCAN_HW_ID].scan_req) {
 		if (ndev_vif->scan[SLSI_SCAN_HW_ID].requeue_timeout_work) {
@@ -5225,6 +5313,7 @@ void slsi_scan_ind_timeout_handle(struct work_struct *work)
 		}
 	}
 	SLSI_MUTEX_UNLOCK(ndev_vif->scan_mutex);
+	SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
 }
 
 void slsi_update_supported_channels_regd_flags(struct slsi_dev *sdev)

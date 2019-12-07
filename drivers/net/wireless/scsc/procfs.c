@@ -429,7 +429,11 @@ static int slsi_procfs_build_show(struct seq_file *m, void *v)
 #else
 	seq_puts(m, "CONFIG_SCSC_WIFI_NAN_ENABLE                       : n\n");
 #endif
-
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+	seq_puts(m, "CONFIG_SLSI_WLAN_STA_FWD_BEACON                   : y\n");
+#else
+	seq_puts(m, "CONFIG_SLSI_WLAN_STA_FWD_BEACON                   : n\n");
+#endif
 	return 0;
 }
 

@@ -1,0 +1,5 @@
+*.o
+Image
+Image.gz
+.config
+.config.old
