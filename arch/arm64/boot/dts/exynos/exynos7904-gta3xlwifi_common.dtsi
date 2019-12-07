@@ -820,7 +820,7 @@
 						sound-dai = <&abox 17>;
 					};
 					codec {
-						sound-dai = <&dummy_audio_codec>;
+						sound-dagi = <&dummy_audio_codec>;
 					};
 				};
 				speedy@0 {
@@ -838,8 +838,12 @@
 			};
 
 			cpufreq {
+				domain@0 {
+					min-freq = <208000>;
+					};
 				domain@1 {
 					max-freq = <2184000>;
+					min-freq = <520000>;
 
 					dm-constraints {
 						mif-perf {
