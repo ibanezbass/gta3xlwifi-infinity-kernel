@@ -144,7 +144,7 @@ config USB_ANDROID_SAMSUNG_COMPOSITE
 	  Multi Configuration.
 	  If you enable this option, android composite will be changed.
 
-conf USB_ANDROID_SAMSUNG_MTP
+config USB_ANDROID_SAMSUNG_MTP
 	boolean "Samsung MTP Function"
 	depends on USB_G_ANDROID &&!SEC_FACTORY
 	help
