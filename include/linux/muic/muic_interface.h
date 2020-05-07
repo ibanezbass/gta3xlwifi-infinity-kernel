@@ -222,8 +222,6 @@ struct muic_interface_t {
 	bool 			is_dcp_charger;
 	bool			is_afc_reset;
 	bool			is_afc_pdic_ready;
-	bool			is_bypass;
-	bool			is_ccic_attached;
 
 	struct hv_data		*phv;
 

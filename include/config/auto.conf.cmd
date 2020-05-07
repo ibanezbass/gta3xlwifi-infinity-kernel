@@ -285,6 +285,7 @@ deps_config := \
 	drivers/staging/gdm724x/Kconfig \
 	drivers/staging/gdm72xx/Kconfig \
 	drivers/staging/board/Kconfig \
+	drivers/staging/android/fiq_debugger/Kconfig \
 	drivers/staging/android/ion/exynos/Kconfig \
 	drivers/staging/android/ion/Kconfig \
 	drivers/staging/android/Kconfig \

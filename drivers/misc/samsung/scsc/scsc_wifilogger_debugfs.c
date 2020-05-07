@@ -109,7 +109,7 @@ static ssize_t dfs_read_record(struct file *filp, char __user *ubuf,
 		    !scsc_wlog_is_ring_empty(rto->r)))
 			return -ERESTARTSYS;
 	}
-	ret = scsc_wlog_read_records(rto->r, rto->rbuf, rto->bsz, false);
+	ret = scsc_wlog_read_records(rto->r, rto->rbuf, rto->bsz);
 	count = ret <= count ? ret : count;
 	if (copy_to_user(ubuf, rto->rbuf, count))
 		return -EFAULT;
