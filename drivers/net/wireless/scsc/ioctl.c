@@ -1320,10 +1320,13 @@ static ssize_t slsi_set_pmk(struct net_device *dev, char *command, int buf_len)
 {
 	struct netdev_vif *ndev_vif = netdev_priv(dev);
 	struct slsi_dev   *sdev = ndev_vif->sdev;
-	u8                pmk[33];
+	u8                pmk[33] = {0};
 	int               result = 0;
 
-	memcpy((u8 *)pmk, command + strlen("SET_PMK "), 32);
+	if ((buf_len - (strlen(CMD_SET_PMK) + 1)) < 32)
+		return -EINVAL;
+
+	memcpy((u8 *)pmk, command + (strlen(CMD_SET_PMK) + 1), 32);
 	SLSI_MUTEX_LOCK(ndev_vif->vif_mutex);
 
 	result = slsi_mlme_set_pmk(sdev, dev, pmk, 32);

@@ -3704,6 +3704,11 @@ int slsi_mlme_del_range_req(struct slsi_dev *sdev, struct net_device *dev, u16 c
 		SLSI_ERR(sdev, "failed to alloc %zd\n", alloc_data_size);
 		return -ENOMEM;
 	}
+	if (rtt_id >= ARRAY_SIZE(sdev->rtt_vif)) {
+		SLSI_ERR(sdev, "rtt_id is too large\n");
+		slsi_kfree_skb(req);
+		return -EINVAL;
+	}
 	/*fill the data */
 	fapi_set_u16(req, u.mlme_del_range_req.vif, rtt_vif_idx[rtt_id]);
 	fapi_set_u16(req, u.mlme_del_range_req.rtt_id, rtt_id);
@@ -3734,7 +3739,9 @@ int slsi_mlme_set_pno_list(struct slsi_dev *sdev, int count,
 	u32            i, j;
 	u8             fapi_ie_generic[] = { 0xdd, 0, 0x00, 0x16, 0x32, 0x01, 0x00 };
 	u8             *buff_ptr, *ie_start_pos;
+	size_t str_len = 0;
 
+	str_len = strnlen(epno_hs2_param->realm, ARRAY_SIZE(epno_hs2_param->realm));
 	if (count) {
 		/* calculate data size */
 		if (epno_param) {
@@ -3747,8 +3754,8 @@ int slsi_mlme_set_pno_list(struct slsi_dev *sdev, int count,
 				 * + Roaming_Consortium_Count(1) + Roaming Consortium data(16 * 8) +
 				 * PLMN length(1) + PLMN data(6)
 				 */
-				if (strlen(epno_hs2_param->realm))
-					alloc_data_size += sizeof(fapi_ie_generic) + 1 + 1 + (strlen(epno_hs2_param->realm) + 1)
+				if (str_len)
+					alloc_data_size += sizeof(fapi_ie_generic) + 1 + 1 + (str_len + 1)
 							   + 1 + 16 * 8 + 1 + 6;
 				else
 					alloc_data_size += sizeof(fapi_ie_generic) + 1 + 1 + 0

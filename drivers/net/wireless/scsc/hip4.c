@@ -1475,6 +1475,8 @@ int hip4_init(struct slsi_hip4 *hip)
 	spin_lock_init(&hip->hip_priv->tx_lock);
 	atomic_set(&hip->hip_priv->in_tx, 0);
 
+        wake_lock_init(&hip->hip_priv->hip4_wake_lock, WAKE_LOCK_SUSPEND, "hip4_wake_lock");
+
 	/* Init work structs */
 	hip->hip_priv->hip4_workq = create_singlethread_workqueue("hip4_work");
 	if (!hip->hip_priv->hip4_workq) {
@@ -1499,8 +1501,6 @@ int hip4_init(struct slsi_hip4 *hip)
 	atomic_set(&hip->hip_priv->gactive, 1);
 	spin_lock_init(&hip->hip_priv->gbot_lock);
 	hip->hip_priv->saturated = 0;
-
-	wake_lock_init(&hip->hip_priv->hip4_wake_lock, WAKE_LOCK_SUSPEND, "hip4_wake_lock");
 
 	return 0;
 }

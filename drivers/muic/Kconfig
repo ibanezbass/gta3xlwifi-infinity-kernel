@@ -203,6 +203,14 @@ config S2MU205_TYPEC_WATER
 	  If you say yes here you will get support for
 	  the S2MU205 Type-C Water functions.
 
+config NONE_WATERPROOF_MODEL
+	bool "Supporting Type-C NONE_WATERPROOF_MODEL"
+	depends on USE_MUIC
+	default n
+	help
+	  If you say yes here you will get support for
+	  the Type-C NONE_WATERPROOF_MODEL functions.
+
 config HICCUP_CHARGER
 	bool "Using HICCUP charger"
 	depends on USE_MUIC

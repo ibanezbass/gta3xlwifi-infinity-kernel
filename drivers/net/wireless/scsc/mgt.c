@@ -3370,17 +3370,19 @@ int slsi_ip_address_changed(struct slsi_dev *sdev, struct net_device *dev, __be3
 		ndev_vif->ipaddress = ipaddress;
 
 	if (ndev_vif->activated && (ndev_vif->vif_type == FAPI_VIFTYPE_AP)) {
+#ifdef CONFIG_SCSC_WLAN_BLOCK_IPV6
 		struct slsi_mlme_pattern_desc pattern_desc[1];
 		u8 num_patterns = 0;
 		struct slsi_mlme_pkt_filter_elem pkt_filter_elem[1];
 		u8 pkt_filters_len = 0;
 		u8 num_filters = 0;
-
+#endif
 		ndev_vif->ipaddress = ipaddress;
 		ret = slsi_mlme_set_ip_address(sdev, dev);
 		if (ret != 0)
 			SLSI_NET_ERR(dev, "slsi_mlme_set_ip_address ERROR. ret=%d", ret);
 
+#ifdef CONFIG_SCSC_WLAN_BLOCK_IPV6
 		/* Opt out IPv6 packets in platform suspended mode */
 		pattern_desc[num_patterns].offset = 0x0E;
 		pattern_desc[num_patterns].mask_length = 0x01;
@@ -3393,6 +3395,7 @@ int slsi_ip_address_changed(struct slsi_dev *sdev, struct net_device *dev, __be3
 		ret = slsi_mlme_set_packet_filter(sdev, dev, pkt_filters_len, num_filters, pkt_filter_elem);
 		if (ret != 0)
 			SLSI_NET_ERR(dev, "slsi_mlme_set_packet_filter (return :%d) ERROR\n", ret);
+#endif
 	} else if ((ndev_vif->activated) &&
 		   (ndev_vif->vif_type == FAPI_VIFTYPE_STATION) &&
 		   (ndev_vif->sta.vif_status == SLSI_VIF_STATUS_CONNECTED)) {

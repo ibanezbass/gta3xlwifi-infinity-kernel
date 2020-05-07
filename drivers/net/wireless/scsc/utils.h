@@ -546,6 +546,143 @@ static inline u32 slsi_get_center_freq1(struct slsi_dev *sdev, u16 chann_info, u
 	return center_freq1;
 }
 
+static inline int slsi_util_nla_get_u8(const struct nlattr *attr, u8 *val)
+{
+	if (nla_len(attr) >= sizeof(u8)) {
+		*val = nla_get_u8(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_u16(const struct nlattr *attr, u16 *val)
+{
+	if (nla_len(attr) >= sizeof(u16)) {
+		*val = nla_get_u16(attr);
+		return 0;
+	}
+	return -EINVAL;
+
+}
+
+static inline int slsi_util_nla_get_u32(const struct nlattr *attr, u32 *val)
+{
+	if (nla_len(attr) >= sizeof(u32)) {
+		*val = nla_get_u32(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_u64(const struct nlattr *attr, u64 *val)
+{
+	if (nla_len(attr) >= sizeof(u64)) {
+		*val = nla_get_u64(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+
+static inline int slsi_util_nla_get_s8(const struct nlattr *attr, s8 *val)
+{
+	if (nla_len(attr) >= sizeof(s8)) {
+		*val = nla_get_s8(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_s16(const struct nlattr *attr, s16 *val)
+{
+	if (nla_len(attr) >= sizeof(s16)) {
+		*val = nla_get_s16(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_s32(const struct nlattr *attr, s32 *val)
+{
+	if (nla_len(attr) >= sizeof(s32)) {
+		*val = nla_get_s32(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_s64(const struct nlattr *attr, s64 *val)
+{
+	if (nla_len(attr) >= sizeof(s64)) {
+		*val = nla_get_s64(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_be16(const struct nlattr *attr, __be16 *val)
+{
+	if (nla_len(attr) >= sizeof(__be16)) {
+		*val = nla_get_be16(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_be32(const struct nlattr *attr, __be32 *val)
+{
+	if (nla_len(attr) >= sizeof(__be32)) {
+		*val = nla_get_be32(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_be64(const struct nlattr *attr, __be64 *val)
+{
+	if (nla_len(attr) >= sizeof(__be64)) {
+		*val = nla_get_be64(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_le16(const struct nlattr *attr,  __le16  *val)
+{
+	if (nla_len(attr) >= sizeof(__le16)) {
+		*val = nla_get_le16(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_le32(const struct nlattr *attr, __le32 *val)
+{
+	if (nla_len(attr) >= sizeof(__le32)) {
+		*val = nla_get_le32(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_le64(const struct nlattr *attr, __le64 *val)
+{
+	if (nla_len(attr) >= sizeof(__le64)) {
+		*val = nla_get_le64(attr);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static inline int slsi_util_nla_get_data(const struct nlattr *attr, size_t size, void *val)
+{
+	if(nla_len(attr) >= size) {
+		memcpy(val, nla_data(attr), size);
+		return 0;
+	}
+	return -EINVAL;
+}
+
 #ifdef __cplusplus
 }
 #endif
