@@ -243,10 +243,6 @@ static int slsi_net_stop(struct net_device *dev)
 	slsi_netif_tcp_ack_suppression_stop(dev);
 	slsi_stop_net_dev(sdev, dev);
 
-#ifndef SLSI_TEST_DEV
-	memset(dev->dev_addr, 0, ETH_ALEN);
-#endif
-
 	sdev->allow_switch_40_mhz = true;
 	sdev->allow_switch_80_mhz = true;
 	sdev->acs_channel_switched = false;

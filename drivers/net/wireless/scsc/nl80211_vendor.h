@@ -35,8 +35,6 @@
 #define SLSI_REPORT_EVENTS_FULL_RESULTS                 (2)
 #define SLSI_REPORT_EVENTS_NO_BATCH                     (4)
 
-#define SLSI_NL_ATTRIBUTE_U8_LEN                        (NLA_HDRLEN + 1)
-#define SLSI_NL_ATTRIBUTE_U16_LEN                       (NLA_HDRLEN + 2)
 #define SLSI_NL_ATTRIBUTE_U32_LEN                       (NLA_HDRLEN + 4)
 #define SLSI_NL_ATTRIBUTE_COUNTRY_CODE                  (4)
 #define SLSI_NL_VENDOR_ID_OVERHEAD                      SLSI_NL_ATTRIBUTE_U32_LEN
