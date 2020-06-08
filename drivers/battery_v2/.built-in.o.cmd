@@ -1,0 +1,1 @@
+cmd_drivers/battery_v2/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/battery_v2/built-in.o drivers/battery_v2/sec_battery.o drivers/battery_v2/sec_adc.o drivers/battery_v2/sec_cisd.o drivers/battery_v2/battery_notifier.o drivers/battery_v2/s2mu005_fuelgauge.o drivers/battery_v2/s2mu005_charger.o 

@@ -1,0 +1,2 @@
+kernel/drivers/thermal/thermal_sys.ko
+kernel/drivers/thermal/samsung/exynos_thermal.ko

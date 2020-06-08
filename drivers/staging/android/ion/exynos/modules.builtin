@@ -1,0 +1,2 @@
+kernel/drivers/staging/android/ion/exynos/exynos_ion.ko
+kernel/drivers/staging/android/ion/exynos/exynos_ion_sync.ko

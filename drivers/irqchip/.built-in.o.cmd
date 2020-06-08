@@ -1,0 +1,1 @@
+cmd_drivers/irqchip/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/irqchip/built-in.o drivers/irqchip/irqchip.o drivers/irqchip/exynos-combiner.o drivers/irqchip/irq-gic.o drivers/irqchip/irq-gic-common.o drivers/irqchip/irq-gic-v3.o 

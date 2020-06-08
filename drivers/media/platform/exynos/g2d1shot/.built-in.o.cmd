@@ -1,0 +1,1 @@
+cmd_drivers/media/platform/exynos/g2d1shot/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/media/platform/exynos/g2d1shot/built-in.o drivers/media/platform/exynos/g2d1shot/g2d1shot_drv.o drivers/media/platform/exynos/g2d1shot/g2d1shot_hw5x.o drivers/media/platform/exynos/g2d1shot/g2d1shot_helper.o 

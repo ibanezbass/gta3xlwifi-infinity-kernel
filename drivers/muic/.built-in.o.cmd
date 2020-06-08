@@ -1,0 +1,1 @@
+cmd_drivers/muic/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/muic/built-in.o drivers/muic/muic_notifier.o drivers/muic/muic_manager.o drivers/muic/muic_core.o drivers/muic/muic_sysfs.o drivers/muic/s2mu005-muic-typec.o 

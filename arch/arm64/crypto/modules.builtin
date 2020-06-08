@@ -1,0 +1,5 @@
+kernel/arch/arm64/crypto/sha1-ce.ko
+kernel/arch/arm64/crypto/sha2-ce.ko
+kernel/arch/arm64/crypto/poly-hash-ce.ko
+kernel/arch/arm64/crypto/aes-ce-cipher.ko
+kernel/arch/arm64/crypto/aes-ce-blk.ko

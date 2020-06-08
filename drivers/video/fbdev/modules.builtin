@@ -1,0 +1,4 @@
+kernel/drivers/video/fbdev/core/fb.ko
+kernel/drivers/video/fbdev/core/cfbfillrect.ko
+kernel/drivers/video/fbdev/core/cfbcopyarea.ko
+kernel/drivers/video/fbdev/core/cfbimgblt.ko

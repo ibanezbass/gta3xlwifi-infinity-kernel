@@ -1,0 +1,3 @@
+kernel/drivers/phy/phy-exynos-mipi.ko
+kernel/drivers/phy/phy-exynos5-usbdrd.ko
+kernel/drivers/phy/phy-exynos-usbdrd3.ko

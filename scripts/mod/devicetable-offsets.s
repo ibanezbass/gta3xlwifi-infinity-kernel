@@ -9,12 +9,12 @@
 // -I arch/arm64/include/generated/uapi -I ./include/uapi
 // -I include/generated/uapi
 // -I drivers/gud/gud-exynos7885/MobiCoreDriver/mci/
-// -iprefix /home/dpi/qb5_8814/workspace/P4_1716/android/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/
-// -D __KERNEL__ -D ANDROID_VERSION=90000 -D ANDROID_MAJOR_VERSION=p
-// -D CONFIG_AS_LSE=1 -D CC_HAVE_ASM_GOTO -D KBUILD_STR(s)=#s
+// -iprefix /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/
+// -D __KERNEL__ -D ANDROID_VERSION=990000 -D CONFIG_AS_LSE=1
+// -D CC_HAVE_ASM_GOTO -D KBUILD_STR(s)=#s
 // -D KBUILD_BASENAME=KBUILD_STR(devicetable_offsets)
 // -D KBUILD_MODNAME=KBUILD_STR(devicetable_offsets)
-// -isystem /home/dpi/qb5_8814/workspace/P4_1716/android/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include
+// -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include
 // -include ./include/linux/kconfig.h
 // -MD scripts/mod/.devicetable-offsets.s.d
 // scripts/mod/devicetable-offsets.c -mbionic -mlittle-endian
@@ -1052,12 +1052,12 @@ main:
 	.string	"long unsigned int"
 .LASF6:
 	.string	"long long unsigned int"
-.LASF14:
-	.string	"/home/dpi/qb5_8814/workspace/P4_1716/android/kernel/exynos7885"
 .LASF1:
 	.string	"unsigned char"
 .LASF9:
 	.string	"char"
+.LASF14:
+	.string	"/home/joshwiles/gta3xlwifi-infinity-kernel"
 .LASF10:
 	.string	"long int"
 .LASF11:

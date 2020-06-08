@@ -1,0 +1,1 @@
+cmd_security/dsms/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o security/dsms/built-in.o security/dsms/dsms_kernel_api.o security/dsms/dsms_access_control.o security/dsms/dsms_policy.o security/dsms/dsms_init.o 

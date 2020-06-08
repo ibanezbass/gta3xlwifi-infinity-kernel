@@ -1,0 +1,1 @@
+cmd_drivers/video/fbdev/core/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/video/fbdev/core/built-in.o drivers/video/fbdev/core/fb_notify.o drivers/video/fbdev/core/fb_cmdline.o drivers/video/fbdev/core/fb.o drivers/video/fbdev/core/cfbfillrect.o drivers/video/fbdev/core/cfbcopyarea.o drivers/video/fbdev/core/cfbimgblt.o 

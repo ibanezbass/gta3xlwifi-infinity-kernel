@@ -1,0 +1,1 @@
+cmd_drivers/misc/samsung/scsc/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/misc/samsung/scsc/built-in.o drivers/misc/samsung/scsc/scsc_logring.o drivers/misc/samsung/scsc/scsc_wifilogger.o drivers/misc/samsung/scsc/scsc_platform_mif.o drivers/misc/samsung/scsc/scsc_mx.o drivers/misc/samsung/scsc/scsc_mmap.o 

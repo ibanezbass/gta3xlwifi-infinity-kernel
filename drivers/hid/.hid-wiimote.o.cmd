@@ -1,0 +1,1 @@
+cmd_drivers/hid/hid-wiimote.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/hid/hid-wiimote.o drivers/hid/hid-wiimote-core.o drivers/hid/hid-wiimote-modules.o drivers/hid/hid-wiimote-debug.o 

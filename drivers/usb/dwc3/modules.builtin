@@ -1,0 +1,2 @@
+kernel/drivers/usb/dwc3/dwc3.ko
+kernel/drivers/usb/dwc3/dwc3-exynos.ko

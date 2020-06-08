@@ -1,0 +1,1 @@
+cmd_drivers/media/platform/exynos/mfc/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/media/platform/exynos/mfc/built-in.o drivers/media/platform/exynos/mfc/s5p-mfc.o 

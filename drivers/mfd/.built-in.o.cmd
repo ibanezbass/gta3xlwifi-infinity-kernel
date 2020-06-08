@@ -1,0 +1,1 @@
+cmd_drivers/mfd/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/mfd/built-in.o drivers/mfd/mfd-core.o drivers/mfd/s2mpu08_core.o drivers/mfd/s2mpu08_irq.o drivers/mfd/s2mu005_core.o drivers/mfd/s2mu005_irq.o drivers/mfd/syscon.o 

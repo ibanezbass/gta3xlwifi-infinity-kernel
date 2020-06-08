@@ -1,0 +1,6 @@
+kernel/drivers/mmc/host/dw_mmc.ko
+kernel/drivers/mmc/host/dw_mmc-pltfm.ko
+kernel/drivers/mmc/host/dw_mmc-exynos.ko
+kernel/drivers/mmc/host/cmdq_hci.ko
+kernel/drivers/mmc/host/dw_mmc-exynos-fmp.ko
+kernel/drivers/mmc/host/dw_mmc-exynos-smu.ko

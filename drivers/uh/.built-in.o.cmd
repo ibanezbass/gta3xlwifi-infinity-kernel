@@ -1,0 +1,1 @@
+cmd_drivers/uh/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/uh/built-in.o drivers/uh/uh_reserve_mem.o drivers/uh/uh_debug_log.o drivers/uh/uh_fault_handler.o 

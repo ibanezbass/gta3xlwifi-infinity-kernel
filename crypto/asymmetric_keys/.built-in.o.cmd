@@ -1,0 +1,1 @@
+cmd_crypto/asymmetric_keys/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o crypto/asymmetric_keys/built-in.o crypto/asymmetric_keys/asymmetric_keys.o crypto/asymmetric_keys/public_key.o crypto/asymmetric_keys/rsa.o crypto/asymmetric_keys/x509_key_parser.o 

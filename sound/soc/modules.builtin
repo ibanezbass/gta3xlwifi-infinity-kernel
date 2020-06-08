@@ -1,0 +1,16 @@
+kernel/sound/soc/snd-soc-core.ko
+kernel/sound/soc/codecs/snd-soc-cod3035.ko
+kernel/sound/soc/codecs/snd-soc-sma1301.ko
+kernel/sound/soc/samsung/exynos7885_cod3035_multi.ko
+kernel/sound/soc/samsung/jack_cod3035_sysfs_cb.ko
+kernel/sound/soc/samsung/abox/abox_util.ko
+kernel/sound/soc/samsung/abox/abox_dbg.ko
+kernel/sound/soc/samsung/abox/abox_dump.ko
+kernel/sound/soc/samsung/abox/abox_log.ko
+kernel/sound/soc/samsung/abox/abox_gic.ko
+kernel/sound/soc/samsung/abox/abox.ko
+kernel/sound/soc/samsung/abox/abox_rdma.ko
+kernel/sound/soc/samsung/abox/abox_wdma.ko
+kernel/sound/soc/samsung/abox/abox_effect.ko
+kernel/sound/soc/samsung/abox/abox_vss.ko
+kernel/sound/soc/samsung/abox/abox_failsafe.ko

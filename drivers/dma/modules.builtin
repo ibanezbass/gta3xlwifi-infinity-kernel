@@ -1,0 +1,2 @@
+kernel/drivers/dma/pl330.ko
+kernel/drivers/dma/samsung-dma.ko

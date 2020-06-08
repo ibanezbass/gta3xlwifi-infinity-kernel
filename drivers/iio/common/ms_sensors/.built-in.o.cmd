@@ -1,0 +1,1 @@
+cmd_drivers/iio/common/ms_sensors/built-in.o :=  rm -f drivers/iio/common/ms_sensors/built-in.o; ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ar rcsD drivers/iio/common/ms_sensors/built-in.o

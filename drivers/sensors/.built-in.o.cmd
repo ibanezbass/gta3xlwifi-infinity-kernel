@@ -1,0 +1,1 @@
+cmd_drivers/sensors/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/sensors/built-in.o drivers/sensors/sensors_core.o drivers/sensors/lis2ds_core.o drivers/sensors/lis2ds_i2c.o drivers/sensors/sx9330_wifi.o drivers/sensors/sx9360_wifi.o 

@@ -1,0 +1,4 @@
+kernel/drivers/sensors/lis2ds_core.ko
+kernel/drivers/sensors/lis2ds_i2c.ko
+kernel/drivers/sensors/sx9330_wifi.ko
+kernel/drivers/sensors/sx9360_wifi.ko

@@ -1,0 +1,3 @@
+kernel/drivers/iio/industrialio.ko
+kernel/drivers/iio/adc/exynos_adc.ko
+kernel/drivers/iio/buffer/kfifo_buf.ko

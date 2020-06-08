@@ -1,0 +1,1 @@
+cmd_drivers/media/platform/exynos/smfc/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/media/platform/exynos/smfc/built-in.o drivers/media/platform/exynos/smfc/smfc.o drivers/media/platform/exynos/smfc/smfc-v4l2-ioctls.o drivers/media/platform/exynos/smfc/smfc-regs.o drivers/media/platform/exynos/smfc/smfc-stream-parser.o 

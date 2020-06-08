@@ -1,0 +1,1 @@
+cmd_security/integrity/five/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o security/integrity/five/built-in.o security/integrity/five/task_integrity.o security/integrity/five/five.o security/integrity/five/five_tee_interface.o 

@@ -1,0 +1,11 @@
+kernel/sound/soc/samsung/abox/abox_util.ko
+kernel/sound/soc/samsung/abox/abox_dbg.ko
+kernel/sound/soc/samsung/abox/abox_dump.ko
+kernel/sound/soc/samsung/abox/abox_log.ko
+kernel/sound/soc/samsung/abox/abox_gic.ko
+kernel/sound/soc/samsung/abox/abox.ko
+kernel/sound/soc/samsung/abox/abox_rdma.ko
+kernel/sound/soc/samsung/abox/abox_wdma.ko
+kernel/sound/soc/samsung/abox/abox_effect.ko
+kernel/sound/soc/samsung/abox/abox_vss.ko
+kernel/sound/soc/samsung/abox/abox_failsafe.ko

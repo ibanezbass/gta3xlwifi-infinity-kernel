@@ -1,0 +1,1 @@
+cmd_drivers/misc/samsung/scsc/scsc_platform_mif.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/misc/samsung/scsc/scsc_platform_mif.o drivers/misc/samsung/scsc/platform_mif_module.o drivers/misc/samsung/scsc/platform_mif.o 

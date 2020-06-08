@@ -1,0 +1,1 @@
+cmd_drivers/input/touchscreen/stm_fts1ba90a/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/input/touchscreen/stm_fts1ba90a/built-in.o drivers/input/touchscreen/stm_fts1ba90a/fts_ts.o drivers/input/touchscreen/stm_fts1ba90a/fts_fwu.o 

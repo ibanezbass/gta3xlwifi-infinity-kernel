@@ -1,0 +1,5 @@
+kernel/drivers/staging/android/timed_gpio.ko
+kernel/drivers/staging/android/alarm-dev.ko
+kernel/drivers/staging/android/ion/ion_test.ko
+kernel/drivers/staging/android/ion/exynos/exynos_ion.ko
+kernel/drivers/staging/android/ion/exynos/exynos_ion_sync.ko

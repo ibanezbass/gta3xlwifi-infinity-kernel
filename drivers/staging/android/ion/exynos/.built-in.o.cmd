@@ -1,0 +1,1 @@
+cmd_drivers/staging/android/ion/exynos/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/staging/android/ion/exynos/built-in.o drivers/staging/android/ion/exynos/exynos_ion.o drivers/staging/android/ion/exynos/exynos_ion_sync.o drivers/staging/android/ion/exynos/ion_hpa_heap.o 

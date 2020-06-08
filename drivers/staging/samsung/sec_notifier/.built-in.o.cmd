@@ -1,0 +1,1 @@
+cmd_drivers/staging/samsung/sec_notifier/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/staging/samsung/sec_notifier/built-in.o drivers/staging/samsung/sec_notifier/vbus_notifier.o 

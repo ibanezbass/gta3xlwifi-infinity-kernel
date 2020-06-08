@@ -1,0 +1,1 @@
+cmd_drivers/gud/gud-exynos7885/sec-os-ctrl/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/gud/gud-exynos7885/sec-os-ctrl/built-in.o drivers/gud/gud-exynos7885/sec-os-ctrl/sec_os_ctrl.o 

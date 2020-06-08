@@ -1,0 +1,5 @@
+kernel/drivers/misc/samsung/scsc/scsc_logring.ko
+kernel/drivers/misc/samsung/scsc/scsc_wifilogger.ko
+kernel/drivers/misc/samsung/scsc/scsc_platform_mif.ko
+kernel/drivers/misc/samsung/scsc/scsc_mx.ko
+kernel/drivers/misc/samsung/scsc/scsc_mmap.ko

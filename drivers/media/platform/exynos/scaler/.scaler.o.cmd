@@ -1,0 +1,1 @@
+cmd_drivers/media/platform/exynos/scaler/scaler.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/media/platform/exynos/scaler/scaler.o drivers/media/platform/exynos/scaler/scaler-core.o drivers/media/platform/exynos/scaler/scaler-regs.o 

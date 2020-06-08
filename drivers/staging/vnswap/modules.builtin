@@ -1,0 +1,2 @@
+kernel/drivers/staging/vnswap/vnswap.ko
+kernel/drivers/staging/vnswap/vnswap_sysfs.ko
