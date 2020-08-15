@@ -33,11 +33,21 @@ enum {
 	CCIC_DOCK_NEW		= 200,	/* For New Event  */
 };
 
+typedef enum {
+	TYPE_C_DETACH = 0,
+	TYPE_C_ATTACH_DFP = 1, /* Host */
+	TYPE_C_ATTACH_UFP = 2, /* Device */
+	TYPE_C_ATTACH_DRP = 3, /* Dual role */
+	TYPE_C_PR_SWAP = 4,
+	TYPE_C_DR_SWAP = 5,
+} CCIC_OTP_MODE;
+
 #define GEAR_VR_DETACH_WAIT_MS		(1000)
 
 /* Samsung Acc VID */
 #define SAMSUNG_VENDOR_ID		0x04E8
 #define SAMSUNG_MPA_VENDOR_ID		0x04B4
+#define TypeC_DP_SUPPORT	(0xFF01)
 /* Samsung Acc PID */
 #define GEARVR_PRODUCT_ID		0xA500
 #define GEARVR_PRODUCT_ID_1		0xA501

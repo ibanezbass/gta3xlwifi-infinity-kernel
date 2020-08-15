@@ -614,7 +614,7 @@ static struct snd_soc_dai_link exynos7885_dai[] = {
 		.stream_name = "UAIF3",
 		.cpu_dai_name = "UAIF3",
 		.platform_name = "snd-soc-dummy",
-#if !defined(CONFIG_SND_SOC_TFA9872) && !defined(CONFIG_SND_SOC_TFA9896) && !defined(CONFIG_SND_SOC_SMA1301)
+#if !defined(CONFIG_SND_SOC_TFA9872) && !defined(CONFIG_SND_SOC_TFA9896) && !defined(CONFIG_SND_SOC_SMA1301) && !defined(CONFIG_SND_SOC_TAS2562)
 		.codec_name = "snd-soc-dummy",
 		.codec_dai_name = "snd-soc-dummy-dai",
 #endif
@@ -906,10 +906,11 @@ static int exynos7885_audio_probe(struct platform_device *pdev)
 	if (ret)
 	{
 		dev_err(card->dev, "snd_soc_register_card() failed:%d\n", ret);
+	} else {
+		universal7885_mic_bias_parse_dt(pdev);
+		universal7885_init_soundcard(card);
 	}
 
-	universal7885_mic_bias_parse_dt(pdev);
-	universal7885_init_soundcard(card);
 	return ret;
 }
 

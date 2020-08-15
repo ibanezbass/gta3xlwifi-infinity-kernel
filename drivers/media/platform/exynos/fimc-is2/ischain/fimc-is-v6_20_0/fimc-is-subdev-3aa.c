@@ -151,7 +151,7 @@ static int fimc_is_ischain_3aa_cfg(struct fimc_is_subdev *leader,
 	 * TODO: get orientation value through interface if needed
 	 */
 	if (test_bit(FIMC_IS_ISCHAIN_REPROCESSING, &device->state)
-		&& (frame && CHK_REMOSAIC_SCN(frame->shot->ctl.aa.sceneMode))) {
+		&& (frame && CHK_REMOSAIC_SCN(frame->shot->ctl.aa.captureIntent))) {
 		if (frame->shot_ext->remosaic_rotation)
 			dma_input->orientation = DMA_INPUT_ORIENTATION_CCW;
 		else

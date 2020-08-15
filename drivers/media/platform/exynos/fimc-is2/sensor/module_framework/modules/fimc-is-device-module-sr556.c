@@ -118,8 +118,16 @@ static int sensor_module_sr556_power_setpin(struct device *dev,
 	int gpio_1p2_en = 0;
 	int gpio_1p8_en = 0;
 	int gpio_1p8_a2p8_en = 0;
+	bool shared_camio_1p8 = false;
+	struct fimc_is_core *core;
 
 	BUG_ON(!dev);
+
+	core = (struct fimc_is_core *)dev_get_drvdata(fimc_is_dev);
+	if (!core) {
+		err("core is NULL");
+		return -EINVAL;
+	}
 
 	dnode = dev->of_node;
 
@@ -163,6 +171,9 @@ static int sensor_module_sr556_power_setpin(struct device *dev,
 		gpio_request_one(gpio_1p8_a2p8_en, GPIOF_OUT_INIT_LOW, "IO_LDO_1P8_A2P8_EN");
 		gpio_free(gpio_1p8_a2p8_en);
 	}
+
+	shared_camio_1p8 = of_property_read_bool(dnode, "shared_camio_1p8");
+
 	SET_PIN_INIT(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON);
 	SET_PIN_INIT(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF);
 	SET_PIN_INIT(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON);
@@ -182,6 +193,10 @@ static int sensor_module_sr556_power_setpin(struct device *dev,
 	}
 	if (gpio_is_valid(gpio_1p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_1p8_en, "1p8_en", PIN_OUTPUT, 1, 1000);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, SRT_ACQUIRE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
+		}
 	}else {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 2000);
 	}
@@ -200,6 +215,10 @@ static int sensor_module_sr556_power_setpin(struct device *dev,
 	}
 	if (gpio_is_valid(gpio_1p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_1p8_en, "1p8_en", PIN_OUTPUT, 0, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, SRT_RELEASE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
+		}
 	} else {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 0, 0);
 	}
@@ -222,6 +241,10 @@ static int sensor_module_sr556_power_setpin(struct device *dev,
 	}
 	if (gpio_is_valid(gpio_1p2_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_1p2_en, "1p2_en", PIN_OUTPUT, 1, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, SRT_ACQUIRE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
+		}
 	}
 	if (gpio_is_valid(gpio_1p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_1p8_en, "1p8_en", PIN_OUTPUT, 1, 1000);
@@ -253,6 +276,10 @@ static int sensor_module_sr556_power_setpin(struct device *dev,
 	}
 	if (gpio_is_valid(gpio_1p2_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_1p2_en, "1p2_en", PIN_OUTPUT, 0, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, SRT_RELEASE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
+		}
 	}
 	if (gpio_is_valid(gpio_sensor_a2p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_sensor_a2p8_en, "sensor_a2p8_en", PIN_OUTPUT, 0, 0);

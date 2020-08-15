@@ -16,6 +16,7 @@ obj-$(CONFIG_SENSORS_LIS2DS_SPI)            += lis2ds_spi.o
 obj-$(CONFIG_SENSORS_K2HH)          += k2hh.o
 # magnetic_sensor
 obj-$(CONFIG_SENSORS_YAS539)		+= yas_mag_drv-yas539.o yas_mag_kernel.o
+obj-$(CONFIG_SENSORS_AK09918C)	    += ak09916c.o
 # optical_sensor
 obj-$(CONFIG_SENSORS_GP2AP070S)	    += gp2ap070s.o
 obj-$(CONFIG_SENSORS_GP2AP110S)	    += gp2ap110s.o
@@ -28,6 +29,8 @@ obj-$(CONFIG_SENSORS_TCS3701)       += ams_dax.o ams_i2c.o
 obj-$(CONFIG_SENSORS_VEML3328)      += veml3328.o
 obj-$(CONFIG_SENSORS_CM3323)        += cm3323.o
 obj-$(CONFIG_SENSORS_TMD3725)       += tmd3725.o
+#barometer_sensor
+obj-$(CONFIG_SENSORS_LPS22HB)       += lps22hb_core.o lps22hb_i2c.o
 #grip_sensor
 obj-$(CONFIG_SENSORS_A96T3X6)		+= a96t3x6.o
 obj-$(CONFIG_SENSORS_A96T3X6_SUB)	+= a96t3x6_sub.o

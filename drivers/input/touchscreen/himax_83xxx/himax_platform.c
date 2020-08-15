@@ -16,6 +16,14 @@
 #include "himax_platform.h"
 #include "himax_common.h"
 
+#ifdef CONFIG_SAMSUNG_TUI
+#include "stui_inf.h"
+#endif
+
+#ifdef CONFIG_SAMSUNG_TUI
+struct himax_ts_data *tui_tsp_info;
+#endif
+
 int i2c_error_count = 0;
 int irq_enable_count = 0;
 
@@ -215,6 +223,10 @@ int himax_parse_dt(struct himax_ts_data *ts,
 		(dt, "himax,factory_item_version", &pdata->item_version) < 0)
 		pdata->item_version = 0;
 
+	of_property_read_string(dt, "himax,project_name",
+				&pdata->proj_name);
+	I("Now project nam=%s\n", pdata->proj_name);
+	
 	himax_vk_parser(dt, pdata);
 	return 0;
 }
@@ -238,6 +250,12 @@ int himax_bus_read(uint8_t command, uint8_t * data, uint32_t length,
 			.buf = data,
 		}
 	};
+
+#ifdef CONFIG_SAMSUNG_TUI
+	if (STUI_MODE_TOUCH_SEC & stui_get_mode())
+		return -EBUSY;
+#endif
+
 	mutex_lock(&private_ts->rw_lock);
 
 	for (retry = 0; retry < toRetry; retry++) {
@@ -245,6 +263,7 @@ int himax_bus_read(uint8_t command, uint8_t * data, uint32_t length,
 			break;
 
 		msleep(20);
+		private_ts->comm_err_count++;
 	}
 
 	if (retry == toRetry) {
@@ -274,6 +293,12 @@ int himax_bus_write(uint8_t command, uint8_t * data, uint32_t length,
 			.buf = buf,
 		}
 	};
+
+#ifdef CONFIG_SAMSUNG_TUI
+	if (STUI_MODE_TOUCH_SEC & stui_get_mode())
+		return -EBUSY;
+#endif
+
 	mutex_lock(&private_ts->rw_lock);
 	buf[0] = command;
 	memcpy(buf + 1, data, length);
@@ -283,6 +308,7 @@ int himax_bus_write(uint8_t command, uint8_t * data, uint32_t length,
 			break;
 
 		msleep(20);
+		private_ts->comm_err_count++;
 	}
 
 	if (retry == toRetry) {
@@ -316,6 +342,12 @@ int himax_bus_master_write(uint8_t * data, uint32_t length, uint8_t toRetry)
 			.buf = buf,
 		}
 	};
+
+#ifdef CONFIG_SAMSUNG_TUI
+	if (STUI_MODE_TOUCH_SEC & stui_get_mode())
+		return -EBUSY;
+#endif
+
 	mutex_lock(&private_ts->rw_lock);
 	memcpy(buf, data, length);
 
@@ -324,6 +356,7 @@ int himax_bus_master_write(uint8_t * data, uint32_t length, uint8_t toRetry)
 			break;
 
 		msleep(20);
+		private_ts->comm_err_count++;
 	}
 
 	if (retry == toRetry) {
@@ -844,6 +877,9 @@ int himax_chip_common_probe(struct i2c_client *client,
 	ts->dev = &client->dev;
 	mutex_init(&ts->rw_lock);
 	private_ts = ts;
+#ifdef CONFIG_SAMSUNG_TUI
+	tui_tsp_info = ts;
+#endif
 
 	ret = himax_chip_common_init();
 
@@ -862,6 +898,47 @@ int himax_chip_common_remove(struct i2c_client *client)
 
 	return 0;
 }
+
+#ifdef CONFIG_SAMSUNG_TUI
+extern int stui_i2c_lock(struct i2c_adapter *adap);
+extern int stui_i2c_unlock(struct i2c_adapter *adap);
+
+int stui_tsp_enter(void)
+{
+	int ret = 0;
+
+	if (!tui_tsp_info)
+		return -EINVAL;
+
+	disable_irq(tui_tsp_info->client->irq);
+	stui_report_all_leave_event(tui_tsp_info);
+
+	ret = stui_i2c_lock(tui_tsp_info->client->adapter);
+	if (ret) {
+		pr_err("[STUI] stui_i2c_lock failed : %d\n", ret);
+		enable_irq(tui_tsp_info->client->irq);
+		return -1;
+	}
+
+	return 0;
+}
+
+int stui_tsp_exit(void)
+{
+	int ret = 0;
+
+	if (!tui_tsp_info)
+		return -EINVAL;
+
+	ret = stui_i2c_unlock(tui_tsp_info->client->adapter);
+	if (ret)
+		pr_err("[STUI] stui_i2c_unlock failed : %d\n", ret);
+
+	enable_irq(tui_tsp_info->client->irq);
+
+	return ret;
+}
+#endif
 
 static const struct i2c_device_id himax_common_ts_id[] = {
 	{HIMAX_common_NAME, 0},

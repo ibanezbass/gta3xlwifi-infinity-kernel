@@ -686,6 +686,26 @@ static int mst_ldo_device_probe(struct platform_device *pdev)
 		printk(KERN_ERR "MST_DRV]]] This device supports MST, %d\n", is_mst_support);
 	} else {
 		printk(KERN_ERR "MST_DRV]]] This device doesn't supports MST, %d\n", is_mst_support);
+
+		mst_drv_class = class_create(THIS_MODULE, "mstldo");
+		if (IS_ERR(mst_drv_class)) {
+			retval = PTR_ERR(mst_drv_class);
+			goto error;
+		}
+
+		mst_drv_dev = device_create(mst_drv_class,
+				NULL /* parent */, 0 /* dev_t */,
+				NULL /* drvdata */,
+				MST_DRV_DEV);
+		if (IS_ERR(mst_drv_dev)) {
+			retval = PTR_ERR(mst_drv_dev);
+			goto error_destroy;
+		}
+
+		retval = device_create_file(mst_drv_dev, &dev_attr_support);
+		if (retval)
+			goto error_destroy;
+
 		return -1;
 	}
 #endif

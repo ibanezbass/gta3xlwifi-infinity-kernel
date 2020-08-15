@@ -105,6 +105,11 @@
 #include <linux/memblock.h>
 #endif
 
+#ifdef CONFIG_SECURITY_DEFEX
+#include <linux/defex.h>
+void __init __weak defex_load_rules(void) { }
+#endif
+
 static int kernel_init(void *);
 
 extern void init_IRQ(void);
@@ -563,13 +568,13 @@ static void __init mm_init(void)
 	 */
 	page_ext_init_flatmem();
 	mem_init();
+	set_memsize_kernel_type(MEMSIZE_KERNEL_STOP);
 	kmem_cache_init();
 	percpu_init_late();
 	pgtable_init();
 	vmalloc_init();
 	ioremap_huge_init();
 	kaiser_init();
-	set_memsize_kernel_type(MEMSIZE_KERNEL_OTHERS);
 }
 #ifdef CONFIG_UH_RKP
 rkp_init_t rkp_init_data __rkp_ro = {
@@ -608,6 +613,20 @@ static void __init rkp_init(void)
 #endif
 
 #ifdef CONFIG_RKP_KDP
+#define VERITY_PARAM_LENGTH 20
+static char verifiedbootstate[VERITY_PARAM_LENGTH];
+int __check_verifiedboot __kdp_ro = 0;
+static int __init verifiedboot_state_setup(char *str)
+{
+	strlcpy(verifiedbootstate, str, sizeof(verifiedbootstate));
+
+	if(!strncmp(verifiedbootstate, "orange", sizeof("orange")))
+		__check_verifiedboot = 1;
+
+	return 0;
+}
+__setup("androidboot.verifiedbootstate=", verifiedboot_state_setup);
+
 void kdp_init(void)
 {
 	kdp_init_t cred;
@@ -639,6 +658,9 @@ void kdp_init(void)
 #else
 	cred.task_threadinfo = 0;
 #endif
+
+	cred.verifiedbootstate = (u64)verifiedbootstate;
+
 	uh_call(UH_APP_RKP, 0x40, (u64)&cred, 0, 0, 0);
 }
 #endif /*CONFIG_RKP_KDP*/
@@ -685,7 +707,9 @@ asmlinkage __visible void __init start_kernel(void)
 	build_all_zonelists(NULL, NULL);
 	page_alloc_init();
 
+#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
 	pr_notice("Kernel command line: %s\n", boot_command_line);
+#endif
 	parse_early_param();
 	after_dashes = parse_args("Booting kernel",
 				  static_command_line, __start___param,
@@ -843,7 +867,6 @@ asmlinkage __visible void __init start_kernel(void)
 
 	ftrace_init();
 
-	set_memsize_kernel_type(MEMSIZE_KERNEL_STOP);
 	/* Do the rest non-__init'ed, we're now alive */
 	rest_init();
 }
@@ -1257,4 +1280,7 @@ static noinline void __init kernel_init_freeable(void)
 
 	integrity_load_keys();
 	load_default_modules();
+#ifdef CONFIG_SECURITY_DEFEX
+	defex_load_rules();
+#endif
 }

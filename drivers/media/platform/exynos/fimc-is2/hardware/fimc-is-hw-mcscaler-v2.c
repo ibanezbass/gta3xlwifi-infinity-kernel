@@ -83,6 +83,11 @@ static int fimc_is_hw_mcsc_handle_interrupt(u32 id, void *context)
 	instance = atomic_read(&hw_ip->instance);
 	param = &hw_ip->region[instance]->parameter.mcs;
 
+	if (!test_bit(HW_OPEN, &hw_ip->state)) {
+		mserr_hw("invalid interrupt", instance, hw_ip);
+		return 0;
+	}
+
 	fimc_is_scaler_get_input_status(hw_ip->regs, hw_ip->id, &hl, &vl);
 	/* read interrupt status register (sc_intr_status) */
 	intr_mask = fimc_is_scaler_get_intr_mask(hw_ip->regs, hw_ip->id);
@@ -128,32 +133,6 @@ static int fimc_is_hw_mcsc_handle_interrupt(u32 id, void *context)
 
 	if (status & (1 << INTR_MC_SCALER_WDMA_FINISH))
 		mserr_hw("Disabeld interrupt occurred! WDAM FINISH!! (0x%x)", instance, hw_ip, status);
-
-	if (status & (1 << INTR_MC_SCALER_FRAME_END)) {
-		atomic_inc(&hw_ip->count.fe);
-		hw_ip->cur_e_int++;
-		if (hw_ip->cur_e_int >= hw_ip->num_buffers) {
-			fimc_is_hw_mcsc_frame_done(hw_ip, NULL, IS_SHOT_SUCCESS);
-
-			if (!atomic_read(&hardware->streaming[hardware->sensor_position[instance]]))
-				sinfo_hw("[F:%d]F.E\n", hw_ip, hw_fcount);
-
-			atomic_set(&hw_ip->status.Vvalid, V_BLANK);
-			if (atomic_read(&hw_ip->count.fs) < atomic_read(&hw_ip->count.fe)) {
-				mserr_hw("fs(%d), fe(%d), dma(%d), status(0x%x)", instance, hw_ip,
-					atomic_read(&hw_ip->count.fs),
-					atomic_read(&hw_ip->count.fe),
-					atomic_read(&hw_ip->count.dma), status);
-			}
-
-			wake_up(&hw_ip->status.wait_queue);
-			head = GET_HEAD_GROUP_IN_DEVICE(FIMC_IS_DEVICE_ISCHAIN, hw_ip->group[instance]);
-			if (!test_bit(FIMC_IS_GROUP_OTF_INPUT, &head->state))
-				up(&hw_ip->smp_resource);
-			flag_clk_gate = true;
-			hw_ip->mframe = NULL;
-		}
-	}
 
 	if (status & (1 << INTR_MC_SCALER_FRAME_START)) {
 		atomic_inc(&hw_ip->count.fs);
@@ -212,6 +191,32 @@ static int fimc_is_hw_mcsc_handle_interrupt(u32 id, void *context)
 			 */
 			if (!test_bit(FIMC_IS_GROUP_OTF_INPUT, &group->state))
 				fimc_is_scaler_stop(hw_ip->regs, hw_ip->id);
+		}
+	}
+
+	if (status & (1 << INTR_MC_SCALER_FRAME_END)) {
+		atomic_inc(&hw_ip->count.fe);
+		hw_ip->cur_e_int++;
+		if (hw_ip->cur_e_int >= hw_ip->num_buffers) {
+			fimc_is_hw_mcsc_frame_done(hw_ip, NULL, IS_SHOT_SUCCESS);
+
+			if (!atomic_read(&hardware->streaming[hardware->sensor_position[instance]]))
+				sinfo_hw("[F:%d]F.E\n", hw_ip, hw_fcount);
+
+			atomic_set(&hw_ip->status.Vvalid, V_BLANK);
+			if (atomic_read(&hw_ip->count.fs) < atomic_read(&hw_ip->count.fe)) {
+				mserr_hw("fs(%d), fe(%d), dma(%d), status(0x%x)", instance, hw_ip,
+					atomic_read(&hw_ip->count.fs),
+					atomic_read(&hw_ip->count.fe),
+					atomic_read(&hw_ip->count.dma), status);
+			}
+
+			wake_up(&hw_ip->status.wait_queue);
+			head = GET_HEAD_GROUP_IN_DEVICE(FIMC_IS_DEVICE_ISCHAIN, hw_ip->group[instance]);
+			if (!test_bit(FIMC_IS_GROUP_OTF_INPUT, &head->state))
+				up(&hw_ip->smp_resource);
+			flag_clk_gate = true;
+			hw_ip->mframe = NULL;
 		}
 	}
 
@@ -817,6 +822,8 @@ static int fimc_is_hw_mcsc_shot(struct fimc_is_hw_ip *hw_ip, struct fimc_is_fram
 		hw_ip->internal_fcount = frame->fcount;
 		goto config;
 	}
+
+	hw_mcsc->back_param = param;
 
 	fimc_is_hw_mcsc_update_param(hw_ip, mcs_param, instance);
 
@@ -1564,13 +1571,22 @@ int fimc_is_hw_mcsc_poly_phase(struct fimc_is_hw_ip *hw_ip, struct param_mcs_inp
 	fimc_is_scaler_set_poly_src_size(hw_ip->regs, output_id, src_pos_x, src_pos_y,
 		src_width, src_height);
 
-	if ((src_width <= (out_width * MCSC_POLY_RATIO_DOWN))
-		&& (out_width <= (src_width * MCSC_POLY_RATIO_UP))) {
+	if (((src_width <= (out_width * MCSC_POLY_QUALITY_RATIO_DOWN))
+		&& (out_width <= (src_width * MCSC_POLY_RATIO_UP)))
+		|| (output_id == MCSC_OUTPUT3 || output_id == MCSC_OUTPUT4)) {
 		poly_dst_width = out_width;
 		post_en = false;
+	} else if ((src_width <= (out_width * MCSC_POLY_QUALITY_RATIO_DOWN * MCSC_POST_RATIO_DOWN))
+		&& ((out_width * MCSC_POLY_QUALITY_RATIO_DOWN) < src_width)) {
+		poly_dst_width = MCSC_ROUND_UP(src_width / MCSC_POLY_QUALITY_RATIO_DOWN, 2);
+		if (poly_dst_width > MCSC_POST_MAX_WIDTH)
+			poly_dst_width = MCSC_POST_MAX_WIDTH;
+		post_en = true;
 	} else if ((src_width <= (out_width * MCSC_POLY_RATIO_DOWN * MCSC_POST_RATIO_DOWN))
-		&& ((out_width * MCSC_POLY_RATIO_DOWN) < src_width)) {
-		poly_dst_width = MCSC_ROUND_UP(src_width / MCSC_POLY_RATIO_DOWN, 2);
+		&& ((out_width *  MCSC_POLY_QUALITY_RATIO_DOWN * MCSC_POST_RATIO_DOWN) < src_width)) {
+		poly_dst_width = MCSC_ROUND_UP(out_width * MCSC_POST_RATIO_DOWN, 2);
+		if (poly_dst_width > MCSC_POST_MAX_WIDTH)
+			poly_dst_width = MCSC_POST_MAX_WIDTH;
 		post_en = true;
 	} else {
 		mserr_hw("hw_mcsc_poly_phase: Unsupported H ratio, (%dx%d)->(%dx%d)\n",
@@ -1579,16 +1595,21 @@ int fimc_is_hw_mcsc_poly_phase(struct fimc_is_hw_ip *hw_ip, struct param_mcs_inp
 		post_en = true;
 	}
 
-	if ((src_height <= (out_height * MCSC_POLY_RATIO_DOWN))
-		&& (out_height <= (src_height * MCSC_POLY_RATIO_UP))) {
+	if (((src_height <= (out_height * MCSC_POLY_QUALITY_RATIO_DOWN))
+		&& (out_height <= (src_height * MCSC_POLY_RATIO_UP)))
+		|| (output_id == MCSC_OUTPUT3 || output_id == MCSC_OUTPUT4)) {
 		poly_dst_height = out_height;
 		post_en = false;
+	} else if ((src_height <= (out_height * MCSC_POLY_QUALITY_RATIO_DOWN * MCSC_POST_RATIO_DOWN))
+		&& ((out_height * MCSC_POLY_QUALITY_RATIO_DOWN) < src_height)) {
+		poly_dst_height = (src_height / MCSC_POLY_QUALITY_RATIO_DOWN);
+		post_en = true;
 	} else if ((src_height <= (out_height * MCSC_POLY_RATIO_DOWN * MCSC_POST_RATIO_DOWN))
-		&& ((out_height * MCSC_POLY_RATIO_DOWN) < src_height)) {
-		poly_dst_height = (src_height / MCSC_POLY_RATIO_DOWN);
+		&& ((out_height * MCSC_POLY_QUALITY_RATIO_DOWN * MCSC_POST_RATIO_DOWN) < src_height)) {
+		poly_dst_height = (out_height * MCSC_POST_RATIO_DOWN);
 		post_en = true;
 	} else {
-		mserr_hw("hw_mcsc_poly_phase: Unsupported H ratio, (%dx%d)->(%dx%d)\n",
+		mserr_hw("hw_mcsc_poly_phase: Unsupported V ratio, (%dx%d)->(%dx%d)\n",
 			instance, hw_ip, src_width, src_height, out_width, out_height);
 		poly_dst_height = (src_height / MCSC_POLY_RATIO_DOWN);
 		post_en = true;
@@ -2681,6 +2702,35 @@ static int fimc_is_hw_mcsc_get_meta(struct fimc_is_hw_ip *hw_ip,
 	return ret;
 }
 
+int fimc_is_hw_mcsc_restore(struct fimc_is_hw_ip *hw_ip, u32 instance)
+{
+	int ret = 0;
+	struct fimc_is_hw_mcsc *hw_mcsc;
+	struct is_param_region *param;
+
+	BUG_ON(!hw_ip);
+
+	hw_mcsc = (struct fimc_is_hw_mcsc *)hw_ip->priv_info;
+
+	fimc_is_hw_mcsc_reset(hw_ip);
+
+	param = hw_mcsc->back_param;
+	param->tpu.config.tdnr_bypass = true;
+
+	/* setting for MCSC */
+	fimc_is_hw_mcsc_update_param(hw_ip, &param->mcs, instance);
+	info_hw("[RECOVERY]: mcsc update param\n");
+
+	/* setting for TDNR */
+	ret = fimc_is_hw_mcsc_recovery_tdnr_register(hw_ip, param, instance);
+	info_hw("[RECOVERY]: tdnr update param\n");
+
+	fimc_is_hw_mcsc_clear_interrupt(hw_ip);
+	fimc_is_scaler_start(hw_ip->regs, hw_ip->id);
+
+	return ret;
+}
+
 const struct fimc_is_hw_ip_ops fimc_is_hw_mcsc_ops = {
 	.open			= fimc_is_hw_mcsc_open,
 	.init			= fimc_is_hw_mcsc_init,
@@ -2695,7 +2745,8 @@ const struct fimc_is_hw_ip_ops fimc_is_hw_mcsc_ops = {
 	.apply_setfile		= fimc_is_hw_mcsc_apply_setfile,
 	.delete_setfile		= fimc_is_hw_mcsc_delete_setfile,
 	.size_dump		= fimc_is_hw_mcsc_size_dump,
-	.clk_gate		= fimc_is_hardware_clk_gate
+	.clk_gate		= fimc_is_hardware_clk_gate,
+	.restore		= fimc_is_hw_mcsc_restore
 };
 
 int fimc_is_hw_mcsc_probe(struct fimc_is_hw_ip *hw_ip, struct fimc_is_interface *itf,

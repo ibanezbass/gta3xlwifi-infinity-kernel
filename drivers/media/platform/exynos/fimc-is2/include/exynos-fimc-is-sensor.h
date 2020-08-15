@@ -106,6 +106,7 @@ enum exynos_sensor_id {
 	SENSOR_NAME_S5K2P6		 = 58, /* TODO */
 	SENSOR_NAME_S5K3L6		 = 59,
 	SENSOR_NAME_S5K2X5		 = 60,
+	SENSOR_NAME_S5KGM2		 = 61,
 
 	/* 101~200: SONY sensors */
 	SENSOR_NAME_IMX135		 = 101,
@@ -123,6 +124,11 @@ enum exynos_sensor_id {
 	SENSOR_NAME_IMX241		 = 113,
 	SENSOR_NAME_IMX345		 = 114,
 	SENSOR_NAME_IMX576		 = 115,
+	SENSOR_NAME_IMX316		 = 116,
+	SENSOR_NAME_IMX586		 = 117,
+	SENSOR_NAME_IMX471		 = 118,
+	SENSOR_NAME_IMX582		 = 120,
+	SENSOR_NAME_IMX616		 = 121,
 
 	/* 201~255: Other vendor sensors */
 	SENSOR_NAME_SR261		 = 201,
@@ -135,6 +141,8 @@ enum exynos_sensor_id {
 	SENSOR_NAME_SR846		 = 208,
 	SENSOR_NAME_SR556		 = 209,
 	SENSOR_NAME_GC5035		 = 210,
+	SENSOR_NAME_HI1336		 = 211,
+	SENSOR_NAME_HI1631		 = 213,
 
 	SENSOR_NAME_S5K5E6		 = 254, // IRIS Camera Sensor
 
@@ -189,6 +197,7 @@ enum flash_drv_name {
 	FLADRV_NAME_DRV_FLASH_GPIO = 11, /* Common Gpio type(Flash mode, Movie/torch mode) */
 	FLADRV_NAME_LM3644	= 12,
 	FLADRV_NAME_DRV_FLASH_I2C = 13, /* Common I2C type */
+	FLADRV_NAME_RT8547	= 16,
 	FLADRV_NAME_END,
 	FLADRV_NAME_NOTHING	= 100,
 };

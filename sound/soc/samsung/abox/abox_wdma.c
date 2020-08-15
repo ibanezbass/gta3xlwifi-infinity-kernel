@@ -234,7 +234,6 @@ static int abox_wdma_trigger(struct snd_pcm_substream *substream, int cmd)
 	struct device *dev = platform->dev;
 	struct abox_platform_data *data = dev_get_drvdata(dev);
 	struct device *dev_abox = &data->pdev_abox->dev;
-	struct snd_pcm_runtime *runtime = substream->runtime;
 	int id = data->id;
 	int result;
 	ABOX_IPC_MSG msg;
@@ -250,9 +249,6 @@ static int abox_wdma_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		if (memblock_is_memory(runtime->dma_addr))
-			abox_request_dram_on(data->pdev_abox, dev, true);
-
 		pcmtask_msg->param.trigger = 1;
 		result = abox_request_ipc(dev_abox,
 				msg.ipcid, &msg, sizeof(msg), 1, 0);
@@ -284,8 +280,6 @@ static int abox_wdma_trigger(struct snd_pcm_substream *substream, int cmd)
 			break;
 		}
 
-		if (memblock_is_memory(runtime->dma_addr))
-			abox_request_dram_on(data->pdev_abox, dev, false);
 		break;
 	default:
 		result = -EINVAL;

@@ -352,12 +352,14 @@ int sensor_3p8_cis_group_param_hold(struct v4l2_subdev *subdev, bool hold)
 
 	BUG_ON(!cis);
 	BUG_ON(!cis->cis_data);
-
+	
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	ret = sensor_3p8_cis_group_param_hold_func(subdev, hold);
 	if (ret < 0)
 		goto p_err;
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -384,6 +386,7 @@ int sensor_3p8_cis_set_global_setting(struct v4l2_subdev *subdev)
 	} else
 #endif
 	{
+		I2C_MUTEX_LOCK(cis->i2c_lock);
 		ret = sensor_cis_set_registers(subdev, sensor_3p8_global, sensor_3p8_global_size);
 	}
 
@@ -395,6 +398,7 @@ int sensor_3p8_cis_set_global_setting(struct v4l2_subdev *subdev)
 	dbg_sensor(1, "[%s] global setting done\n", __func__);
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -442,6 +446,7 @@ int sensor_3p8_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 	} else
 #endif
 	{
+		I2C_MUTEX_LOCK(cis->i2c_lock);
 		sensor_3p8_cis_data_calculation(sensor_3p8_pllinfos[mode], cis->cis_data);
 		ret = sensor_cis_set_registers(subdev, sensor_3p8_setfiles[mode], sensor_3p8_setfile_sizes[mode]);
 	}
@@ -483,6 +488,7 @@ int sensor_3p8_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 	dbg_sensor(1, "[%s] mode changed(%d)\n", __func__, mode);
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -552,6 +558,7 @@ int sensor_3p8_cis_set_size(struct v4l2_subdev *subdev, cis_shared_data *cis_dat
 	if (ret < 0)
 		 goto p_err;
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	/* 2. pixel address region setting */
 	start_x = ((SENSOR_3P8_MAX_WIDTH - cis_data->cur_width * ratio_w) / 2) & (~0x1);
 	start_y = ((SENSOR_3P8_MAX_HEIGHT - cis_data->cur_height * ratio_h) / 2) & (~0x1);
@@ -640,6 +647,7 @@ int sensor_3p8_cis_set_size(struct v4l2_subdev *subdev, cis_shared_data *cis_dat
 #endif
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -673,6 +681,7 @@ int sensor_3p8_cis_stream_on(struct v4l2_subdev *subdev)
 
 	dbg_sensor(1, "[MOD:D:%d] %s\n", cis->id, __func__);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	ret = sensor_3p8_cis_group_param_hold_func(subdev, 0x00);
 	if (ret < 0)
 		err("[%s] sensor_3p8_cis_group_param_hold_func fail\n", __func__);
@@ -720,6 +729,7 @@ int sensor_3p8_cis_stream_on(struct v4l2_subdev *subdev)
 #endif
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -753,6 +763,7 @@ int sensor_3p8_cis_stream_off(struct v4l2_subdev *subdev)
 
 	dbg_sensor(1, "[MOD:D:%d] %s\n", cis->id, __func__);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	ret = sensor_3p8_cis_group_param_hold_func(subdev, 0x00);
 	if (ret < 0)
 		err("[%s] sensor_3p8_cis_group_param_hold_func fail\n", __func__);
@@ -773,6 +784,7 @@ int sensor_3p8_cis_stream_off(struct v4l2_subdev *subdev)
 #endif
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -853,6 +865,7 @@ int sensor_3p8_cis_set_exposure_time(struct v4l2_subdev *subdev, struct ae_param
 		short_coarse_int = cis_data->min_coarse_integration_time;
 	}
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_3p8_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -891,7 +904,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1103,6 +1116,7 @@ int sensor_3p8_cis_set_frame_duration(struct v4l2_subdev *subdev, u32 frame_dura
 		KERN_CONT "(line_length_pck%#x), frame_length_lines(%#x)\n",
 		cis->id, __func__, vt_pic_clk_freq_mhz, frame_duration, line_length_pck, frame_length_lines);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_3p8_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1128,7 +1142,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1277,6 +1291,7 @@ int sensor_3p8_cis_set_analog_gain(struct v4l2_subdev *subdev, struct ae_param *
 	dbg_sensor(1, "[MOD:D:%d] %s(vsync cnt = %d), input_again = %d us, analog_gain(%#x)\n",
 		cis->id, __func__, cis->cis_data->sen_vsync_count, again->val, analog_gain);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_3p8_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1298,7 +1313,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1329,7 +1344,8 @@ int sensor_3p8_cis_get_analog_gain(struct v4l2_subdev *subdev, u32 *again)
 		ret = -EINVAL;
 		goto p_err;
 	}
-
+	
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_3p8_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1356,7 +1372,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1520,6 +1536,7 @@ int sensor_3p8_cis_set_digital_gain(struct v4l2_subdev *subdev, struct ae_param 
 	dbg_sensor(1, "[MOD:D:%d] %s(vsync cnt = %d), input_dgain = %d/%d us, long_gain(%#x), short_gain(%#x)\n",
 			cis->id, __func__, cis->cis_data->sen_vsync_count, dgain->long_val, dgain->short_val, long_gain, short_gain);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_3p8_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1553,7 +1570,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1585,6 +1602,7 @@ int sensor_3p8_cis_get_digital_gain(struct v4l2_subdev *subdev, u32 *dgain)
 		goto p_err;
 	}
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_3p8_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1611,7 +1629,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 

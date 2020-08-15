@@ -184,23 +184,39 @@ static int slsi_rx_netdev_mlme(struct slsi_dev *sdev, struct net_device *dev, st
 	case MLME_RANGE_DONE_IND:
 		slsi_rx_range_done_ind(sdev, dev, skb);
 		break;
-
-#endif
 	case MLME_EVENT_LOG_IND:
 		slsi_rx_event_log_indication(sdev, dev, skb);
 		break;
+#endif
 #ifdef CONFIG_SCSC_WIFI_NAN_ENABLE
 	case MLME_NAN_EVENT_IND:
 		slsi_nan_event(sdev, dev, skb);
-		slsi_kfree_skb(skb);
 		break;
 	case MLME_NAN_FOLLOWUP_IND:
 		slsi_nan_followup_ind(sdev, dev, skb);
-		slsi_kfree_skb(skb);
 		break;
 	case MLME_NAN_SERVICE_IND:
 		slsi_nan_service_ind(sdev, dev, skb);
-		slsi_kfree_skb(skb);
+		break;
+	case MLME_NDP_REQUEST_IND:
+		slsi_nan_ndp_setup_ind(sdev, dev, skb, true);
+		break;
+	case MLME_NDP_REQUESTED_IND:
+		slsi_nan_ndp_requested_ind(sdev, dev, skb);
+		break;
+	case MLME_NDP_RESPONSE_IND:
+		slsi_nan_ndp_setup_ind(sdev, dev, skb, false);
+		break;
+	case MLME_NDP_TERMINATE_IND:
+		slsi_nan_ndp_termination_ind(sdev, dev, skb, false);
+		break;
+	case MLME_NDP_TERMINATED_IND:
+		slsi_nan_ndp_termination_ind(sdev, dev, skb, true);
+		break;
+#endif
+#ifdef CONFIG_SCSC_WLAN_SAE_CONFIG
+	case MLME_SYNCHRONISED_IND:
+		slsi_rx_synchronised_ind(sdev, dev, skb);
 		break;
 #endif
 #ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
@@ -348,10 +364,17 @@ static int sap_mlme_rx_handler(struct slsi_dev *sdev, struct sk_buff *skb)
 			}
 			return slsi_rx_action_enqueue_netdev_mlme(sdev, skb, vif);
 #ifdef CONFIG_SCSC_WLAN_GSCAN_ENABLE
+#ifdef CONFIG_SCSC_WIFI_NAN_ENABLE
 		case MLME_NAN_EVENT_IND:
 		case MLME_NAN_FOLLOWUP_IND:
 		case MLME_NAN_SERVICE_IND:
+		case MLME_NDP_REQUEST_IND:
+		case MLME_NDP_REQUESTED_IND:
+		case MLME_NDP_RESPONSE_IND:
+		case MLME_NDP_TERMINATE_IND:
+		case MLME_NDP_TERMINATED_IND:
 			return slsi_rx_enqueue_netdev_mlme(sdev, skb, vif);
+#endif
 		case MLME_RANGE_IND:
 		case MLME_RANGE_DONE_IND:
 			if (vif == 0)

@@ -22,10 +22,8 @@
 #define __MUIC_INTERNAL_H__
 
 #include <linux/muic/muic.h>
-
-#if defined(CONFIG_MUIC_SUPPORT_POWERMETER)
 #include <linux/power_supply.h>
-#endif
+#include "../drivers/battery_v2/include/sec_charging_common.h"
 
 #define muic_err(fmt, ...)					\
 	do {							\
@@ -175,6 +173,14 @@ typedef enum {
 	MUIC_ABNORMAL_OTG,
 } muic_usb_killer_t;
 
+#if defined(CONFIG_MUIC_SUPPORT_PRSWAP)
+typedef enum {
+	MUIC_PRSWAP_UNDIFINED,
+	MUIC_PRSWAP_TO_SINK,
+	MUIC_PRSWAP_TO_SRC,
+} muic_prswap_t;
+#endif
+
 struct muic_interface_t {
 	struct device *dev;
 	struct i2c_client *i2c; /* i2c addr: 0x4A; MUIC */
@@ -247,10 +253,12 @@ struct muic_interface_t {
 	/* Operation Mode */
 	enum muic_op_mode	opmode;
 
-#if defined(CONFIG_MUIC_SUPPORT_POWERMETER)
+#if defined(CONFIG_MUIC_SUPPORT_PRSWAP)
+	muic_prswap_t prswap_status;
+#endif
+
 	struct power_supply *psy_muic;
 	struct power_supply_desc psy_muic_desc;
-#endif
 
 	/* function pointer should be registered from each specific driver file */
 	int (*set_com_to_open_with_vbus)(void *);
@@ -312,6 +320,11 @@ struct muic_interface_t {
 	int (*set_hiccup_mode)(void *, bool en);
 	int (*get_hiccup_mode)(void *);
 #endif
+#if defined(CONFIG_MUIC_SUPPORT_PRSWAP)
+	void (*set_chg_det)(void *, bool en);
+	void (*prswap_work)(void *, int mode);
+#endif
+	void (*set_bypass)(void *);
 };
 
 extern struct device *switch_device;
@@ -322,8 +335,6 @@ int muic_manager_get_legacy_dev(struct muic_interface_t *muic_if);
 void muic_manager_set_legacy_dev(struct muic_interface_t *muic_if, int new_dev);
 void muic_manager_handle_ccic_detach(struct muic_interface_t *muic_if);
 int muic_manager_dcd_rescan(struct muic_interface_t *muic_if);
-#if defined(CONFIG_MUIC_SUPPORT_POWERMETER)
 int muic_manager_psy_init(struct muic_interface_t *muic_if, struct device *parent);
-#endif
 
 #endif /* __MUIC_INTERNAL_H__ */

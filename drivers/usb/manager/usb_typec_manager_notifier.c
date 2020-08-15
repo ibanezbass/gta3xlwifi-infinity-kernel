@@ -295,9 +295,10 @@ static int manager_external_notifier_notification(struct notifier_block *nb,
 	switch (action) {
 	case EXTERNAL_NOTIFY_DEVICEADD:
 		pr_info("%s EXTERNAL_NOTIFY_DEVICEADD, enable=%d\n", __func__, enable);
+		pr_info("drp_state %d, pdic_attach_state %d, muic_attach_state %d\n",
+				typec_manager.ccic_drp_state, typec_manager.ccic_attach_state, typec_manager.muic_action);
 		if (enable &&
 			typec_manager.ccic_drp_state == USB_STATUS_NOTIFY_ATTACH_DFP &&
-			typec_manager.ccic_attach_state == CCIC_NOTIFY_ATTACH &&
 			typec_manager.muic_action != MUIC_NOTIFY_CMD_DETACH) {
 			pr_info("%s: a usb device is added in host mode\n", __func__);
 			/* USB cable Type */
@@ -522,7 +523,9 @@ static void muic_fake_event_work(struct work_struct *work)
 
 	typec_manager.muic_fake_event_wq_processing = 0;
 
-	if( typec_manager.ccic_rid_state == RID_523K ||  typec_manager.ccic_rid_state == RID_619K
+	if( typec_manager.ccic_rid_state == RID_523K
+		|| typec_manager.ccic_rid_state == RID_619K
+		|| typec_manager.ccic_rid_state == RID_301K
 		|| typec_manager.cable_type == MANAGER_NOTIFY_MUIC_UART
 		|| typec_manager.ccic_drp_state == USB_STATUS_NOTIFY_ATTACH_DFP 
 		|| typec_manager.vbus_state == STATUS_VBUS_HIGH) {

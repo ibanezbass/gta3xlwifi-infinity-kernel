@@ -15,16 +15,16 @@
 #define FRONT_SENSOR_CHECKSUM_LEN (0x1F0F - 0x1700 + 0x1)
 
 // The start address of checksum is not same with OEM CAL start address
-/*
+
 const struct rom_extend_cal_addr front_3p8sp_extend_cal_addr[COUNT_EXTEND_CAL_DATA] = {
 	{"oem_checksum_base_addr", 0x0190},
 };
-*/
+
 const struct fimc_is_vender_rom_addr front_3p8sp_cal_addr = {
 	/* Set '-1' if not used */
 
 	'A',				//char		camera_module_es_version;
-	(1),				//u8			cal_map_es_version;
+	'1',				//u8			cal_map_es_version;
 	(8 * 1024),		//int32_t		rom_max_cal_size;
 
 	0x00,			//int32_t		rom_header_cal_data_start_addr;
@@ -119,7 +119,7 @@ const struct fimc_is_vender_rom_addr front_3p8sp_cal_addr = {
 	-1,				//int32_t		rom_dual_shift_x_addr;
 	-1,				//int32_t		rom_dual_shift_y_addr;
 
-	//front_3p8sp_extend_cal_addr,			//void*			extended_cal_addr;
+	front_3p8sp_extend_cal_addr,			//void*			extended_cal_addr;
 };
 
 

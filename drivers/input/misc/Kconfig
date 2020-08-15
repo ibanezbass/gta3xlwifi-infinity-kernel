@@ -818,4 +818,15 @@ config FLIP_COVER
 	help
 	  Enable Hall Feature
 
+config HALL_EVENT_REVERSE
+	tristate "Adjusting the status value of HALL IC"
+	default y
+	depends on FLIP_COVER
+	depends on ANDROID_MAJOR_VERSION >= "q"
+	help
+	  Adjusting the status value of HALL IC.
+	  This was required from input FW.
+
+	  If unsure, say N.
+
 endif

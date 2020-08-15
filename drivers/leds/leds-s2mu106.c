@@ -418,15 +418,30 @@ int s2mu106_led_mode_ctrl(int state)
 		case S2MU106_FLED_MODE_OFF:
 			gpio_direction_output(gpio_torch, 0);
 			gpio_direction_output(gpio_flash, 0);
+			if(s2mu106_fled_get_torch_curr(fled, 1) != fled->preflash_current/10)
+				s2mu106_fled_set_torch_curr(fled, 1, fled->preflash_current);
+
 			s2mu106_fled_operating_mode(fled, AUTO_MODE);
 			break;
 		case S2MU106_FLED_MODE_TORCH:
 			/* chgange SYS MODE when turn on torch */
+			if((s2mu106_fled_get_torch_curr(fled, 1)/10) != fled->preflash_current/10)
+				s2mu106_fled_set_torch_curr(fled, 1, fled->preflash_current);
 			s2mu106_fled_operating_mode(fled, SYS_MODE);
 			gpio_direction_output(gpio_torch, 1);
 			break;
 		case S2MU106_FLED_MODE_FLASH:
 			gpio_direction_output(gpio_flash, 1);
+			break;
+		case S2MU106_FLED_MODE_MOVIE:
+			s2mu106_fled_operating_mode(fled, SYS_MODE);
+			s2mu106_fled_set_torch_curr(fled, 1, fled->movie_current);
+			gpio_direction_output(gpio_torch, 1);
+			break;
+		case S2MU106_FLED_MODE_FACTORY:
+			/* chgange SYS MODE when turn on torch */
+			s2mu106_fled_operating_mode(fled, SYS_MODE);
+			gpio_direction_output(gpio_torch, 1);
 			break;
 		default:
 			break;
@@ -978,10 +993,10 @@ static ssize_t rear_flash_store(struct device *dev,
 		s2mu106_fled_set_mode(g_fled_data, 1, mode);
 	} else {
 		if (mode == S2MU106_FLED_MODE_TORCH) {
-			pr_info("%s: %d: S2MU106_FLED_MODE_TORCH - %dmA\n", __func__, value, torch_current );
+			pr_info("%s: %d: S2MU106_FLED_MODE_FACTORY - %dmA\n", __func__, value, torch_current );
 			/* torch current set */
 			s2mu106_fled_set_torch_curr(g_fled_data, 1, torch_current);
-			s2mu106_led_mode_ctrl(S2MU106_FLED_MODE_TORCH);
+			s2mu106_led_mode_ctrl(S2MU106_FLED_MODE_FACTORY);
 		} else if (mode == S2MU106_FLED_MODE_FLASH) {
 			pr_info("%s: %d: S2MU106_FLED_MODE_FLASH - %dmA\n", __func__, value, flash_current );
 			/* flash current set */

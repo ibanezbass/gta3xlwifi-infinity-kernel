@@ -1,6 +1,6 @@
 /* sma1301.c -- sma1301 ALSA SoC Audio driver
  *
- * r008_TEST, 2019.01.11	- initial version  sma1301
+ * r012, 2019.07.16	- initial version  sma1301
  *
  * Copyright 2018 Silicon Mitus Corporation / Iron Device Corporation
  *
@@ -72,9 +72,12 @@ struct sma1301_priv {
 	unsigned int sys_clk_id;
 	unsigned int init_vol;
 	unsigned int cur_vol;
+	unsigned int bst_vol_lvl_status;
+	unsigned int flt_vdd_gain_status;
 	bool amp_power_status;
 	bool force_amp_power_down;
 	bool stereo_two_chip;
+	bool impossible_bst_ctrl;
 	bool src_bypass;
 	bool ot1_clear_flag;
 	const uint32_t *eq_reg_array;
@@ -85,6 +88,7 @@ struct sma1301_priv {
 	long check_fault_status;
 	unsigned int format;
 	struct device *dev;
+	unsigned int rev_num;
 	unsigned int last_over_temp;
 	unsigned int last_ocp_val;
 };
@@ -95,10 +99,19 @@ PLL_MATCH("1.536MHz",  "24.576MHz", 1536000,  0x07, 0xE0, 0x00, 0x00, 0x03),
 PLL_MATCH("3.072MHz",  "24.576MHz", 3072000,  0x07, 0x70, 0x00, 0x00, 0x03),
 PLL_MATCH("6.144MHz",  "24.576MHz", 6144000,  0x07, 0x70, 0x00, 0x00, 0x07),
 PLL_MATCH("12.288MHz", "24.576MHz", 12288000, 0x07, 0x70, 0x00, 0x00, 0x0B),
-PLL_MATCH("19.2MHz",   "24.343MHz", 19200000, 0x07, 0x71, 0x00, 0x00, 0x0A),
+PLL_MATCH("19.2MHz",   "24.343MHz", 19200000, 0x07, 0x47, 0x00, 0x00, 0x0A),
 PLL_MATCH("24.576MHz", "24.576MHz", 24576000, 0x07, 0x70, 0x00, 0x00, 0x0F),
 };
 
+static struct sma1301_pll_match sma1301_pll_matches_shift[] = {
+/* in_clk_name, out_clk_name, input_clk post_n, n, f1, f2, f3_p_cp */
+PLL_MATCH("1.536MHz",  "24.576MHz", 1536000,  0x06, 0xC0, 0x00, 0x00, 0x03),
+PLL_MATCH("3.072MHz",  "24.576MHz", 3072000,  0x06, 0x60, 0x00, 0x00, 0x03),
+PLL_MATCH("6.144MHz",  "24.576MHz", 6144000,  0x06, 0x60, 0x00, 0x00, 0x07),
+PLL_MATCH("12.288MHz", "24.576MHz", 12288000, 0x06, 0x60, 0x00, 0x00, 0x0B),
+PLL_MATCH("19.2MHz",   "24.4MHz",   19200000, 0x06, 0x3D, 0x00, 0x00, 0x0A),
+PLL_MATCH("24.576MHz", "24.576MHz", 24576000, 0x06, 0x60, 0x00, 0x00, 0x0F),
+};
 static int sma1301_startup(struct snd_soc_codec *);
 static int sma1301_shutdown(struct snd_soc_codec *);
 
@@ -416,8 +429,8 @@ static int power_down_control_put(struct snd_kcontrol *kcontrol,
 
 /* Clock System Set */
 static const char * const sma1301_clk_system_text[] = {
-	"Reserved", "Reserved", "Reserved", "External clock 19.2MHz",
-	"External clock 24.576MHz", "Reserved", "Reserved", "Reserved"};
+	"Reserved", "Reserved", "Reserved", "Ext_19.2MHz",
+	"Ext_24.576MHz", "Reserved", "Reserved", "Reserved"};
 
 static const struct soc_enum sma1301_clk_system_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_clk_system_text),
@@ -451,9 +464,8 @@ static int sma1301_clk_system_put(struct snd_kcontrol *kcontrol,
 
 /* InputCTRL1 Set */
 static const char * const sma1301_input_format_text[] = {
-	"Philips standard I2S", "Left justified", "Not used",
-	"Not used", "Right justified 16bits", "Right justified 18bits",
-	"Right justified 20bits", "Right justified 24bits"};
+	"I2S", "LJ", "Reserved", "Reserved",
+	"RJ_16", "RJ_18", "RJ_20", "RJ_24"};
 
 static const struct soc_enum sma1301_input_format_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_input_format_text),
@@ -487,7 +499,7 @@ static int sma1301_input_format_put(struct snd_kcontrol *kcontrol,
 
 /* InputCTRL2 Set */
 static const char * const sma1301_in_audio_mode_text[] = {
-	"I2S mode", "PCM/IOM2 short sync", "PCM/IOM2 long sync", "Reserved"};
+	"I2S mode", "PCM short", "PCM long", "Reserved"};
 
 static const struct soc_enum sma1301_in_audio_mode_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_in_audio_mode_text),
@@ -629,7 +641,7 @@ static int sma1301_pcm2_slot_put(struct snd_kcontrol *kcontrol,
 
 /* Input & output port config */
 static const char * const sma1301_port_config_text[] = {
-	"Input port only", "Reserved", "Output port enable", "Reserved"};
+	"IN_Port", "Reserved", "OUT_Port", "Reserved"};
 
 static const struct soc_enum sma1301_port_config_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_port_config_text),
@@ -663,7 +675,7 @@ static int sma1301_port_config_put(struct snd_kcontrol *kcontrol,
 
 /* Output format select */
 static const char * const sma1301_port_out_format_text[] = {
-	"I2S 32 SCK", "I2S 64 SCK", "PCM Short sync 128fs", "Reserved"};
+	"I2S_32", "I2S_64", "PCM_Short_128fs", "Reserved"};
 
 static const struct soc_enum sma1301_port_out_format_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_port_out_format_text),
@@ -697,8 +709,7 @@ static int sma1301_port_out_format_put(struct snd_kcontrol *kcontrol,
 
 /* Output source */
 static const char * const sma1301_port_out_sel_text[] = {
-	"Disable", "Format Converter", "Mixer output",
-	"SPK path, EQ, Bass, Vol, DRC",
+	"Disable", "Format_C", "Mixer_out", "After_DSP",
 	"Reserved", "Reserved", "Reserved", "Reserved"};
 
 static const struct soc_enum sma1301_port_out_sel_enum =
@@ -803,8 +814,8 @@ static int sma1301_mute_slope_put(struct snd_kcontrol *kcontrol,
 
 /* Speaker mode */
 static const char * const sma1301_spkmode_text[] = {
-	"Off", "Mono for one chip solution", "Reserved", "Reserved",
-	"Stereo for two chip solution", "Reserved", "Reserved", "Reserved"};
+	"Off", "Mono", "Reserved", "Reserved",
+	"Stereo", "Reserved", "Reserved", "Reserved"};
 
 static const struct soc_enum sma1301_spkmode_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_spkmode_text),
@@ -843,7 +854,7 @@ static int sma1301_spkmode_put(struct snd_kcontrol *kcontrol,
 
 /* SystemCTRL3 Set */
 static const char * const sma1301_input_gain_text[] = {
-	"Gain_0dB", "Gain_-6dB", "Gain_-12dB", "Gain_-Infinity"};
+	"Gain_0dB", "Gain_M6dB", "Gain_M12dB", "Gain_MInf"};
 
 static const struct soc_enum sma1301_input_gain_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_input_gain_text),
@@ -876,7 +887,7 @@ static int sma1301_input_gain_put(struct snd_kcontrol *kcontrol,
 }
 
 static const char * const sma1301_input_r_gain_text[] = {
-	"Gain_0dB", "Gain_-6dB", "Gain_-12dB", "Gain_-Infinity"};
+	"Gain_0dB", "Gain_M6dB", "Gain_M12dB", "Gain_MInf"};
 
 static const struct soc_enum sma1301_input_r_gain_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_input_r_gain_text),
@@ -981,8 +992,8 @@ static int comp_lim_spk_coeff_put(struct snd_kcontrol *kcontrol,
 
 /* EQ Mode SELECT */
 static const char * const sma1301_eq_mode_text[] = {
-	"User Defined", "Classic ", "Rock/Pop", "Jazz",
-	"R&B", "Dance", "Speech", "Parametric"};
+	"User Defined", "Classic ", "Rock_Pop", "Jazz",
+	"RnB", "Dance", "Speech", "Parametric"};
 
 static const struct soc_enum sma1301_eq_mode_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_eq_mode_text), sma1301_eq_mode_text);
@@ -1061,9 +1072,7 @@ static int sma1301_lr_delay_put(struct snd_kcontrol *kcontrol,
 
 /* OTP MODE Set */
 static const char * const sma1301_otp_mode_text[] = {
-	"Disable", "Ignore threshold1, shutdown threshold2",
-	"Reduced threshold1, shutdown threshold2",
-	"Shutdown threshold1, shutdown threshold2"};
+	"Disable", "I_L1_S_L2", "R_L1_S_L2", "S_L1_S_L2"};
 
 static const struct soc_enum sma1301_otp_mode_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_otp_mode_text), sma1301_otp_mode_text);
@@ -1199,11 +1208,10 @@ static int pll_setting_put(struct snd_kcontrol *kcontrol,
 
 /* ClassG control Set */
 static const char * const sma1301_attack_lvl_text[] = {
-	"Disabled and BOOST LVL on", "LVL_0.0625FS", "LVL_0.125FS",
-	"LVL_0.1875FS", "LVL_0.25FS", "LVL_0.3125FS", "LVL_0.375FS",
-	"LVL_0.4375FS", "LVL_0.5FS", "LVL_0.5625FS", "LVL_0.625FS",
-	"LVL_0.6875FS", "LVL_0.75FS", "LVL_0.8125FS", "LVL_0.875FS",
-	"Disabled and BOOST LVL off"};
+	"BST_ON", "LVL_0.0625FS", "LVL_0.125FS", "LVL_0.1875FS",
+	"LVL_0.25FS", "LVL_0.3125FS", "LVL_0.375FS", "LVL_0.4375FS",
+	"LVL_0.5FS", "LVL_0.5625FS", "LVL_0.625FS", "LVL_0.6875FS",
+	"LVL_0.75FS", "LVL_0.8125FS", "LVL_0.875FS", "BST_OFF"};
 
 static const struct soc_enum sma1301_attack_lvl_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_attack_lvl_text),
@@ -1223,14 +1231,10 @@ static int sma1301_attack_lvl_get(struct snd_kcontrol *kcontrol,
 }
 
 static const char * const sma1301_release_time_text[] = {
-	"Time_48kHz-0ms,96kHz-0ms", "Time_48kHz-20ms,96kHz-10ms",
-	"Time_48kHz-40ms,96kHz-20ms", "Time_48kHz-60ms,96kHz-30ms",
-	"Time_48kHz-80ms,96kHz-40ms", "Time_48kHz-100ms,96kHz-50ms",
-	"Time_48kHz-120ms,96kHz-60ms", "Time_48kHz-140ms,96kHz-70ms",
-	"Time_48kHz-160ms,96kHz-80ms", "Time_48kHz-180ms,96kHz-90ms",
-	"Time_48kHz-200ms,96kHz-100ms", "Time_48kHz-220ms,96kHz-110ms",
-	"Time_48kHz-240ms,96kHz-120ms", "Time_48kHz-260ms,96kHz-130ms",
-	"Time_48kHz-280ms,96kHz-140ms", "Time_48kHz-300ms,96kHz-150ms"};
+	"Time_0ms", "Time_20ms", "Time_40ms", "Time_60ms",
+	"Time_80ms", "Time_100ms", "Time_120ms", "Time_140ms",
+	"Time_160ms", "Time_180ms", "Time_200ms", "Time_220ms",
+	"Time_240ms", "Time_260ms", "Time_280ms", "Time_300ms"};
 
 static const struct soc_enum sma1301_release_time_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_release_time_text),
@@ -1305,6 +1309,8 @@ static int sma1301_flt_vdd_gain_put(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct sma1301_priv *sma1301 = snd_soc_codec_get_drvdata(codec);
 	int sel = (int)ucontrol->value.integer.value[0];
+
+	sma1301->flt_vdd_gain_status = sel;
 
 	regmap_update_bits(sma1301->regmap,
 		SMA1301_92_FDPEC_CTRL, 0xF0, (sel << 4));
@@ -1415,22 +1421,14 @@ static int sma1301_trm_ocl_put(struct snd_kcontrol *kcontrol,
 
 /* Boost control2 Set */
 static const char * const sma1301_trm_comp_text[] = {
-	"PI compensation & 50pF I-gain & 1.5Mohm P-gain",
-	"PI compensation & 50pF I-gain & 1.0Mohm P-gain",
-	"PI compensation & 50pF I-gain & 0.75Mohm P-gain",
-	"PI compensation & 50pF I-gain & 0.25ohm P-gain",
-	"PI compensation & 80pF I-gain & 1.5Mohm P-gain",
-	"PI compensation & 80pF I-gain & 1.0Mohm P-gain",
-	"PI compensation & 80pF I-gain & 0.75Mohm P-gain",
-	"PI compensation & 80pF I-gain & 0.25ohm P-gain",
-	"Type-2 compensation & 50pF I-gain & 1.5Mohm P-gain",
-	"Type-2 compensation & 50pF I-gain & 1.0Mohm P-gain",
-	"Type-2 compensation & 50pF I-gain & 0.75Mohm P-gain",
-	"Type-2 compensation & 50pF I-gain & 0.25ohm P-gain",
-	"Type-2 compensation & 80pF I-gain & 1.5Mohm P-gain",
-	"Type-2 compensation & 80pF I-gain & 1.0Mohm P-gain",
-	"Type-2 compensation & 80pF I-gain & 0.75Mohm P-gain",
-	"Type-2 compensation & 80pF I-gain & 0.25ohm P-gain"};
+	"PI_50pF_1.5Mohm", "PI_50pF_1.0Mohm",
+	"PI_50pF_0.75Mohm", "PI_50pF_0.25Mohm",
+	"PI_80pF_1.5Mohm", "PI_80pF_1.0Mohm",
+	"PI_80pF_0.75Mohm", "PI_80pF_0.25Mohm",
+	"Type2_50pF_1.5Mohm", "Type2_50pF_1.0Mohm",
+	"Type2_50pF_0.75Mohm", "Type2_50pF_0.25Mohm",
+	"Type2_80pF_1.5Mohm", "Type2_80pF_1.0Mohm",
+	"Type2_80pF_0.75Mohm", "Type2_80pF_0.25Mohm"};
 
 static const struct soc_enum sma1301_trm_comp_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_trm_comp_text), sma1301_trm_comp_text);
@@ -1455,8 +1453,89 @@ static int sma1301_trm_comp_put(struct snd_kcontrol *kcontrol,
 	struct sma1301_priv *sma1301 = snd_soc_codec_get_drvdata(codec);
 	int sel = (int)ucontrol->value.integer.value[0];
 
-	regmap_update_bits(sma1301->regmap,
-		SMA1301_95_BOOST_CTRL2, 0x0F, sel);
+	if (sma1301->rev_num <= REV_NUM_ES0) {
+		regmap_update_bits(sma1301->regmap,
+			SMA1301_95_BOOST_CTRL2, 0x0F, sel);
+	} else {
+		dev_info(codec->dev,
+		"Trimming of loop compensation does not change on ES1 and above\n");
+	}
+
+	return 0;
+}
+
+static const char * const sma1301_trm_comp_i_text[] = {
+	"IG_15pF", "IG_30pF", "IG_65pF", "IG_80pF"};
+
+static const struct soc_enum sma1301_trm_comp_i_enum =
+SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_trm_comp_i_text),
+			sma1301_trm_comp_i_text);
+
+static int sma1301_trm_comp_i_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct sma1301_priv *sma1301 = snd_soc_codec_get_drvdata(codec);
+	int val;
+
+	regmap_read(sma1301->regmap, SMA1301_95_BOOST_CTRL2, &val);
+	ucontrol->value.integer.value[0] = ((val & 0x0C) >> 2);
+
+	return 0;
+}
+
+static int sma1301_trm_comp_i_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct sma1301_priv *sma1301 = snd_soc_codec_get_drvdata(codec);
+	int sel = (int)ucontrol->value.integer.value[0];
+
+	if (sma1301->rev_num > REV_NUM_ES0) {
+		regmap_update_bits(sma1301->regmap,
+			SMA1301_95_BOOST_CTRL2, 0x0C, (sel << 2));
+	} else {
+		dev_info(codec->dev,
+		"Trimming of loop compensation I gain does not change on ES0\n");
+	}
+
+	return 0;
+}
+
+static const char * const sma1301_trm_comp_p_text[] = {
+	"PG_1.5Mohm", "PG_1.0Mohm", "PG_0.75Mohm", "PG_0.25Mohm"};
+
+static const struct soc_enum sma1301_trm_comp_p_enum =
+SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_trm_comp_p_text),
+			sma1301_trm_comp_p_text);
+
+static int sma1301_trm_comp_p_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct sma1301_priv *sma1301 = snd_soc_codec_get_drvdata(codec);
+	int val;
+
+	regmap_read(sma1301->regmap, SMA1301_95_BOOST_CTRL2, &val);
+	ucontrol->value.integer.value[0] = (val & 0x03);
+
+	return 0;
+}
+
+static int sma1301_trm_comp_p_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct sma1301_priv *sma1301 = snd_soc_codec_get_drvdata(codec);
+	int sel = (int)ucontrol->value.integer.value[0];
+
+	if (sma1301->rev_num > REV_NUM_ES0) {
+		regmap_update_bits(sma1301->regmap,
+			SMA1301_95_BOOST_CTRL2, 0x03, sel);
+	} else {
+		dev_info(codec->dev,
+		"Trimming of loop compensation P gain does not change on ES0\n");
+	}
 
 	return 0;
 }
@@ -1591,8 +1670,15 @@ static int sma1301_trm_vbst_put(struct snd_kcontrol *kcontrol,
 	struct sma1301_priv *sma1301 = snd_soc_codec_get_drvdata(codec);
 	int sel = (int)ucontrol->value.integer.value[0];
 
-	regmap_update_bits(sma1301->regmap,
-		SMA1301_97_BOOST_CTRL4, 0x1C, (sel << 2));
+	if (sma1301->impossible_bst_ctrl)
+		dev_info(codec->dev,
+		"Trimming of boost voltage does not change on 'impossible-bst-ctrl' property\n");
+	else {
+		sma1301->bst_vol_lvl_status = sel;
+
+		regmap_update_bits(sma1301->regmap,
+			SMA1301_97_BOOST_CTRL4, 0x1C, (sel << 2));
+	}
 
 	return 0;
 }
@@ -1631,8 +1717,8 @@ static int sma1301_trm_tmin_put(struct snd_kcontrol *kcontrol,
 
 /* TOP_MAN3 Set */
 static const char * const sma1301_o_format_text[] = {
-	"RJ", "LJ", "I2S", "SPI", "PCM short",
-	"PCM long", "Reserved", "Reserved"};
+	"RJ", "LJ", "I2S", "SPI",
+	"PCM short", "PCM long", "Reserved", "Reserved"};
 
 static const struct soc_enum sma1301_o_format_enum =
 SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(sma1301_o_format_text), sma1301_o_format_text);
@@ -1704,28 +1790,28 @@ SOC_SINGLE_EXT("Force AMP Power Down", SND_SOC_NOPM, 0, 1, 0,
 SOC_ENUM_EXT("External Clock System", sma1301_clk_system_enum,
 	sma1301_clk_system_get, sma1301_clk_system_put),
 
-SOC_SINGLE("I2S/PCM Clock mode(1:Master_2:Slave)",
+SOC_SINGLE("I2S/PCM Clock mode(1:M_2:S)",
 		SMA1301_01_INPUT1_CTRL1, 7, 1, 0),
 SOC_ENUM_EXT("I2S input format(I2S_LJ_RJ)", sma1301_input_format_enum,
 	sma1301_input_format_get, sma1301_input_format_put),
-SOC_SINGLE("First-channel pol for I2S(1:High_0:Low)",
+SOC_SINGLE("First-channel pol I2S(1:H_0:L)",
 		SMA1301_01_INPUT1_CTRL1, 3, 1, 0),
-SOC_SINGLE("Data written on SCK edge(1:rise_0:fall)",
+SOC_SINGLE("Data written SCK edge(1:R_0:F)",
 		SMA1301_01_INPUT1_CTRL1, 2, 1, 0),
 
 SOC_ENUM_EXT("Input audio mode", sma1301_in_audio_mode_enum,
 	sma1301_in_audio_mode_get, sma1301_in_audio_mode_put),
-SOC_SINGLE("Data inversion(1:right-first_0:left-first)",
+SOC_SINGLE("Data inversion(1:R_0:L)",
 		SMA1301_02_INPUT1_CTRL2, 5, 1, 0),
-SOC_SINGLE("Decoding select(1:A-law_0:u-law)",
+SOC_SINGLE("Decoding select(1:A_0:u)",
 		SMA1301_02_INPUT1_CTRL2, 4, 1, 0),
-SOC_SINGLE("Companding PCM data(1:Companding_2:Linear)",
+SOC_SINGLE("Companding PCM data(1:C_2:L)",
 		SMA1301_02_INPUT1_CTRL2, 3, 1, 0),
 SOC_SINGLE("PCM sample freq(1:16kHz_0:8kHz)",
 		SMA1301_02_INPUT1_CTRL2, 2, 1, 0),
-SOC_SINGLE("PCM stero/mono sel(1:stereo_0:mono)",
+SOC_SINGLE("PCM stero/mono sel(1:S_0:M)",
 		SMA1301_02_INPUT1_CTRL2, 1, 1, 0),
-SOC_SINGLE("PCM data length(1:16-bit_0:8-bit)",
+SOC_SINGLE("PCM data length(1:16_0:8)",
 		SMA1301_02_INPUT1_CTRL2, 0, 1, 0),
 
 SOC_SINGLE("SR converted bypass(1:bypass_0:normal)",
@@ -1741,7 +1827,7 @@ SOC_ENUM_EXT("Position of the second sample at 16kHz",
 		sma1301_pcm2_slot_enum, sma1301_pcm2_slot_get,
 		sma1301_pcm2_slot_put),
 
-SOC_ENUM_EXT("Port In/Out port configuration", sma1301_port_config_enum,
+SOC_ENUM_EXT("Port In/Out port config", sma1301_port_config_enum,
 	sma1301_port_config_get, sma1301_port_config_put),
 SOC_ENUM_EXT("Port Output Format", sma1301_port_out_format_enum,
 	sma1301_port_out_format_get, sma1301_port_out_format_put),
@@ -1755,18 +1841,18 @@ SOC_ENUM_EXT("Volume slope", sma1301_vol_slope_enum,
 	sma1301_vol_slope_get, sma1301_vol_slope_put),
 SOC_ENUM_EXT("Mute slope", sma1301_mute_slope_enum,
 	sma1301_mute_slope_get, sma1301_mute_slope_put),
-SOC_SINGLE("Speaker Mute Switch(1:muted_0:un-muted)",
+SOC_SINGLE("Speaker Mute Switch(1:muted_0:un)",
 		SMA1301_0E_MUTE_VOL_CTRL, 0, 1, 0),
 
 SOC_ENUM_EXT("Speaker Mode", sma1301_spkmode_enum,
 	sma1301_spkmode_get, sma1301_spkmode_put),
 
-SOC_SINGLE("Speaker EQ(1:enable_0:bypass)", SMA1301_11_SYSTEM_CTRL2, 7, 1, 0),
-SOC_SINGLE("Speaker Bass(1:enable_0:bypass)", SMA1301_11_SYSTEM_CTRL2, 6, 1, 0),
-SOC_SINGLE("Speaker Comp/Limiter(1:enable_0:bypass)",
+SOC_SINGLE("Speaker EQ(1:en_0:dis)", SMA1301_11_SYSTEM_CTRL2, 7, 1, 0),
+SOC_SINGLE("Speaker Bass(1:en_0:dis)", SMA1301_11_SYSTEM_CTRL2, 6, 1, 0),
+SOC_SINGLE("Speaker Comp/Limiter(1:en_0:dis)",
 		SMA1301_11_SYSTEM_CTRL2, 5, 1, 0),
 SOC_SINGLE("LR_DATA_SW(1:swap_0:normal)", SMA1301_11_SYSTEM_CTRL2, 4, 1, 0),
-SOC_SINGLE("Mono Mix(1:enable_0:disable)", SMA1301_11_SYSTEM_CTRL2, 0, 1, 0),
+SOC_SINGLE("Mono Mix(1:en_0:dis)", SMA1301_11_SYSTEM_CTRL2, 0, 1, 0),
 
 SOC_ENUM_EXT("Input gain", sma1301_input_gain_enum,
 	sma1301_input_gain_get, sma1301_input_gain_put),
@@ -1790,21 +1876,21 @@ SOC_SINGLE("EQ Band2 Bypass Switch", SMA1301_2D_EQ_GRAPHIC2, 5, 1, 0),
 SOC_SINGLE("EQ Band3 Bypass Switch", SMA1301_2E_EQ_GRAPHIC3, 5, 1, 0),
 SOC_SINGLE("EQ Band4 Bypass Switch", SMA1301_2F_EQ_GRAPHIC4, 5, 1, 0),
 SOC_SINGLE("EQ Band5 Bypass Switch", SMA1301_30_EQ_GRAPHIC5, 5, 1, 0),
-SND_SOC_BYTES_EXT("5 band equalizer(EqGraphic 1~5)",
+SND_SOC_BYTES_EXT("5 band equalizer(EqGraphic 1_5)",
 		5, eqgraphic_get, eqgraphic_put),
 
 SOC_SINGLE("SPK modulator sync(1:1/8_0:1/4)",
 		SMA1301_33_SDM_CTRL, 2, 1, 0),
 
-SOC_SINGLE("Edge displacement(1:disable_0:enable)",
+SOC_SINGLE("Edge displacement(1:dis_0:en)",
 		SMA1301_36_PROTECTION, 7, 1, 0),
 SOC_ENUM_EXT("PWM LR delay", sma1301_lr_delay_enum,
 		sma1301_lr_delay_get, sma1301_lr_delay_put),
-SOC_SINGLE("SRC random jitter(1:disable_0:added)",
+SOC_SINGLE("SRC random jitter(1:dis_0:add)",
 		SMA1301_36_PROTECTION, 4, 1, 0),
-SOC_SINGLE("OCP spk output state(1:disable_0:enable)",
+SOC_SINGLE("OCP spk output state(1:dis_0:en)",
 		SMA1301_36_PROTECTION, 3, 1, 0),
-SOC_SINGLE("OCP mode(1:Permanent SD_0:Auto recover)",
+SOC_SINGLE("OCP mode(1:SD_0:AR)",
 		SMA1301_36_PROTECTION, 2, 1, 0),
 SOC_ENUM_EXT("OTP MODE", sma1301_otp_mode_enum,
 		sma1301_otp_mode_get, sma1301_otp_mode_put),
@@ -1827,7 +1913,7 @@ SND_SOC_BYTES_EXT("EQ Ctrl Band5", 15,
 
 SND_SOC_BYTES_EXT("PLL Setting", 5, pll_setting_get, pll_setting_put),
 
-SOC_SINGLE("PLL enable(1:Enable_0:Disable)",
+SOC_SINGLE("PLL enable(1:en_0:dis)",
 		SMA1301_8B_PLL_POST_N, 5, 1, 0),
 
 SOC_ENUM_EXT("Attack level control", sma1301_attack_lvl_enum,
@@ -1837,7 +1923,8 @@ SOC_ENUM_EXT("Release time control", sma1301_release_time_enum,
 
 SOC_ENUM_EXT("Filtered VDD gain control", sma1301_flt_vdd_gain_enum,
 	sma1301_flt_vdd_gain_get, sma1301_flt_vdd_gain_put),
-SOC_SINGLE("Fast charge(1:Disable_0:Enable)",
+
+SOC_SINGLE("Fast charge(1:dis_0:en)",
 		SMA1301_92_FDPEC_CTRL, 2, 1, 0),
 
 SOC_ENUM_EXT("Trimming of switching frequency", sma1301_trm_osc_enum,
@@ -1848,6 +1935,10 @@ SOC_ENUM_EXT("Trimming of over current limit", sma1301_trm_ocl_enum,
 	sma1301_trm_ocl_get, sma1301_trm_ocl_put),
 SOC_ENUM_EXT("Trimming of loop compensation", sma1301_trm_comp_enum,
 	sma1301_trm_comp_get, sma1301_trm_comp_put),
+SOC_ENUM_EXT("Trimming of loop comp I gain", sma1301_trm_comp_i_enum,
+	sma1301_trm_comp_i_get, sma1301_trm_comp_i_put),
+SOC_ENUM_EXT("Trimming of loop comp P gain", sma1301_trm_comp_p_enum,
+	sma1301_trm_comp_p_get, sma1301_trm_comp_p_put),
 SOC_ENUM_EXT("Trimming of driver deadtime", sma1301_trm_dt_enum,
 	sma1301_trm_dt_get, sma1301_trm_dt_put),
 SOC_ENUM_EXT("Trimming of switching slew", sma1301_trm_slw_enum,
@@ -1859,45 +1950,45 @@ SOC_ENUM_EXT("Trimming of boost voltage", sma1301_trm_vbst_enum,
 SOC_ENUM_EXT("Trimming of minimum on-time", sma1301_trm_tmin_enum,
 	sma1301_trm_tmin_get, sma1301_trm_tmin_put),
 
-SOC_SINGLE("PLL Lock Skip Mode(1:disable_0:enable)",
+SOC_SINGLE("PLL Lock Skip Mode(1:dis_0:en)",
 		SMA1301_A2_TOP_MAN1, 7, 1, 0),
-SOC_SINGLE("PLL Power Down(1:PLL PD en_0:PLL operation)",
+SOC_SINGLE("PLL Power Down(1:PD_0:oper)",
 		SMA1301_A2_TOP_MAN1, 6, 1, 0),
-SOC_SINGLE("MCLK Selection(1:Ext CLK_0:PLL CLK)",
+SOC_SINGLE("MCLK Sel(1:Ext Clk_0:PLL Clk)",
 		SMA1301_A2_TOP_MAN1, 5, 1, 0),
-SOC_SINGLE("PLL Reference Clock1(1:Int OSC_0:Ext CLK)",
+SOC_SINGLE("PLL Ref Clk1(1:Int OSC_0:Ext Clk)",
 		SMA1301_A2_TOP_MAN1, 4, 1, 0),
-SOC_SINGLE("PLL Reference Clock2(1:SCK_0:PLL_REF_CLK1)",
+SOC_SINGLE("PLL Ref Clk2(1:SCK_0:PLL_REF_Clk1)",
 		SMA1301_A2_TOP_MAN1, 3, 1, 0),
-SOC_SINGLE("DAC Down Conversion(1:Conversion_0:Normal)",
+SOC_SINGLE("DAC Down Conver(1:C_0:N)",
 		SMA1301_A2_TOP_MAN1, 2, 1, 0),
-SOC_SINGLE("SDO Pad Output Control(1:LRCK L_0:LRCK H)",
+SOC_SINGLE("SDO Pad Output Ctrl(1:L_0:H)",
 		SMA1301_A2_TOP_MAN1, 1, 1, 0),
-SOC_SINGLE("Master Mode Enable(1:Master_0:Slave)",
+SOC_SINGLE("Master Mode Enable(1:M_0:S)",
 		SMA1301_A2_TOP_MAN1, 0, 1, 0),
 
 SOC_SINGLE("Monitoring at SDO(1:OSC_0:PLL)",
 		SMA1301_A3_TOP_MAN2, 7, 1, 0),
-SOC_SINGLE("Test clock output en(1:Clock out_0:Normal)",
+SOC_SINGLE("Test clk out en(1:Clk out_0:N)",
 		SMA1301_A3_TOP_MAN2, 6, 1, 0),
-SOC_SINGLE("PLL SDM PD(1:SDM off_0:SDM on)",
+SOC_SINGLE("PLL SDM PD(1:off_0:on)",
 		SMA1301_A3_TOP_MAN2, 5, 1, 0),
-SOC_SINGLE("Clock monitoring time(1:4usec_0:2usec)",
+SOC_SINGLE("Clk monitor time(1:4u_0:2u)",
 		SMA1301_A3_TOP_MAN2, 4, 1, 0),
-SOC_SINGLE("SDO output(1:High-Z_0:Normal output)",
+SOC_SINGLE("SDO output(1:H_0:N)",
 		SMA1301_A3_TOP_MAN2, 3, 1, 0),
-SOC_SINGLE("SDO output only(1:output only_0:normal)",
+SOC_SINGLE("SDO output only(1:O_0:N)",
 		SMA1301_A3_TOP_MAN2, 2, 1, 0),
-SOC_SINGLE("Clock Monitoring(1:Not_0:Monitoring)",
+SOC_SINGLE("Clk Monitor(1:Not_0:Mon)",
 		SMA1301_A3_TOP_MAN2, 1, 1, 0),
-SOC_SINGLE("OSC PD(1:Power down_0:Normal operation)",
+SOC_SINGLE("OSC PD(1:PD_0:N)",
 		SMA1301_A3_TOP_MAN2, 0, 1, 0),
 
 SOC_ENUM_EXT("Top Manager Output Format", sma1301_o_format_enum,
 	sma1301_o_format_get, sma1301_o_format_put),
 SOC_ENUM_EXT("Top Manager SCK rate", sma1301_sck_rate_enum,
 	sma1301_sck_rate_get, sma1301_sck_rate_put),
-SOC_SINGLE("Top Manager LRCK Pol(1:H valid_0:L valid)",
+SOC_SINGLE("Top Manager LRCK Pol(1:H_0:L)",
 		SMA1301_A4_TOP_MAN3, 0, 1, 0),
 };
 
@@ -1911,7 +2002,9 @@ static int sma1301_startup(struct snd_soc_codec *codec)
 		return 0;
 	}
 
-	dev_info(codec->dev, "%s\n", __func__);
+	dev_info(codec->dev, "%s : TRM_%s, FLT_%s\n",
+	__func__, sma1301_trm_vbst_text[sma1301->bst_vol_lvl_status],
+	sma1301_flt_vdd_gain_text[sma1301->flt_vdd_gain_status]);
 
 	regmap_update_bits(sma1301->regmap, SMA1301_00_SYSTEM_CTRL,
 			POWER_MASK, POWER_ON);
@@ -2168,7 +2261,8 @@ static int sma1301_dai_hw_params_amp(struct snd_pcm_substream *substream,
 			(sma1301->sys_clk_id == SMA1301_PLL_CLKIN_MCLK
 			|| sma1301->sys_clk_id == SMA1301_PLL_CLKIN_BCLK)) {
 
-			regmap_update_bits(sma1301->regmap, SMA1301_03_INPUT1_CTRL3,
+			regmap_update_bits(sma1301->regmap,
+				SMA1301_03_INPUT1_CTRL3,
 				BP_SRC_MASK, BP_SRC_NORMAL);
 
 			sma1301_shutdown(codec);
@@ -2503,9 +2597,9 @@ static void sma1301_check_fault_worker(struct work_struct *work)
 			SMA1301_0A_SPK_VOL, sma1301->cur_vol + 6);
 		sma1301->ot1_clear_flag = true;
 	} else if (sma1301->ot1_clear_flag == true) {
-			regmap_write(sma1301->regmap,
-				SMA1301_0A_SPK_VOL, sma1301->cur_vol);
-			sma1301->ot1_clear_flag = false;
+		regmap_write(sma1301->regmap,
+			SMA1301_0A_SPK_VOL, sma1301->cur_vol);
+		sma1301->ot1_clear_flag = false;
 	}
 	if (~over_temp & OT2_OK_STATUS) {
 		dev_crit(sma1301->dev,
@@ -2570,10 +2664,24 @@ static int sma1301_reset(struct snd_soc_codec *codec)
 {
 	struct sma1301_priv *sma1301 = snd_soc_codec_get_drvdata(codec);
 	struct reg_default *reg_val;
-	int cnt;
+	int cnt, ret;
 	int eq_len = sma1301->eq_reg_array_len / sizeof(uint32_t);
+	unsigned int status;
 
 	dev_info(codec->dev, "%s\n", __func__);
+
+	ret = regmap_read(sma1301->regmap, SMA1301_FA_STATUS1, &status);
+
+	if (ret != 0)
+		dev_err(sma1301->dev,
+			"failed to read SMA1301_FA_STATUS1 : %d\n", ret);
+	else
+		sma1301->rev_num = status & REV_NUM_STATUS;
+
+	if (sma1301->rev_num == REV_NUM_ES0)
+		dev_info(codec->dev, "SMA1301 chip revision ID - ES0\n");
+	else if (sma1301->rev_num == REV_NUM_ES1)
+		dev_info(codec->dev, "SMA1301 chip revision ID - ES1\n");
 
 	/* External clock 24.576MHz */
 	regmap_write(sma1301->regmap, SMA1301_00_SYSTEM_CTRL,	0x80);
@@ -2609,10 +2717,6 @@ static int sma1301_reset(struct snd_soc_codec *codec)
 			EQ_BAND4_BYPASS_MASK, EQ_BAND4_BYPASS);
 	regmap_update_bits(sma1301->regmap, SMA1301_30_EQ_GRAPHIC5,
 			EQ_BAND5_BYPASS_MASK, EQ_BAND5_BYPASS);
-	/* Apply tuning values of PWM slope control and
-	 * PWM dead time control
-	 */
-	regmap_write(sma1301->regmap, SMA1301_37_SLOPE_CTRL,	0x30);
 	/* Enable test registers */
 	regmap_write(sma1301->regmap, SMA1301_3B_TEST1, 0x5A);
 	/* Stereo idle noise improvement : Improved idle noise by
@@ -2630,27 +2734,62 @@ static int sma1301_reset(struct snd_soc_codec *codec)
 	regmap_update_bits(sma1301->regmap, SMA1301_3F_ATEST2,
 			THERMAL_ADJUST_MASK, THERMAL_140_100);
 
-	/* Attack level - 0.4375FS,
+	/* Attack level - 0.25FS,
 	 * Release time - 40ms(48kHz) & 20ms(96kHz)
 	 */
-	regmap_write(sma1301->regmap, SMA1301_91_CLASS_G_CTRL,	0x72);
+	regmap_write(sma1301->regmap, SMA1301_91_CLASS_G_CTRL,	0x42);
 	/* Filtered VDD gain control 2.8V */
 	regmap_write(sma1301->regmap, SMA1301_92_FDPEC_CTRL,	0x80);
+	sma1301->flt_vdd_gain_status = (FLT_VDD_GAIN_2P80 >> 4);
 	/* Trimming of switching frequency - 1.4MHz,
 	 * Trimming of ramp compensation - 2.94A/us
 	 */
 	regmap_write(sma1301->regmap, SMA1301_94_BOOST_CTRL1,	0x05);
-	/* Trimming of over current limit - 2.21A,
-	 * Trimming of loop compensation
-	 * - PI compensation, 50pF I-gain, 1.0Mohm P-gain
-	 */
-	regmap_write(sma1301->regmap, SMA1301_95_BOOST_CTRL2,	0x21);
+	if (sma1301->rev_num <= REV_NUM_ES0) {
+		sma1301->pll_matches = sma1301_pll_matches;
+		sma1301->num_of_pll_matches =
+			ARRAY_SIZE(sma1301_pll_matches);
+		/* Apply tuning values of PWM slope control and
+		 * PWM dead time control
+		 * SPK_SLOPE - 2'b11, SPK_DEAD_TIME - 4'b1000
+		 */
+		regmap_write(sma1301->regmap, SMA1301_37_SLOPE_CTRL, 0x38);
+		/* Trimming of over current limit - 2.21A,
+		 * Trimming of loop compensation
+		 * - PI compensation, 50pF I-gain, 1.0Mohm P-gain
+		 */
+		regmap_write(sma1301->regmap, SMA1301_95_BOOST_CTRL2, 0x21);
+		/* Trimming of reference voltage - 1.19V,
+		 * boost voltage - 5.6V, minimum on-time - 62ns
+		 */
+		regmap_write(sma1301->regmap, SMA1301_97_BOOST_CTRL4,	0xA6);
+	} else {
+		sma1301->pll_matches = sma1301_pll_matches_shift;
+		sma1301->num_of_pll_matches =
+			ARRAY_SIZE(sma1301_pll_matches_shift);
+		/* Apply tuning values of PWM slope control and
+		 * PWM dead time control
+		 * SPK_SLOPE - 2'b00, SPK_DEAD_TIME - 4'b0000
+		 */
+		regmap_write(sma1301->regmap, SMA1301_37_SLOPE_CTRL, 0x00);
+		/* Enable fast off drive speaker */
+		regmap_update_bits(sma1301->regmap, SMA1301_3F_ATEST2,
+					FAST_OFF_DRIVE_SPK_MASK,
+					FAST_OFF_DRIVE_SPK_ENABLE);
+		/* Trimming of over current limit - 2.21A,
+		 * Trimming of loop compensation
+		 * - PI compensation, 65pF I-gain, 1.0Mohm P-gain
+		 */
+		regmap_write(sma1301->regmap, SMA1301_95_BOOST_CTRL2, 0x29);
+		/* Trimming of reference voltage - 1.2V,
+		 * boost voltage - 5.6V, minimum on-time - 62ns
+		 */
+		regmap_write(sma1301->regmap, SMA1301_97_BOOST_CTRL4,	0x86);
+	}
 	/* Trimming of driver deadtime - 0.75ns, switching slew - 2.5ns */
 	regmap_write(sma1301->regmap, SMA1301_96_BOOST_CTRL3,	0xF3);
-	/* Trimming of reference voltage - 1.19V,
-	 * boost voltage - 5.6V, minimum on-time - 62ns
-	 */
-	regmap_write(sma1301->regmap, SMA1301_97_BOOST_CTRL4,	0xA6);
+
+	sma1301->bst_vol_lvl_status = (TRM_VBST_5P6 >> 2);
 
 	if (sma1301->src_bypass == true) {
 		dev_info(codec->dev, "If do not use SRC, mono mix does not work property\n");
@@ -2873,7 +3012,7 @@ static int sma1301_i2c_probe(struct i2c_client *client,
 	u32 value, value_clk;
 	unsigned int version_status;
 
-	dev_info(&client->dev, "%s is here. Driver version REV008 TEST\n", __func__);
+	dev_info(&client->dev, "%s is here. Driver version REV012\n", __func__);
 
 	sma1301 = devm_kzalloc(&client->dev, sizeof(struct sma1301_priv),
 							GFP_KERNEL);
@@ -2905,6 +3044,13 @@ static int sma1301_i2c_probe(struct i2c_client *client,
 		} else {
 			dev_info(&client->dev, "Mono for one chip solution\n");
 				sma1301->stereo_two_chip = false;
+		}
+		if (of_property_read_bool(np, "impossible-bst-ctrl")) {
+			dev_info(&client->dev, "Boost control setting is not possible\n");
+				sma1301->impossible_bst_ctrl = true;
+		} else {
+			dev_info(&client->dev, "Boost control setting is possible\n");
+				sma1301->impossible_bst_ctrl = false;
 		}
 		if (!of_property_read_u32(np, "sys-clk-id", &value)) {
 			switch (value) {
@@ -2986,8 +3132,6 @@ static int sma1301_i2c_probe(struct i2c_client *client,
 	sma1301->devtype = id->driver_data;
 	sma1301->dev = &client->dev;
 	sma1301->kobj = &client->dev.kobj;
-	sma1301->pll_matches = sma1301_pll_matches;
-	sma1301->num_of_pll_matches = ARRAY_SIZE(sma1301_pll_matches);
 
 	i2c_set_clientdata(client, sma1301);
 
@@ -3003,7 +3147,8 @@ static int sma1301_i2c_probe(struct i2c_client *client,
 	ret = sysfs_create_group(sma1301->kobj, sma1301->attr_grp);
 
 	if (ret) {
-		pr_err("failed to create attribute group [%d]\n", ret);
+		dev_err(&client->dev,
+			"failed to create attribute group [%d]\n", ret);
 		sma1301->attr_grp = NULL;
 	}
 

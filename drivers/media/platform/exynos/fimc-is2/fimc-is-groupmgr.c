@@ -45,7 +45,7 @@
 #ifdef CONFIG_USE_DIRECT_IS_CONTROL
 #include "fimc-is-interface-wrap.h"
 #endif
-#if defined(CONFIG_COMPANION_DIRECT_USE) || defined(USE_AP_PDAF) || defined(USE_SENSOR_WDR)
+#if defined(CONFIG_COMPANION_DIRECT_USE) || defined(USE_AP_PDAF) || defined(USE_SENSOR_WDR) || defined (USE_MS_PDAF)
 #include "fimc-is-interface-sensor.h"
 #include "fimc-is-device-sensor-peri.h"
 #endif
@@ -53,6 +53,9 @@
 /* sysfs variable for debug */
 extern struct fimc_is_sysfs_debug sysfs_debug;
 extern struct pm_qos_request exynos_isp_qos_mem;
+#ifdef CHAIN_SKIP_GFRAME_FOR_VRA
+static struct fimc_is_group_frame dummy_gframe;
+#endif
 
 static inline void smp_shot_init(struct fimc_is_group *group, u32 value)
 {
@@ -633,6 +636,9 @@ void fimc_is_group_subdev_cancel(struct fimc_is_group *group,
 #endif
 				}
 			} while (sub_frame && flush);
+
+			if (sub_vctx->video->try_smp)
+				up(&sub_vctx->video->smp_multi_input);
 		}
 
 		group = group->child;
@@ -902,6 +908,8 @@ static int fimc_is_group_task_start(struct fimc_is_groupmgr *groupmgr,
 
 	if (test_bit(FIMC_IS_GTASK_START, &gtask->state))
 		goto p_work;
+
+	sema_init(&gtask->smp_resource, 0);
 
 	init_kthread_worker(&gtask->worker);
 	snprintf(name, sizeof(name), "fimc_is_gw%d", gtask->id);
@@ -1322,8 +1330,21 @@ int fimc_is_groupmgr_init(struct fimc_is_groupmgr *groupmgr,
 			fimc_is_pipe_create(&device->pipe, next->gprev, next);
 #endif
 		} else {
-			sibling->gnext = next;
-			next->gprev = sibling;
+#ifdef CHAIN_SKIP_GFRAME_FOR_VRA
+			/**
+			 * HACK: Put VRA group as a isolated group.
+			 * There is some case that user skips queueing VRA buffer,
+			 * even though DMA out request of junction node is set.
+			 * To prevent the gframe stuck issue,
+			 * VRA group must not receive gframe from previous group.
+			 */
+			if (next->id != GROUP_ID_VRA0)
+#endif
+			{
+				sibling->gnext = next;
+				next->gprev = sibling;
+			}
+
 			sibling = next;
 		}
 
@@ -2095,6 +2116,7 @@ int fimc_is_group_stop(struct fimc_is_groupmgr *groupmgr,
 	struct fimc_is_framemgr *framemgr;
 	struct fimc_is_device_ischain *device;
 	struct fimc_is_device_sensor *sensor;
+	struct fimc_is_group *head;
 	struct fimc_is_group *child;
 	struct fimc_is_subdev *subdev;
 	struct fimc_is_group_task *gtask;
@@ -2106,18 +2128,18 @@ int fimc_is_group_stop(struct fimc_is_groupmgr *groupmgr,
 	BUG_ON(group->instance >= FIMC_IS_STREAM_COUNT);
 	BUG_ON(group->id >= GROUP_ID_MAX);
 
-	device = group->device;
-	sensor = device->sensor;
+	if (!test_bit(FIMC_IS_GROUP_START, &group->state)) {
+		mwarn("already group stop", group);
+		return -EPERM;
+	}
+	head = group->head;
+	if (head && !test_bit(FIMC_IS_GROUP_START, &head->state)) {
+		mwarn("already head group stop", group);
+		return -EPERM;
+	}
 	framemgr = GET_HEAD_GROUP_FRAMEMGR(group);
-	gtask = &groupmgr->gtask[group->id];
 	if (!framemgr) {
 		mgerr("framemgr is NULL", group, group);
-		goto p_err;
-	}
-
-	if (!test_bit(FIMC_IS_GROUP_START, &group->state) &&
-		!test_bit(FIMC_IS_GROUP_START, &group->head->state)) {
-		mwarn("already group stop", group);
 		goto p_err;
 	}
 
@@ -2125,34 +2147,37 @@ int fimc_is_group_stop(struct fimc_is_groupmgr *groupmgr,
 		set_bit(FIMC_IS_GROUP_FORCE_STOP, &group->state);
 		clear_bit(FIMC_IS_GROUP_REQUEST_FSTOP, &group->state);
 	}
+	gtask = &groupmgr->gtask[head->id];
+	device = group->device;
 
 	retry = 150;
 	while (--retry && framemgr->queued_count[FS_REQUEST]) {
-		if (test_bit(FIMC_IS_GROUP_OTF_INPUT, &group->state) &&
-			!list_empty(&group->smp_trigger.wait_list)) {
+		if (test_bit(FIMC_IS_GROUP_OTF_INPUT, &head->state) &&
+			!list_empty(&head->smp_trigger.wait_list)) {
 
+			sensor = device->sensor;
 			if (!sensor) {
-				mwarn(" sensor is NULL, forcely trigger(pc %d)", device, group->pcount);
-				set_bit(FIMC_IS_GROUP_FORCE_STOP, &group->state);
-				up(&group->smp_trigger);
-			} else if (!test_bit(FIMC_IS_SENSOR_OPEN, &sensor->state)) {
-				mwarn(" sensor is closed, forcely trigger(pc %d)", device, group->pcount);
-				set_bit(FIMC_IS_GROUP_FORCE_STOP, &group->state);
-				up(&group->smp_trigger);
+				mwarn(" sensor is NULL, forcely trigger(pc %d)", device, head->pcount);
+				set_bit(FIMC_IS_GROUP_FORCE_STOP, &head->state);
+				up(&head->smp_trigger);
+			} else if (!test_bit(FIMC_IS_SENSOR_OPEN, &head->state)) {
+				mwarn(" sensor is closed, forcely trigger(pc %d)", device, head->pcount);
+				set_bit(FIMC_IS_GROUP_FORCE_STOP, &head->state);
+				up(&head->smp_trigger);
 			} else if (!test_bit(FIMC_IS_SENSOR_FRONT_START, &sensor->state)) {
-				mwarn(" front is stopped, forcely trigger(pc %d)", device, group->pcount);
-				set_bit(FIMC_IS_GROUP_FORCE_STOP, &group->state);
-				up(&group->smp_trigger);
+				mwarn(" front is stopped, forcely trigger(pc %d)", device, head->pcount);
+				set_bit(FIMC_IS_GROUP_FORCE_STOP, &head->state);
+				up(&head->smp_trigger);
 			} else if (!test_bit(FIMC_IS_SENSOR_BACK_START, &sensor->state)) {
-				mwarn(" back is stopped, forcely trigger(pc %d)", device, group->pcount);
-				set_bit(FIMC_IS_GROUP_FORCE_STOP, &group->state);
-				up(&group->smp_trigger);
+				mwarn(" back is stopped, forcely trigger(pc %d)", device, head->pcount);
+				set_bit(FIMC_IS_GROUP_FORCE_STOP, &head->state);
+				up(&head->smp_trigger);
 			} else if (retry < 100) {
-				merr(" sensor is working but no trigger(pc %d)", device, group->pcount);
-				set_bit(FIMC_IS_GROUP_FORCE_STOP, &group->state);
-				up(&group->smp_trigger);
+				merr(" sensor is working but no trigger(pc %d)", device, head->pcount);
+				set_bit(FIMC_IS_GROUP_FORCE_STOP, &head->state);
+				up(&head->smp_trigger);
 			} else {
-				mwarn(" wating for sensor trigger(pc %d)", device, group->pcount);
+				mwarn(" wating for sensor trigger(pc %d)", device, head->pcount);
 			}
 #ifdef ENABLE_SYNC_REPROCESSING
 		} else if (!test_bit(FIMC_IS_GROUP_OTF_INPUT, &group->state)) {
@@ -2166,14 +2191,14 @@ int fimc_is_group_stop(struct fimc_is_groupmgr *groupmgr,
 #endif
 		}
 
-		mgwarn(" %d reqs waiting...(pc %d) smp_resource(%d)", device, group,
-				framemgr->queued_count[FS_REQUEST], group->pcount,
+		mgwarn(" %d reqs waiting...(pc %d) smp_resource(%d)", device, head,
+				framemgr->queued_count[FS_REQUEST], head->pcount,
 				list_empty(&gtask->smp_resource.wait_list));
 		msleep(20);
 	}
 
 	if (!retry) {
-		mgerr(" waiting(until request empty) is fail(pc %d)", device, group, group->pcount);
+		mgerr(" waiting(until request empty) is fail(pc %d)", device, head, head->pcount);
 		errcnt++;
 	}
 
@@ -2212,22 +2237,22 @@ int fimc_is_group_stop(struct fimc_is_groupmgr *groupmgr,
 
 	retry = 150;
 	while (--retry && framemgr->queued_count[FS_PROCESS]) {
-		mgwarn(" %d pros waiting...(pc %d)", device, group, framemgr->queued_count[FS_PROCESS], group->pcount);
+		mgwarn(" %d pros waiting...(pc %d)", device, head, framemgr->queued_count[FS_PROCESS], head->pcount);
 		msleep(20);
 	}
 
 	if (!retry) {
-		mgerr(" waiting(until process empty) is fail(pc %d)", device, group, group->pcount);
+		mgerr(" waiting(until process empty) is fail(pc %d)", device, head, head->pcount);
 		errcnt++;
 	}
 
-	rcount = atomic_read(&group->rcount);
+	rcount = atomic_read(&head->rcount);
 	if (rcount) {
-		mgerr(" request is NOT empty(%d) (pc %d)", device, group, rcount, group->pcount);
+		mgerr(" request is NOT empty(%d) (pc %d)", device, head, rcount, head->pcount);
 		errcnt++;
 	}
 	/* the count of request should be clear for next streaming */
-	atomic_set(&group->rcount, 0);
+	atomic_set(&head->rcount, 0);
 
 	child = group;
 	while(child) {
@@ -2273,7 +2298,7 @@ int fimc_is_group_stop(struct fimc_is_groupmgr *groupmgr,
 		child = child->child;
 	}
 
-	fimc_is_gframe_flush(groupmgr, group);
+	fimc_is_gframe_flush(groupmgr, head);
 
 	if (test_bit(FIMC_IS_GROUP_OTF_INPUT, &group->state))
 		mginfo(" sensor fcount: %d, fcount: %d\n", device, group,
@@ -2299,7 +2324,7 @@ int fimc_is_group_buffer_queue(struct fimc_is_groupmgr *groupmgr,
 	struct fimc_is_device_ischain *device;
 	struct fimc_is_framemgr *framemgr;
 	struct fimc_is_frame *frame;
-#if defined(CONFIG_COMPANION_DIRECT_USE) || defined(USE_AP_PDAF) || defined(USE_SENSOR_WDR)
+#if defined(CONFIG_COMPANION_DIRECT_USE) || defined(USE_AP_PDAF) || defined(USE_SENSOR_WDR) || defined (USE_MS_PDAF)
 	struct fimc_is_module_enum *module = NULL;
 	struct fimc_is_device_sensor *sensor = NULL;
 	struct fimc_is_device_sensor_peri *sensor_peri = NULL;
@@ -2318,7 +2343,7 @@ int fimc_is_group_buffer_queue(struct fimc_is_groupmgr *groupmgr,
 	framemgr = &queue->framemgr;
 
 	BUG_ON(index >= framemgr->num_frames);
-#if defined(CONFIG_COMPANION_DIRECT_USE) || defined(USE_AP_PDAF) || defined(USE_SENSOR_WDR)
+#if defined(CONFIG_COMPANION_DIRECT_USE) || defined(USE_AP_PDAF) || defined(USE_SENSOR_WDR) || defined (USE_MS_PDAF)
 	sensor = device->sensor;
 	BUG_ON(!sensor);
 
@@ -2394,7 +2419,8 @@ int fimc_is_group_buffer_queue(struct fimc_is_groupmgr *groupmgr,
 #ifdef SENSOR_REQUEST_DELAY
 		if (test_bit(FIMC_IS_GROUP_OTF_INPUT, &group->state) &&
 			(frame->shot->uctl.opMode == CAMERA_OP_MODE_HAL3_GED
-			|| frame->shot->uctl.opMode == CAMERA_OP_MODE_HAL3_SDK)) {
+			|| frame->shot->uctl.opMode == CAMERA_OP_MODE_HAL3_SDK
+			|| frame->shot->uctl.opMode == CAMERA_OP_MODE_HAL3_CAMERAX)) {
 			int req_cnt = 0;
 			struct fimc_is_frame *prev;
 			list_for_each_entry_reverse(prev, &framemgr->queued_list[FS_REQUEST], list) {
@@ -2431,7 +2457,7 @@ int fimc_is_group_buffer_queue(struct fimc_is_groupmgr *groupmgr,
 			&& (device->sensor && !test_bit(FIMC_IS_SENSOR_FRONT_START, &device->sensor->state))) {
 			device->sensor->mode_chg_frame = NULL;
 
-			if (CHK_REMOSAIC_SCN(frame->shot->ctl.aa.sceneMode)) {
+			if (CHK_REMOSAIC_SCN(frame->shot->ctl.aa.captureIntent)) {
 				clear_bit(FIMC_IS_SENSOR_OTF_OUTPUT, &device->sensor->state);
 				device->sensor->mode_chg_frame = frame;
 			} else {
@@ -2476,6 +2502,15 @@ int fimc_is_group_buffer_queue(struct fimc_is_groupmgr *groupmgr,
 #else
 	frame->shot->uctl.isModeUd.paf_mode = CAMERA_PAF_OFF;
 #endif
+
+#if defined (USE_MS_PDAF)
+	if (sensor_peri->cis.use_pdaf) {
+		frame->shot->uctl.isModeUd.paf_mode  = CAMERA_PAF_ON;
+	} else {
+		frame->shot->uctl.isModeUd.paf_mode = CAMERA_PAF_OFF;
+	}
+#endif /* USE_MS_PDAF */
+
 #if defined(USE_SENSOR_WDR)
 	/* WDR */
 	if ((cis_data->is_data.wdr_enable == false) &&
@@ -2598,11 +2633,11 @@ static int fimc_is_group_check_pre(struct fimc_is_groupmgr *groupmgr,
 		/* tailer */
 		fimc_is_gframe_group_head(group, &gframe);
 		if (unlikely(!gframe)) {
-			mgrerr("gframe is NULL3", device, group, frame);
-			fimc_is_stream_status(groupmgr, group_leader);
+			mgrerr("gframe is NULL1", device, group, frame);
 			fimc_is_gframe_print_free(gframemgr);
 			fimc_is_gframe_print_group(group_leader);
 			spin_unlock_irqrestore(&gframemgr->gframe_slock, flags);
+			fimc_is_stream_status(groupmgr, group_leader);
 			ret = -EINVAL;
 			goto p_err;
 		}
@@ -2630,10 +2665,10 @@ static int fimc_is_group_check_pre(struct fimc_is_groupmgr *groupmgr,
 		fimc_is_gframe_free_head(gframemgr, &gframe);
 		if (unlikely(!gframe)) {
 			mgerr("gframe is NULL2", device, group);
-			fimc_is_stream_status(groupmgr, group_leader);
 			fimc_is_gframe_print_free(gframemgr);
 			fimc_is_gframe_print_group(group_leader);
 			spin_unlock_irqrestore(&gframemgr->gframe_slock, flags);
+			fimc_is_stream_status(groupmgr, group_leader);
 			group->fcount -= frame->num_buffers;
 			ret = -EINVAL;
 			goto p_err;
@@ -2663,10 +2698,10 @@ static int fimc_is_group_check_pre(struct fimc_is_groupmgr *groupmgr,
 		fimc_is_gframe_group_head(group, &gframe);
 		if (unlikely(!gframe)) {
 			mgrerr("gframe is NULL3", device, group, frame);
-			fimc_is_stream_status(groupmgr, group_leader);
 			fimc_is_gframe_print_free(gframemgr);
 			fimc_is_gframe_print_group(group_leader);
 			spin_unlock_irqrestore(&gframemgr->gframe_slock, flags);
+			fimc_is_stream_status(groupmgr, group_leader);
 			ret = -EINVAL;
 			goto p_err;
 		}
@@ -2685,41 +2720,60 @@ static int fimc_is_group_check_pre(struct fimc_is_groupmgr *groupmgr,
 		fimc_is_gframe_s_info(gframe, group->slot, frame);
 		fimc_is_gframe_check(gprev, group, gnext, gframe, frame);
 	} else {
-		/* single */
-		if (atomic_read(&group->scount))
-			group->fcount += frame->num_buffers;
-		else
-			group->fcount++;
+#ifdef CHAIN_SKIP_GFRAME_FOR_VRA
+		if (group->id == GROUP_ID_VRA0) {
+			/* VRA: Skip gframe logic. */
+			struct fimc_is_crop *incrop
+				= (struct fimc_is_crop *)frame->shot_ext->node_group.leader.input.cropRegion;
+			struct fimc_is_subdev *subdev = &group->leader;
 
-		fimc_is_gframe_free_head(gframemgr, &gframe);
-		if (unlikely(!gframe)) {
-			mgerr("gframe is NULL4", device, group);
-			fimc_is_stream_status(groupmgr, group_leader);
-			fimc_is_gframe_print_free(gframemgr);
-			fimc_is_gframe_print_group(group_leader);
-			spin_unlock_irqrestore(&gframemgr->gframe_slock, flags);
-			ret = -EINVAL;
-			goto p_err;
-		}
+			if ((incrop->w * incrop->h) > (subdev->input.width * subdev->input.height)) {
+				mrwarn("the input size is invalid(%dx%d > %dx%d)", group, frame,
+						incrop->w, incrop->h,
+						subdev->input.width, subdev->input.height);
+				incrop->w = subdev->input.width;
+				incrop->h = subdev->input.height;
+			}
 
-		if (unlikely(!test_bit(FIMC_IS_ISCHAIN_REPROCESSING, &device->state) &&
-			(frame->fcount != group->fcount))) {
-			if (frame->fcount > group->fcount) {
-				mgwarn("shot mismatch(%d != %d)", device, group,
-					frame->fcount, group->fcount);
-				group->fcount = frame->fcount;
-			} else {
+			gframe = &dummy_gframe;
+		} else
+#endif
+		{
+			/* single */
+			if (atomic_read(&group->scount))
+				group->fcount += frame->num_buffers;
+			else
+				group->fcount++;
+
+			fimc_is_gframe_free_head(gframemgr, &gframe);
+			if (unlikely(!gframe)) {
+				mgerr("gframe is NULL4", device, group);
+				fimc_is_gframe_print_free(gframemgr);
+				fimc_is_gframe_print_group(group_leader);
 				spin_unlock_irqrestore(&gframemgr->gframe_slock, flags);
-				mgerr("shot mismatch(%d, %d)", device, group,
-					frame->fcount, group->fcount);
-				group->fcount -= frame->num_buffers;
+				fimc_is_stream_status(groupmgr, group_leader);
 				ret = -EINVAL;
 				goto p_err;
 			}
-		}
+			if (unlikely(!test_bit(FIMC_IS_ISCHAIN_REPROCESSING, &device->state) &&
+						(frame->fcount != group->fcount))) {
+				if (frame->fcount > group->fcount) {
+					mgwarn("shot mismatch(%d != %d)", device, group,
+							frame->fcount, group->fcount);
+					group->fcount = frame->fcount;
+				} else {
+					spin_unlock_irqrestore(&gframemgr->gframe_slock, flags);
+					mgerr("shot mismatch(%d, %d)", device, group,
+							frame->fcount, group->fcount);
+					group->fcount -= frame->num_buffers;
+					ret = -EINVAL;
+					goto p_err;
+				}
+			}
 
-		fimc_is_gframe_s_info(gframe, group->slot, frame);
-		fimc_is_gframe_check(gprev, group, gnext, gframe, frame);
+			fimc_is_gframe_s_info(gframe, group->slot, frame);
+			fimc_is_gframe_check(gprev, group, gnext, gframe, frame);
+		}
 	}
 
 	*result = gframe;
@@ -2798,8 +2852,12 @@ static int fimc_is_group_check_post(struct fimc_is_groupmgr *groupmgr,
 			}
 		}
 	} else {
-		/* single */
-		gframe->fcount = frame->fcount;
+#ifdef CHAIN_SKIP_GFRAME_FOR_VRA
+		/* VRA: Skip gframe logic. */
+		if (group->id != GROUP_ID_VRA0)
+#endif
+			/* single */
+			gframe->fcount = frame->fcount;
 	}
 
 	spin_unlock_irqrestore(&gframemgr->gframe_slock, flags);

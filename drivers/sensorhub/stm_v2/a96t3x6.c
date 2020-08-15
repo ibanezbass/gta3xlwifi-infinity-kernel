@@ -1495,7 +1495,7 @@ static ssize_t grip_reg_show(struct device *dev,
 	int offset = 0, i = 0;
 	struct a96t3x6_data *data = dev_get_drvdata(dev);
 
-	for (i = 0; i < 255; i++) {
+	for (i = 0; i < 128; i++) {
 		a96t3x6_i2c_read(data->client, i, &val, 1);
 		SENSOR_INFO("%s: reg=%02X val=%02X\n", __func__, i, val);
 		

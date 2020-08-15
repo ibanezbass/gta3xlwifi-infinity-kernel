@@ -88,7 +88,7 @@ static irqreturn_t usim_dt_interrupt0(int irq, void *dev_id)
 		/* Check HIGH -> LOW */
 		flag = 0;
 		for (i = 0; i < USIM_LOW_DETECT_COUNT; i++) {
-			msleep_interruptible(100);
+			msleep_interruptible(udd->usim_check_delay_msec);
 			value = gpio_get_value(udd->gpio_usim_det0);
 			if (value == 0)
 				flag++;
@@ -106,7 +106,7 @@ static irqreturn_t usim_dt_interrupt0(int irq, void *dev_id)
 		/* Check LOW -> HIGH */
 		flag = 0;
 		for (i = 0; i < USIM_HIGH_DETECT_COUNT; i++) {
-			msleep_interruptible(100);
+			msleep_interruptible(udd->usim_check_delay_msec);
 			value = gpio_get_value(udd->gpio_usim_det0);
 			if (value == 1)
 				flag++;
@@ -141,7 +141,7 @@ static irqreturn_t usim_dt_interrupt1(int irq, void *dev_id)
 		/* Check HIGH -> LOW */
 		flag = 0;
 		for (i = 0; i < USIM_LOW_DETECT_COUNT; i++) {
-			msleep_interruptible(100);
+			msleep_interruptible(udd->usim_check_delay_msec);
 			value = gpio_get_value(udd->gpio_usim_det1);
 			if (value == 0)
 				flag++;
@@ -158,7 +158,7 @@ static irqreturn_t usim_dt_interrupt1(int irq, void *dev_id)
 		/* Check LOW -> HIGH */
 		flag = 0;
 		for (i = 0; i < USIM_HIGH_DETECT_COUNT; i++) {
-			msleep_interruptible(100);
+			msleep_interruptible(udd->usim_check_delay_msec);
 			value = gpio_get_value(udd->gpio_usim_det1);
 			if (value == 1)
 				flag++;
@@ -217,6 +217,15 @@ static int usim_detect_probe(struct platform_device *pdev)
 
 	if (udd->num_of_usim_det == 0 || udd->num_of_usim_det > 2)
 		goto exit_err;
+	
+	/* USIM delay check */
+	err = of_property_read_u32(dev->of_node, "usim_check_delay_msec",
+			&udd->usim_check_delay_msec);
+	if (err) {
+		udd->usim_check_delay_msec = 100;
+	}
+
+	pr_err("usim_check_delay_msec: %d\n", udd->usim_check_delay_msec);
 
 	/* USIM0_DET */
 	err = of_property_read_u32(dev->of_node,

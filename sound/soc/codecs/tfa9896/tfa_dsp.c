@@ -4862,11 +4862,7 @@ enum tfa_error tfa_start(int next_profile, int *vstep)
 
 		/* Check if we need coldstart or ACS is set */
 #if defined(USE_TFA9896)
-#if defined(REDUCED_REGISTER_SETTING)
-		if ((handles_local[dev].first_after_boot)
-#else
 		if ((tfa98xx_log_start_cnt == 1)
-#endif
 			&& (tfa_is_cold(dev) == 0)) {
 			pr_info("%s: cold start by force at boot-up, even in warm state\n",
 				__func__);
@@ -5038,6 +5034,10 @@ enum tfa_error tfa_stop(void)
 			pr_debug("Stopping device [%s]\n",
 				 tfa_cont_device_name(dev));
 
+#if defined(USE_TFA9896)
+		tfa_status_read(dev);
+#endif
+
 		err = _tfa_stop(dev);
 		if (err != TFA98XX_ERROR_OK)
 			goto error_exit;
@@ -5063,7 +5063,7 @@ static enum tfa_error _tfa_stop(tfa98xx_handle_t handle)
 	enum tfa98xx_error err = TFA98XX_ERROR_OK;
 
 	/* mute */
-	tfa_run_mute(handle);
+	err = tfa_run_mute(handle);
 
 	/* Make sure internal oscillator is not running for DSP devices
 	 * (non-dsp and max1 this is no-op)
@@ -5087,7 +5087,16 @@ static enum tfa_error _tfa_stop(tfa98xx_handle_t handle)
 		TFA_SET_BF_VOLATILE(handle, AMPE, 0);
 
 	/* disable I2S output on TFA1 devices without TDM */
-	err = tfa98xx_aec_output(handle, 0);
+	tfa98xx_aec_output(handle, 0);
+
+	if (err != TFA98XX_ERROR_OK) {
+#if defined(USE_TFA9896)
+		tfa_status_read(handle);
+#endif
+
+		/* reset device if DSP is not responding */
+		tfa_reset();
+	}
 
 	return err;
 }
@@ -5130,21 +5139,27 @@ int tfa98xx_reset(tfa98xx_handle_t handle)
 enum tfa_error tfa_reset(void)
 {
 	enum tfa98xx_error err = TFA98XX_ERROR_OK;
+	int handle_in_use = 0;
 	int dev, devcount = tfa98xx_cnt_max_device();
 
 	for (dev = 0; dev < devcount; dev++) {
 		err = tfa_cont_open(dev);
 		if (err != TFA98XX_ERROR_OK)
-			break;
+			handle_in_use = 1;
 
 		if (tfa98xx_runtime_verbose)
 			pr_debug("resetting device [%s]\n",
 				 tfa_cont_device_name(dev));
+
+#if defined(REDUCED_REGISTER_SETTING)
+		handles_local[dev].first_after_boot = 1;
+#endif
 		err = tfa98xx_reset(dev);
 		if (err != TFA98XX_ERROR_OK)
 			break;
 
-		tfa_cont_close(dev);
+		if (!handle_in_use)
+			tfa_cont_close(dev);
 	}
 
 	return err;

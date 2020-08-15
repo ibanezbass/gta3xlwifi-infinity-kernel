@@ -70,18 +70,30 @@ static struct fimc_is_sensor_cfg config_module_4ha_4lane[] = {
 	FIMC_IS_SENSOR_CFG(3264, 2040, 30, 14, 5, CSI_DATA_LANES_4),
 	/* 3264x1400@30fps */
 	FIMC_IS_SENSOR_CFG(3264, 1400, 30, 14, 6, CSI_DATA_LANES_4),
+	/* 2608x1956_30fps */
+	FIMC_IS_SENSOR_CFG(2608, 1956, 30, 14, 7, CSI_DATA_LANES_4),
+	/* 2608x1468_30fps */
+	FIMC_IS_SENSOR_CFG(2608, 1468, 30, 14, 8, CSI_DATA_LANES_4),
+	/* 2608x1204_30fps */
+	FIMC_IS_SENSOR_CFG(2608, 1204, 30, 14, 9, CSI_DATA_LANES_4),
 	/* 2448x2448_30fps */
-	FIMC_IS_SENSOR_CFG(2448, 2448, 30, 14, 7, CSI_DATA_LANES_4),
+	FIMC_IS_SENSOR_CFG(2448, 2448, 30, 14, 10, CSI_DATA_LANES_4),
+	/* 1968x1968_30fps */
+	FIMC_IS_SENSOR_CFG(1968, 1968, 30, 14, 11, CSI_DATA_LANES_4),
 	/* 1920x1080@30fps */
-	FIMC_IS_SENSOR_CFG(1920, 1080, 30, 14, 8, CSI_DATA_LANES_4),
+	FIMC_IS_SENSOR_CFG(1920, 1080, 30, 14, 12, CSI_DATA_LANES_4),
 	/* 1632x1224_30fps */
-	FIMC_IS_SENSOR_CFG(1632, 1224, 30, 14, 9, CSI_DATA_LANES_4),
+	FIMC_IS_SENSOR_CFG(1632, 1224, 30, 14, 13, CSI_DATA_LANES_4),
 	/* 1632x1224_60fps */
-	FIMC_IS_SENSOR_CFG(1632, 1224, 60, 14, 10, CSI_DATA_LANES_4),
+	FIMC_IS_SENSOR_CFG(1632, 1224, 60, 14, 14, CSI_DATA_LANES_4),
+	/* 1304x978_30fps */
+	FIMC_IS_SENSOR_CFG(1304, 978, 30, 14, 15, CSI_DATA_LANES_4),
+	/* 984x984_30fps */
+	FIMC_IS_SENSOR_CFG(984, 984, 30, 14, 16, CSI_DATA_LANES_4),
 	/* 800x600_120fps */
-	FIMC_IS_SENSOR_CFG(800 , 600, 120, 14, 11, CSI_DATA_LANES_4),
+	FIMC_IS_SENSOR_CFG(800, 600, 120, 14, 17, CSI_DATA_LANES_4),
 	/* 640x480@120fps */
-	FIMC_IS_SENSOR_CFG(640 , 480, 120, 14, 12, CSI_DATA_LANES_4),
+	FIMC_IS_SENSOR_CFG(640, 480, 120, 14, 18, CSI_DATA_LANES_4),
 };
 
 
@@ -123,6 +135,135 @@ static const struct v4l2_subdev_ops subdev_ops = {
 	.pad = &pad_ops
 };
 
+static int sensor_module_4ha_power_setpin_with_common_ldo_en(struct device *dev,
+	struct exynos_platform_fimc_is_module *pdata)
+{
+	struct device_node *dnode;
+	int gpio_reset = 0;
+	int gpio_mclk = 0;
+	int gpio_cam_ldo_en = 0;
+	int gpio_camio_1p8_en = 0;
+	int gpio_none = 0;
+	bool shared_camio_1p8 = false;
+
+	struct fimc_is_core *core;
+
+	BUG_ON(!dev);
+
+	core = (struct fimc_is_core *)dev_get_drvdata(fimc_is_dev);
+	if (!core) {
+		err("core is NULL");
+		return -EINVAL;
+	}
+
+	dnode = dev->of_node;
+
+	dev_info(dev, "%s E v4\n", __func__);
+
+	gpio_reset = of_get_named_gpio(dnode, "gpio_reset", 0);
+	if (!gpio_is_valid(gpio_reset)) {
+		dev_err(dev, "failed to get PIN_RESET\n");
+		return -EINVAL;
+	} else {
+		gpio_request_one(gpio_reset, GPIOF_OUT_INIT_LOW, "CAM_GPIO_OUTPUT_LOW");
+		gpio_free(gpio_reset);
+	}
+
+	gpio_mclk = of_get_named_gpio(dnode, "gpio_mclk", 0);
+	if (!gpio_is_valid(gpio_mclk)) {
+		dev_err(dev, "failed to get gpio_mclk\n");
+	} else {
+		gpio_request_one(gpio_mclk, GPIOF_OUT_INIT_LOW, "CAM_MCLK_OUTPUT_LOW");
+		gpio_free(gpio_mclk);
+	}
+
+	gpio_camio_1p8_en = of_get_named_gpio(dnode, "gpio_camio_1p8_en", 0);
+	if (!gpio_is_valid(gpio_camio_1p8_en)) {
+		dev_err(dev, "failed to get gpio_camio_1p8_en\n");
+	} else {
+		gpio_request_one(gpio_camio_1p8_en, GPIOF_OUT_INIT_LOW, "CAM_GPIO_OUTPUT_LOW");
+		gpio_free(gpio_camio_1p8_en);
+	}
+
+	gpio_cam_ldo_en = of_get_named_gpio(dnode, "gpio_cam_ldo_en", 0);
+	if (!gpio_is_valid(gpio_cam_ldo_en)) {
+		dev_err(dev, "failed to get gpio_cam_ldo_en\n");
+	} else {
+		gpio_request_one(gpio_cam_ldo_en, GPIOF_OUT_INIT_LOW, "CAM_GPIO_OUTPUT_LOW");
+		gpio_free(gpio_cam_ldo_en);
+	}
+
+	SET_PIN_INIT(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON);
+	SET_PIN_INIT(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF);
+
+	SET_PIN_INIT(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON);
+	SET_PIN_INIT(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF);
+
+	/* SENSOR_SCENARIO_NORMAL on */
+	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_reset, "sen_rst low", PIN_OUTPUT, 0, 1000);
+	if (gpio_is_valid(gpio_camio_1p8_en)) {
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 1, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, SRT_ACQUIRE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
+		}
+	}
+
+	if (gpio_is_valid(gpio_cam_ldo_en)) {
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_ldo_en, "rcam_ldo_en", PIN_OUTPUT, 1, 3000);
+	}
+
+	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "pin", PIN_FUNCTION, 2, 1000);
+	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_reset, "sen_rst high", PIN_OUTPUT, 1, 2000);
+
+	/* SENSOR_SCENARIO_NORMAL off */
+	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 0, 100);
+	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 1, 100);
+	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 0, 1000);
+
+	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_reset, "sen_rst low", PIN_OUTPUT, 0, 1500);
+	if (gpio_is_valid(gpio_cam_ldo_en)) {
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_ldo_en, "rcam_ldo_en", PIN_OUTPUT, 0, 0);
+	}
+	if (gpio_is_valid(gpio_camio_1p8_en)) {
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 0, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, SRT_RELEASE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
+		}
+	}
+
+	/* SENSOR_SCENARIO_READ_ROM on */
+	if (gpio_is_valid(gpio_cam_ldo_en)) {
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_cam_ldo_en, "rcam_ldo_en", PIN_OUTPUT, 1, 5000);
+	}
+	if (gpio_is_valid(gpio_camio_1p8_en)) {
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 1, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, SRT_ACQUIRE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
+		}
+	}
+
+	/* SENSOR_SCENARIO_READ_ROM off */
+	if (gpio_is_valid(gpio_camio_1p8_en)) {
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 0, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, SRT_RELEASE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
+		}
+	}
+	if (gpio_is_valid(gpio_cam_ldo_en)) {
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_cam_ldo_en, "rcam_ldo_en", PIN_OUTPUT, 0, 0);
+	}
+
+	SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, "delay", PIN_NONE, 0, 500);
+
+	dev_info(dev, "%s X v4\n", __func__);
+
+	return 0;
+}
+
 static int sensor_module_4ha_power_setpin(struct device *dev,
 	struct exynos_platform_fimc_is_module *pdata)
 {
@@ -134,11 +275,20 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 	int gpio_cam_core_en = 0;
 	int gpio_camio_1p8_en = 0;
 	int gpio_none = 0;
+	char *cam_dvdd_1p2 = NULL;
 	bool exist_actuator = false;
 	bool disable_core_ldo = false;
 	bool disable_control_of_af_2p8 = false;
+	bool shared_camio_1p8 = false;
+	struct fimc_is_core *core;
 
 	BUG_ON(!dev);
+
+	core = (struct fimc_is_core *)dev_get_drvdata(fimc_is_dev);
+	if (!core) {
+		err("core is NULL");
+		return -EINVAL;
+	}
 
 	dnode = dev->of_node;
 
@@ -170,7 +320,7 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 
 	gpio_cam_a2p8_en = of_get_named_gpio(dnode, "gpio_cam_a2p8_en", 0);
 	if (!gpio_is_valid(gpio_cam_a2p8_en)) {
-		dev_err(dev, "failed to get gpio_cam_a2p8_en\n");
+		dev_warn(dev, "failed to get gpio_cam_a2p8_en\n");
 	} else {
 		gpio_request_one(gpio_cam_a2p8_en, GPIOF_OUT_INIT_LOW, "CAM_GPIO_OUTPUT_LOW");
 		gpio_free(gpio_cam_a2p8_en);
@@ -179,7 +329,7 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 	if (exist_actuator == true) {
 		gpio_camaf_2p8_en = of_get_named_gpio(dnode, "gpio_camaf_2p8_en", 0);
 		if (!gpio_is_valid(gpio_camaf_2p8_en)) {
-			dev_err(dev, "failed to get gpio_camaf_2p8_en\n");
+			dev_warn(dev, "failed to get gpio_camaf_2p8_en\n");
 		} else {
 			gpio_request_one(gpio_camaf_2p8_en, GPIOF_OUT_INIT_LOW, "CAM_GPIO_OUTPUT_LOW");
 			gpio_free(gpio_camaf_2p8_en);
@@ -188,7 +338,7 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 
 	gpio_camio_1p8_en = of_get_named_gpio(dnode, "gpio_camio_1p8_en", 0);
 	if (!gpio_is_valid(gpio_camio_1p8_en)) {
-		dev_err(dev, "failed to get gpio_camio_1p8_en\n");
+		dev_warn(dev, "failed to get gpio_camio_1p8_en\n");
 	} else {
 		gpio_request_one(gpio_camio_1p8_en, GPIOF_OUT_INIT_LOW, "CAM_GPIO_OUTPUT_LOW");
 		gpio_free(gpio_camio_1p8_en);
@@ -196,7 +346,7 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 
 	gpio_cam_core_en = of_get_named_gpio(dnode, "gpio_cam_core_en", 0);
 	if (!gpio_is_valid(gpio_cam_core_en)) {
-		dev_err(dev, "failed to get gpio_cam_core_en\n");
+		dev_warn(dev, "failed to get gpio_cam_core_en\n");
 	} else {
 		gpio_request_one(gpio_cam_core_en, GPIOF_OUT_INIT_LOW, "CAM_GPIO_OUTPUT_LOW");
 		gpio_free(gpio_cam_core_en);
@@ -212,6 +362,12 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 		dev_info(dev, "[%s] Disable control of AF 2.8V\n", __func__);
 	}
 
+	if (of_property_read_string(dnode, "cam_dvdd_1p2", (const char **) &cam_dvdd_1p2)) {
+		dev_info(dev, "Failed to get regulator_dvdd name property\n");
+	}
+
+	shared_camio_1p8 = of_property_read_bool(dnode, "shared_camio_1p8");
+
 	SET_PIN_INIT(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON);
 	SET_PIN_INIT(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF);
 
@@ -223,17 +379,27 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 	if (gpio_is_valid(gpio_cam_a2p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_a2p8_en, "cam_a2p8_en", PIN_OUTPUT, 1, 0);
 	} else {
+#if !defined(AVDD_2P8_REGULATOR)
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "FCAM_AVDD_2P8", PIN_REGULATOR, 1, 0);
+#endif
 	}
 	if (gpio_is_valid(gpio_cam_core_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_core_en, "cam_core_en", PIN_OUTPUT, 1, 0);
 	} else {
-		if(!disable_core_ldo) {
-			SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "FCAM_DVDD_1P2", PIN_REGULATOR, 1, 0);
+		if (cam_dvdd_1p2) {
+			SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, cam_dvdd_1p2, PIN_REGULATOR, 1, 0);
+		} else { 
+			if(!disable_core_ldo) {
+				SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "FCAM_DVDD_1P2", PIN_REGULATOR, 1, 0);
+			}
 		}
 	}
 	if (gpio_is_valid(gpio_camio_1p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 1, 2000);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, SRT_ACQUIRE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
+		}
 	} else {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 2000);
 	}
@@ -251,6 +417,8 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_reset, "sen_rst high", PIN_OUTPUT, 1, 3000);
 
 	/* SENSOR_SCENARIO_NORMAL off */
+	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 0, 100);
+	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 1, 100);
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 0, 1000);
 	if (exist_actuator == true) {
 		if (gpio_is_valid(gpio_camaf_2p8_en)) {
@@ -260,24 +428,34 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 		} else {
 			SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "VDDAF_2.8V_CAM", PIN_REGULATOR, 0, 1500);
 		}
-	} 
+	}
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_reset, "sen_rst low", PIN_OUTPUT, 0, 1500);
 	if (gpio_is_valid(gpio_camio_1p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 0, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, SRT_RELEASE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
+		}
 	} else {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 0, 0);
 	}
 	if (gpio_is_valid(gpio_cam_core_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_core_en, "cam_core_en", PIN_OUTPUT, 0, 0);
 	} else {
-		if(!disable_core_ldo) {
-			SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "FCAM_DVDD_1P2", PIN_REGULATOR, 0, 0);
+		if (cam_dvdd_1p2) {
+			SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, cam_dvdd_1p2, PIN_REGULATOR, 0, 0);
+		} else { 
+			if(!disable_core_ldo) {
+				SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "FCAM_DVDD_1P2", PIN_REGULATOR, 0, 0);
+			}
 		}
 	}
 	if (gpio_is_valid(gpio_cam_a2p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_a2p8_en, "cam_a2p8_en", PIN_OUTPUT, 0, 0);
 	} else {
+#if !defined(AVDD_2P8_REGULATOR)
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "FCAM_AVDD_2P8", PIN_REGULATOR, 0, 0);
+#endif
 	}
 	/* SENSOR_SCENARIO_READ_ROM on */
 	if (exist_actuator == true) {
@@ -291,6 +469,10 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 	}
 	if (gpio_is_valid(gpio_camio_1p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 1, 2000);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, SRT_ACQUIRE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
+		}
 	} else {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 2000);
 	}
@@ -298,6 +480,10 @@ static int sensor_module_4ha_power_setpin(struct device *dev,
 	/* SENSOR_SCENARIO_READ_ROM off */
 	if (gpio_is_valid(gpio_camio_1p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 0, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, SRT_RELEASE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
+		}
 	} else {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 0, 0);
 	}
@@ -328,6 +514,7 @@ int sensor_module_4ha_probe(struct platform_device *pdev)
 	struct sensor_open_extended *ext;
 	struct exynos_platform_fimc_is_module *pdata;
 	struct device *dev;
+	int num_of_gpio_ldo_en = 0; //A10e ver 0.3 uses only one gpio for LDO en. default is '0'
 
 	BUG_ON(!fimc_is_dev);
 
@@ -339,8 +526,21 @@ int sensor_module_4ha_probe(struct platform_device *pdev)
 
 	dev = &pdev->dev;
 
-	fimc_is_module_parse_dt(dev, sensor_module_4ha_power_setpin);
-	
+	ret = of_property_read_u32(dev->of_node, "num_of_gpio_ldo_en", &num_of_gpio_ldo_en);
+	if (ret) {
+		probe_info("[warning] Reading num_of_gpio_ldo_en is not correct, resetting to 0 (%d)", num_of_gpio_ldo_en);
+		num_of_gpio_ldo_en = 0;
+	}
+
+	if (num_of_gpio_ldo_en == 1) {
+		//A10e ver 0.3 uses LDO regulator
+		probe_info("probe using power sequence with common ldo enable gpio");
+		fimc_is_module_parse_dt(dev, sensor_module_4ha_power_setpin_with_common_ldo_en);
+	} else {
+		probe_info("probe using power sequence with gpio & regulator");
+		fimc_is_module_parse_dt(dev, sensor_module_4ha_power_setpin);
+	}
+
 	ret = of_property_read_u32(dev->of_node, "num_of_lanes", &num_lanes);
 	num_lanes=num_lanes-1;
 	if (ret) {
@@ -386,7 +586,7 @@ int sensor_module_4ha_probe(struct platform_device *pdev)
 	module->vci = vci_module_4ha;
 	module->sensor_maker = "SLSI";
 	module->sensor_name = "S5K4HA";
-	if (pdata->position == SENSOR_POSITION_REAR || pdata->position == SENSOR_POSITION_REAR2) {
+	if (pdata->position == SENSOR_POSITION_REAR || pdata->position == SENSOR_POSITION_REAR2 || pdata->position == SENSOR_POSITION_REAR3) {
 		module->setfile_name = "setfile_4ha.bin";
 	} else if (pdata->position == SENSOR_POSITION_FRONT || pdata->position == SENSOR_POSITION_FRONT2) {
 		module->setfile_name = "setfile_4ha_front.bin";
@@ -475,15 +675,6 @@ p_err:
 	return ret;
 }
 
-static int sensor_module_4ha_remove(struct platform_device *pdev)
-{
-        int ret = 0;
-
-        info("%s\n", __func__);
-
-        return ret;
-}
-
 static const struct of_device_id exynos_fimc_is_sensor_module_4ha_match[] = {
 	{
 		.compatible = "samsung,sensor-module-4ha",
@@ -493,8 +684,6 @@ static const struct of_device_id exynos_fimc_is_sensor_module_4ha_match[] = {
 MODULE_DEVICE_TABLE(of, exynos_fimc_is_sensor_module_4ha_match);
 
 static struct platform_driver sensor_module_4ha_driver = {
-	.probe  = sensor_module_4ha_probe,
-	.remove = sensor_module_4ha_remove,
 	.driver = {
 		.name   = "FIMC-IS-SENSOR-MODULE-4HA",
 		.owner  = THIS_MODULE,
@@ -502,4 +691,18 @@ static struct platform_driver sensor_module_4ha_driver = {
 	}
 };
 
-module_platform_driver(sensor_module_4ha_driver);
+
+static int __init fimc_is_sensor_module_4ha_init(void)
+{
+	int ret;
+
+	ret = platform_driver_probe(&sensor_module_4ha_driver,
+				sensor_module_4ha_probe);
+	if (ret)
+		err("failed to probe %s driver: %d\n",
+			sensor_module_4ha_driver.driver.name, ret);
+
+	return ret;
+}
+late_initcall(fimc_is_sensor_module_4ha_init);
+

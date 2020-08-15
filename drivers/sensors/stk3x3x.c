@@ -45,15 +45,21 @@
 #endif
 #include "stk3x3x.h"
 
-#define MODULE_NAME     	"proximity_sensor"
-#define VENDOR_NAME     	"Sensortek"
-#define CHIP_NAME      	 	"STK3031"
-#define PROX_READ_NUM     	25
-#define PS_WAIT 			52000
+#define MODULE_NAME         "proximity_sensor"
+#define VENDOR_NAME         "Sensortek"
+#define CHIP_NAME           "STK3031"
+#define PROX_READ_NUM       25
+#define PS_WAIT             52000
 #define PROX_MIN_DATA          0
-#define PDATA_MIN			0
-#define PDATA_MAX			0xFFFF
+#define PDATA_MIN           0
+#define PDATA_MAX           0xFFFF
 #define FIRST_CAL_ADC_LIMIT 120
+#define MIN_INT             -99999
+#define MAX_INT             99999
+#define AVG_SAMPLE_COUNT     6
+#define CAL_FAIL_MAX_MIN_RANGE  20
+#define CAL_RESET_CLOSE_CNT  3
+#define POCKET_DATA_NUM 3
 
 stk3x3x_register_table stk3x3x_default_register_table[] = {
 	{STK3X3X_PSCTRL_REG,            (STK3X3X_PS_PRS4 | STK3X3X_PS_GAIN8 | STK3X3X_PS_IT400),    0xFF},
@@ -354,19 +360,13 @@ static int32_t stk3x3x_first_cal_enable_ps(struct stk3x3x_data *drv_data, bool e
 		reg_value = (uint8_t)ret;
 	}
 
-	if (drv_data->intel_prst)
-		reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
-	else
-		reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK));
+	reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
 
 	if (en) {
 			SENSOR_INFO("First Cal Enable\n");
 			stk3x3x_set_ps_thd(drv_data, drv_data->prox_thd_h, drv_data->prox_thd_l);
 
-			if (drv_data->intel_prst)
-				reg_value |= (STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK);
-			else
-				reg_value |= (STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_PS_MASK);
+			reg_value |= (STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK);
 
 			ret = STK3X3X_REG_READ_MODIFY_WRITE(drv_data, STK3X3X_STATE_REG, reg_value, 0xFF);
 			if (ret < 0)
@@ -374,10 +374,7 @@ static int32_t stk3x3x_first_cal_enable_ps(struct stk3x3x_data *drv_data, bool e
 	} else {
 		SENSOR_INFO("First Cal Disable\n");
 
-		if (drv_data->intel_prst)
-			reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
-		else
-			reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK));
+		reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
 
 		ret = STK3X3X_REG_READ_MODIFY_WRITE(drv_data, STK3X3X_STATE_REG, reg_value, 0xFF);
 		if (ret < 0)
@@ -392,8 +389,8 @@ done:
 static void stk3x3x_prox_cal(struct stk3x3x_data *ps_data)
 {
 	int i, sum_cnt = 0, ret;
-	int16_t read_value, avg_value = 0;
-	int32_t sum = 0;
+	uint16_t read_value, avg_value = 0, min = PDATA_MAX, max = PDATA_MIN;
+	uint32_t sum = 0;
 	uint8_t sunlight_protection_mode = 0;
 
 	if (ps_data->enable == false) {
@@ -412,10 +409,21 @@ static void stk3x3x_prox_cal(struct stk3x3x_data *ps_data)
 		SENSOR_ERR("WAIT_REG failed %d\n", ret);
 		goto exit;
 	}
-	usleep_range(60000, 60000);
+	if (ps_data->cal_status == STK3X3X_FIRST_CAL) {
+		usleep_range(500000, 500000);
+	} else 
+		usleep_range(60000, 60000);
 
-	for (i = 0; i < 6; i++) {
-		usleep_range(10000, 10000);
+	for (i = 0; i < AVG_SAMPLE_COUNT; i++) {
+		if (ps_data->ps_it == STK3X3X_PS_IT1540) // wait-time = 9.24ms and IT-PS time = 1.54 ms
+		    usleep_range(12000, 12000);
+		else
+		    usleep_range(10000, 10000); // wait-time = 9.24ms and IT-PS time = 368 us
+
+		if (ps_data->cal_status == STK3X3X_CAL_ONGOING && ps_data->enable == false) {
+			SENSOR_ERR("sensor disabled exit\n");
+			goto exit;
+		}
 
 		// check sunlight mode
 		ret = STK3X3X_REG_READ(ps_data, STK3X3X_SUNLIGHT_CHECK_REG);
@@ -428,26 +436,41 @@ static void stk3x3x_prox_cal(struct stk3x3x_data *ps_data)
 
 		// read adc value
 		read_value = stk3x3x_get_ps_reading(ps_data);
+		
+		if (read_value > max)
+			max = read_value;
+		if (read_value < min)
+			min = read_value;
+
+		SENSOR_INFO("read_value = %d, (0x%x)\n", read_value, sunlight_protection_mode);
 		if (((sunlight_protection_mode >> 5) & 0x1) && read_value == 0) {
-			if (ps_data->cal_status == STK3X3X_FIRST_CAL)
-				SENSOR_ERR("SUNLIGHT PROTECTION, set as default thd h(%u) l(%u)\n",
-					ps_data->prox_thd_h, ps_data->prox_thd_l);
-			else
+			if (ps_data->cal_status == STK3X3X_FIRST_CAL) {
+				if (ps_data->sunlight_thd_h != PDATA_MAX && ps_data->sunlight_thd_l != PDATA_MAX) {
+					stk3x3x_set_ps_thd(ps_data, ps_data->sunlight_thd_h, ps_data->sunlight_thd_l);
+					SENSOR_INFO("SUNLIGHT PROTECTION, set as sunlight thd h(%u) l(%u)\n",
+						ps_data->sunlight_thd_h, ps_data->sunlight_thd_l);
+				} else
+					SENSOR_INFO("SUNLIGHT PROTECTION, set as default thd h(%u) l(%u)\n",
+						ps_data->prox_thd_h, ps_data->prox_thd_l);
+			} else
 				SENSOR_ERR("SUNLIGHT PROTECTION, calibration is failed, (0x%x)\n"
 					, sunlight_protection_mode);
 			goto exit;
 		} else if ((ps_data->cal_status == STK3X3X_CAL_ONGOING)
 			&& (read_value > ps_data->prox_thd_l - 10)) {
-			SENSOR_ERR("cal failed ps_data = %d", read_value);
+			SENSOR_ERR("cal failed ps_data = %d, thd l %u\n", read_value, ps_data->prox_thd_l);
 			goto exit;
-		} else if ((ps_data->cal_status == STK3X3X_FIRST_CAL)
-			&& (read_value > FIRST_CAL_ADC_LIMIT)) {
-			SENSOR_ERR("first cal adc is too big. set as default thd h(%u) l(%u)\n",
-				ps_data->prox_thd_h, ps_data->prox_thd_l);
+		} else if (!ps_data->first_limit_skip && (ps_data->cal_status == STK3X3X_FIRST_CAL) 
+				&& read_value > ps_data->first_cal_adc_limit) {
+			if (ps_data->first_cal_thd_h != PDATA_MAX && ps_data->first_cal_thd_l != PDATA_MAX) {
+				stk3x3x_set_ps_thd(ps_data, ps_data->first_cal_thd_h, ps_data->first_cal_thd_l);
+				SENSOR_INFO("first cal adc is too big. set as thd h(%u) l(%u)\n",
+					ps_data->first_cal_thd_h, ps_data->first_cal_thd_l);
+			} else
+				SENSOR_INFO("first cal adc is too big. set as default thd h(%u) l(%u)\n",
+					ps_data->prox_thd_h, ps_data->prox_thd_l);
 			goto exit;
 		} else if (read_value >= PDATA_MIN && read_value <= PDATA_MAX) {
-			SENSOR_INFO("read_value = %d, (0x%x)\n", read_value,
-				sunlight_protection_mode);
 			sum += read_value;
 			sum_cnt++;
 		} else {
@@ -456,11 +479,19 @@ static void stk3x3x_prox_cal(struct stk3x3x_data *ps_data)
 		}
 	}
 
-	if (sum_cnt == 6) {
-		avg_value = sum/sum_cnt;
+	if (max - min > CAL_FAIL_MAX_MIN_RANGE) {
+		SENSOR_ERR("cal failed max(%u) - min(%u) = %u\n", max, min, max-min);
+		goto exit;
+	}
+
+	if (sum_cnt == AVG_SAMPLE_COUNT) {
+		avg_value = sum/AVG_SAMPLE_COUNT;
 		SENSOR_INFO("sum = %d, avg = %d", sum, avg_value);
-		ps_data->prox_thd_h = avg_value + 40;
-		ps_data->prox_thd_l = avg_value + 20;
+		ps_data->prox_thd_h = avg_value + ps_data->thd_h_offset;
+		if (ps_data->cal_status == STK3X3X_FIRST_CAL)
+			ps_data->prox_thd_l = avg_value + 30;
+		else
+			ps_data->prox_thd_l = avg_value + 20;
 		stk3x3x_set_ps_thd(ps_data, ps_data->prox_thd_h, ps_data->prox_thd_l);
 		SENSOR_INFO("cal done h=%u, l=%u\n", ps_data->prox_thd_h,
 			ps_data->prox_thd_l);
@@ -472,9 +503,10 @@ exit :
 	if (ret < 0)
 		SENSOR_ERR("WAIT_REG failed %d\n", ret);
 
-	if (ps_data->cal_status == STK3X3X_FIRST_CAL)
+	if (ps_data->cal_status == STK3X3X_FIRST_CAL && !ps_data->factory_cal)
 		stk3x3x_first_cal_enable_ps(ps_data, 0);
 	ps_data->cal_status = STK3X3X_CAL_DISABLED;
+	ps_data->factory_cal = false;
 }
 
 static void stk3x3x_work_func_prox_cal(struct work_struct *work)
@@ -487,20 +519,141 @@ static void stk3x3x_work_func_prox_cal(struct work_struct *work)
 	mutex_unlock(&ps_data->control_mutex);
 }
 
+static void stk3x3x_work_func_pocket_read(struct work_struct *work)
+{
+	struct stk3x3x_data *ps_data = container_of(work,
+		struct stk3x3x_data, work_pocket);
+
+	int32_t ret = 0;
+	uint16_t read_adc = 0;
+	uint8_t reg_value = 0, read_val[2] = {0,};
+	uint8_t sunlight_protection_mode = 0;
+	int i = 0;
+
+	SENSOR_INFO("start\n");
+	ps_data->pocket_prox = STK3X3X_POCKET_UNKNOWN;
+
+	ret = STK3X3X_REG_READ(ps_data, STK3X3X_STATE_REG);
+	if (ret < 0)
+		goto exit;
+	else
+		reg_value = (uint8_t)ret;
+
+		reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
+
+	stk3x3x_set_ps_thd(ps_data, ps_data->prox_thd_h, ps_data->prox_thd_l);
+
+		reg_value |= (STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK);
+
+
+	ret = STK3X3X_REG_READ_MODIFY_WRITE(ps_data, STK3X3X_STATE_REG, reg_value, 0xFF);
+	if (ret < 0)
+		goto exit;
+
+	// set wait time as 1.74ms
+	ret = STK3X3X_REG_WRITE(ps_data, STK3X3X_WAIT_REG, 0x1);
+	if(ret < 0)
+		SENSOR_ERR("WAIT_REG failed %d\n", ret);
+
+	usleep_range(10000, 10000);
+
+	// check sunlight mode
+	ret = STK3X3X_REG_READ(ps_data, STK3X3X_SUNLIGHT_CHECK_REG);
+	if (ret < 0) {
+		SENSOR_ERR("STK3X3X_SUNLIGHT_CHECK_REG read fail, ret=%d\n", ret);
+		goto exit;
+	}
+
+	sunlight_protection_mode = (uint8_t)ret;
+
+	for (i = 0; i < POCKET_DATA_NUM; i++) {
+		ret = STK3X3X_REG_BLOCK_READ(ps_data, STK3X3X_DATA1_PS_REG, 2, &read_val[0]);
+		if (ret < 0) {
+			SENSOR_ERR("ADC read failed, ret=%d\n", ret);
+			return;
+		} else {
+			read_adc += (read_val[0] << 8 | read_val[1]);
+			if (((sunlight_protection_mode >> 5) & 0x1) && read_adc == 0) {
+				SENSOR_ERR("SUNLIGHT PROTECTION, prox read is failed, (0x%x)\n"
+					, sunlight_protection_mode);
+				ps_data->pocket_prox = STK3X3X_POCKET_FAR_AWAY;
+				// turn off proximity sensor
+				reg_value = 0;
+				STK3X3X_REG_READ(ps_data, STK3X3X_STATE_REG);
+				reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
+				STK3X3X_REG_READ_MODIFY_WRITE(ps_data, STK3X3X_STATE_REG, reg_value, 0xFF);
+				goto exit;
+			}
+		}
+		if (i < POCKET_DATA_NUM - 1)
+			usleep_range(10000, 10000);
+	}
+	read_adc = read_adc / POCKET_DATA_NUM;
+
+	reg_value = 0;
+	ret = STK3X3X_REG_READ(ps_data, STK3X3X_STATE_REG);
+	if (ret < 0) {
+		goto exit;
+	} else {
+		reg_value = (uint8_t)ret;
+	}
+
+	reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
+
+	ret = STK3X3X_REG_READ_MODIFY_WRITE(ps_data, STK3X3X_STATE_REG, reg_value, 0xFF);
+	if (ret < 0)
+		goto exit;
+
+	if (read_adc < ps_data->prox_thd_h)
+		ps_data->pocket_prox = STK3X3X_POCKET_FAR_AWAY;
+	else 
+		ps_data->pocket_prox = STK3X3X_POCKET_NEAR_BY;
+
+	SENSOR_INFO("adc=%d, thd_h=%d, prox=%d\n", read_adc, ps_data->prox_thd_h, ps_data->pocket_prox);
+
+
+exit:  
+	ps_data->pocket_running = false;
+}
+
 static void stk_ps_report(struct stk3x3x_data *drv_data, int nf)
 {
 	uint8_t reg_value = 0x0;
+	uint8_t state_reg = 0x00;
 	int32_t ret;
 
 	input_report_rel(drv_data->prox_input_dev, REL_MISC, nf + 1);
 	input_sync(drv_data->prox_input_dev);
 	wake_lock_timeout(&drv_data->prox_wakelock, 3 * HZ);
 
+	// A20 model only 
+	if(drv_data->intel_prst == 0) {
+		ret = STK3X3X_REG_READ(drv_data, STK3X3X_STATE_REG);
+		if (ret < 0) {
+			SENSOR_ERR("state register read failed, ret=%d\n", ret);		
+		} else {
+			state_reg = (uint8_t)ret;
+			SENSOR_INFO("state register read value, state_reg=%d\n", state_reg);
+		}
+		
+		if (nf == STK3X3X_PRX_NEAR_BY) {
+			state_reg &= (~STK3X3X_STATE_EN_INTELL_PRST_MASK); //disable intel persistance
+		} else if (nf == STK3X3X_PRX_FAR_AWAY) {
+			state_reg |= (STK3X3X_STATE_EN_INTELL_PRST_MASK);  //enable intel persistance
+		}
+		
+		SENSOR_INFO("state register write value, state_reg=%d\n", state_reg);
+		ret = STK3X3X_REG_READ_MODIFY_WRITE(drv_data, STK3X3X_STATE_REG, state_reg, 0xFF);
+		if (ret < 0)
+			SENSOR_ERR("state register write failed, ret=%d\n", ret);
+	}	
 	// PS persistance adjustment
 	if (nf == STK3X3X_PRX_NEAR_BY) {
 		reg_value = (STK3X3X_PS_PRS2 | STK3X3X_PS_GAIN8);
+		drv_data->pocket_prox = STK3X3X_POCKET_NEAR_BY;
 	} else if (nf == STK3X3X_PRX_FAR_AWAY) {
 		reg_value = (STK3X3X_PS_PRS4 | STK3X3X_PS_GAIN8);
+		drv_data->pocket_prox = STK3X3X_POCKET_FAR_AWAY;
 	}
 
 	reg_value = (reg_value | drv_data->ps_it);
@@ -511,12 +664,14 @@ static void stk_ps_report(struct stk3x3x_data *drv_data, int nf)
 	}
 
 	if (nf == STK3X3X_PRX_FAR_AWAY) { 
-		if (drv_data->cal_status == STK3X3X_CAL_DISABLED) { 
+		if (drv_data->cal_status == STK3X3X_CAL_DISABLED) {
 			SENSOR_INFO("call calibration work\n"); 
 			drv_data->cal_status = STK3X3X_CAL_ONGOING;
 			// control mutex already applied
 			stk3x3x_prox_cal(drv_data);
 		}
+		if (drv_data->cal_status == STX3X3X_CAL_SKIP)
+			drv_data->cal_status = STK3X3X_CAL_DISABLED;
 	}
 }
 
@@ -537,7 +692,12 @@ static void check_first_far_event(struct stk3x3x_data *drv_data)
 
 	if (drv_data->adc < drv_data->prox_thd_h) {
 		SENSOR_INFO("First far event reported\n");
-		stk_ps_report(drv_data, 1);
+		if (drv_data->adc < drv_data->prox_thd_l && drv_data->check_far_state != 1) {
+			drv_data->close_cnt = 0;
+			SENSOR_ERR("stk close_cnt(%u) \n", drv_data->close_cnt);
+		}
+		drv_data->cal_status = STX3X3X_CAL_SKIP;
+		stk_ps_report(drv_data, STK3X3X_PRX_FAR_AWAY);
 	}
 }
 
@@ -546,7 +706,13 @@ static int32_t stk3x3x_enable_ps(struct stk3x3x_data *drv_data, bool en)
 	int32_t ret = 0;
 	uint8_t reg_value = 0;
 
-	if (drv_data->enable == en){
+	if (drv_data->pocket_running == true) {
+		SENSOR_INFO("pockek_prox cancel work\n");
+		cancel_work_sync(&drv_data->work_pocket);
+		drv_data->pocket_running = false;
+	}
+
+	if (drv_data->enable == en) {
 		SENSOR_INFO("Prox sensor already on/off, en=%d\n", en);
 		goto done;
 	}
@@ -558,33 +724,31 @@ static int32_t stk3x3x_enable_ps(struct stk3x3x_data *drv_data, bool en)
 		reg_value = (uint8_t)ret;
 	}
 
-	if(drv_data->intel_prst)
-		reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
-	else
-		reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK));
+	reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
 
 	if (en) {
-			SENSOR_INFO("Enable\n");
-
+			SENSOR_INFO("Enable ( close_cnt : %u)\n", drv_data->close_cnt);
+			drv_data->pocket_prox = STK3X3X_POCKET_UNKNOWN;
 			enable_irq_wake(drv_data->irq);
 			enable_irq(drv_data->irq);
 
 			stk3x3x_set_ps_thd(drv_data, drv_data->prox_thd_h, drv_data->prox_thd_l);
 
-			if (drv_data->intel_prst)
-				reg_value |= (STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK);
-			else
-				reg_value |= (STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_PS_MASK);
+			reg_value |= (STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK);
 
 			ret = STK3X3X_REG_READ_MODIFY_WRITE(drv_data, STK3X3X_STATE_REG, reg_value, 0xFF);
 			if (ret < 0)
 				goto done;
 
+			ret = STK3X3X_REG_WRITE(drv_data, STK3X3X_WAIT_REG, STK3X3X_WAIT50);
+			if(ret < 0)
+				SENSOR_ERR("WAIT_REG failed %d\n", ret);
+
 			usleep_range(60000, 60000);
 			drv_data->check_far_state = 0;
 			check_first_far_event(drv_data);
 	} else {
-		SENSOR_INFO("Disable\n");
+		SENSOR_INFO("Disable (close_cnt : %u)\n", drv_data->close_cnt);
 		if (drv_data->cal_status == STK3X3X_CAL_ONGOING) {
 			drv_data->cal_status = STK3X3X_CAL_DISABLED;
 			cancel_work_sync(&drv_data->work_cal_prox);
@@ -592,10 +756,7 @@ static int32_t stk3x3x_enable_ps(struct stk3x3x_data *drv_data, bool en)
 		disable_irq(drv_data->irq);
 		disable_irq_wake(drv_data->irq);
 
-		if(drv_data->intel_prst)
-			reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
-		else
-			reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK));
+		reg_value &= (~(STK3X3X_STATE_EN_PS_MASK | STK3X3X_STATE_EN_WAIT_MASK | STK3X3X_STATE_EN_INTELL_PRST_MASK));
 
 		ret = STK3X3X_REG_READ_MODIFY_WRITE(drv_data, STK3X3X_STATE_REG, reg_value, 0xFF);
 		if (ret < 0)
@@ -637,8 +798,29 @@ static int32_t stk3x3x_get_data_and_report(struct stk3x3x_data *drv_data, uint8_
 	} else {
 		if (ret == 0x7FFF0001) { //BGIR failed
 			SENSOR_ERR("stk3x3x_bgir_check failed, ret=%d\n", ret);
-			stk_ps_report(drv_data, 1);
+			if (drv_data->close_cnt > 0) {
+				drv_data->close_cnt--;
+				SENSOR_ERR("stk close_cnt(%u) \n", drv_data->close_cnt);
+			}
+			drv_data->cal_status = STX3X3X_CAL_SKIP;
+			stk_ps_report(drv_data, STK3X3X_PRX_FAR_AWAY);
 		} else {
+			if (nf_state == STK3X3X_PRX_NEAR_BY) {
+				drv_data->close_cnt++;
+				if (drv_data->close_cnt >= CAL_RESET_CLOSE_CNT) {
+					SENSOR_ERR("stk close_cnt(%u) threshold reset as default cur (h:%u, l:%u) default (h:%u, l:%u)\n",\
+						drv_data->close_cnt, drv_data->prox_thd_h, drv_data->prox_thd_l,\
+						drv_data->prox_default_thd_h, drv_data->prox_default_thd_l);
+					// set as default
+					drv_data->close_cnt = 0;
+					drv_data->prox_thd_h = drv_data->prox_default_thd_h;
+					drv_data->prox_thd_l = drv_data->prox_default_thd_l;
+					stk3x3x_set_ps_thd(drv_data, drv_data->prox_thd_h, drv_data->prox_thd_l);         
+				}
+			} else if (nf_state == STK3X3X_PRX_FAR_AWAY) {
+				drv_data->close_cnt = 0;
+				SENSOR_ERR("stk close_cnt(%u) \n", drv_data->close_cnt);
+			}
 			stk_ps_report(drv_data, nf_state);
 		}
 	}
@@ -844,6 +1026,43 @@ static ssize_t proximity_check_far_state_store(struct device *dev, struct device
 	return size;
 }
 
+static ssize_t pocket_prox_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct stk3x3x_data *ps_data =  dev_get_drvdata(dev);
+
+	SENSOR_INFO("stk pocket_prox = %u\n",  ps_data->pocket_prox);
+	
+	return scnprintf(buf, PAGE_SIZE, "%d\n", ps_data->pocket_prox);
+}
+
+static ssize_t pocket_prox_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	int en;
+	struct stk3x3x_data *ps_data =  dev_get_drvdata(dev);
+
+	if (sscanf(buf, "%d", &en) != 1) {
+		SENSOR_ERR("invalid value\n");
+		return size;
+	}
+
+	ps_data->pocket_prox = STK3X3X_POCKET_UNKNOWN;
+	if (en == 1)
+		ps_data->pocket_enable = true;
+	else {
+		if (ps_data->pocket_running) {
+			cancel_work_sync(&ps_data->work_pocket);
+			ps_data->pocket_running = false;
+		}
+		ps_data->pocket_enable = false;
+	}
+
+	SENSOR_INFO("stk pocket_enable = %u\n",  ps_data->pocket_enable);
+
+	return size;
+}
+
+
 static ssize_t proximity_avg_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t size)
 {
@@ -855,7 +1074,7 @@ static ssize_t proximity_avg_store(struct device *dev,
 	else if (sysfs_streq(buf, "0"))
 		new_value = false;
 	else {
-		SENSOR_ERR("invalid value\n");		
+		SENSOR_ERR("invalid value\n");
 		return -EINVAL;
 	}
 
@@ -898,6 +1117,31 @@ static ssize_t stk_ps_code_cal_show(struct device *dev, struct device_attribute 
 	ps_thd_h = (int16_t)((ps_thd[0] << 8) | ps_thd[1]);
 
 	return scnprintf(buf, PAGE_SIZE, "%d,%d,%d\n", drv_data->offset ,ps_thd_l, ps_thd_h);
+}
+
+static ssize_t stk_ps_code_cal_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct stk3x3x_data *drv_data = dev_get_drvdata(dev);
+
+	if (sysfs_streq(buf, "1")){ /* calibrate cancelation value */
+		SENSOR_INFO("call calibration work\n"); 
+		drv_data->cal_status = STK3X3X_FIRST_CAL;
+		drv_data->factory_cal = true;
+		mutex_lock(&drv_data->control_mutex);
+		stk3x3x_prox_cal(drv_data);
+		mutex_unlock(&drv_data->control_mutex);
+	} else {
+		SENSOR_ERR("invalid value %d\n", *buf);
+		return size;
+	}
+
+	return size;
+}
+
+static ssize_t stk_fac_cal_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "1\n");
 }
 
 static ssize_t stk_ps_code_thd_l_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -1115,11 +1359,13 @@ static DEVICE_ATTR(thresh_low,        0664,   stk_ps_code_thd_l_show,     stk_ps
 static DEVICE_ATTR(thresh_high,       0664,   stk_ps_code_thd_h_show,     stk_ps_code_thd_h_store);
 static DEVICE_ATTR(prox_register,     0664,   stk_ps_code_register_show,  stk_ps_code_register_store);
 static DEVICE_ATTR(prox_trim,         0444,   stk_ps_code_trim_show,      NULL);
-static DEVICE_ATTR(prox_cal,          0444,   stk_ps_code_cal_show,       NULL);
+static DEVICE_ATTR(prox_cal,          0664,   stk_ps_code_cal_show,       stk_ps_code_cal_store);
+static DEVICE_ATTR(prox_offset_pass,  0444,   stk_fac_cal_show,           NULL);
 static DEVICE_ATTR(vendor,            0444,   stk_vendor_show,            NULL);
 static DEVICE_ATTR(name,              0444,   stk_name_show,              NULL);
 static DEVICE_ATTR(prox_avg,          0664,   proximity_avg_show,         proximity_avg_store);
 static DEVICE_ATTR(check_far_state,   0664,   proximity_check_far_state_show,   proximity_check_far_state_store);
+static DEVICE_ATTR(pocket_prox,       0664,   pocket_prox_show, pocket_prox_store);
 
 static struct device_attribute *prox_sysfs_attrs[] = {
 	&dev_attr_psenable,
@@ -1130,10 +1376,12 @@ static struct device_attribute *prox_sysfs_attrs[] = {
 	&dev_attr_prox_register,
 	&dev_attr_prox_trim,
 	&dev_attr_prox_cal,
+	&dev_attr_prox_offset_pass,
 	&dev_attr_vendor,
 	&dev_attr_name,
 	&dev_attr_prox_avg,
 	&dev_attr_check_far_state,
+	&dev_attr_pocket_prox,
 	NULL
 };
 
@@ -1219,7 +1467,7 @@ static int32_t stk3x3x_init_registers(struct stk3x3x_data *drv_data)
 				stk3x3x_default_register_table[reg_count].value = (STK3X3X_PS_PRS4 | STK3X3X_PS_GAIN8 | drv_data->ps_it);
 			}
 			SENSOR_INFO("PS_IT = %d\n", drv_data->ps_it);
-		}	
+		}
 		ret = STK3X3X_REG_READ_MODIFY_WRITE(drv_data,
 										stk3x3x_default_register_table[reg_count].address,
 										stk3x3x_default_register_table[reg_count].value,
@@ -1239,13 +1487,27 @@ static int32_t stk3x3x_init_registers(struct stk3x3x_data *drv_data)
 
 int stk3x3x_suspend(struct device *dev)
 {
+	struct stk3x3x_data *drv_data = dev_get_drvdata(dev);
 	SENSOR_INFO("\n");
+
+	if (drv_data->pocket_running == true) {
+		cancel_work_sync(&drv_data->work_pocket);
+		drv_data->pocket_running = false;
+	}
+
 	return 0;
 }
 
 int stk3x3x_resume(struct device *dev)
 {
+	struct stk3x3x_data *drv_data = dev_get_drvdata(dev);
 	SENSOR_INFO("\n");
+	if (drv_data->enable == false && drv_data->pocket_enable == true) {
+		drv_data->pocket_prox = STK3X3X_POCKET_UNKNOWN;
+		drv_data->pocket_running = true;
+		queue_work(drv_data->prox_pocket_wq, &drv_data->work_pocket);
+	}
+
 	return 0;
 }
 
@@ -1269,7 +1531,7 @@ static int stk3x3x_parse_dt(struct device *dev, struct stk3x3x_data *drv_data)
 		SENSOR_ERR("stk,prox_thd_h read failed, ret=%d\n", ret);
 		return ret;
 	} else {
-		drv_data->prox_thd_h = (u16) temp_val;
+		drv_data->prox_default_thd_h = drv_data->prox_thd_h = (u16) temp_val;
 		SENSOR_INFO("prox_thd_h=%d\n", drv_data->prox_thd_h);
 	}
 
@@ -1278,9 +1540,66 @@ static int stk3x3x_parse_dt(struct device *dev, struct stk3x3x_data *drv_data)
 		SENSOR_ERR("stk,prox_thd_l read failed, ret=%d\n", ret);
 		return ret;
 	} else {
-		drv_data->prox_thd_l = (u16) temp_val;
+		drv_data->prox_default_thd_l = drv_data->prox_thd_l = (u16) temp_val;
 		SENSOR_INFO("prox_thd_l=%d\n", drv_data->prox_thd_l);
 	}
+
+	ret = of_property_read_u32(np, "stk,thd_h_offset", &temp_val);
+	if (ret < 0) {
+		drv_data->thd_h_offset = 40;
+		SENSOR_ERR("stk,thd_h_offset read failed, ret=%d\n", ret);
+	} else {
+		drv_data->thd_h_offset = (u16) temp_val;
+		SENSOR_INFO("thd_h_offset=%d\n", drv_data->thd_h_offset);
+	}
+
+	ret = of_property_read_u32(np, "stk,sunlight_thd_h", &temp_val);
+	if (ret < 0) {
+		drv_data->sunlight_thd_h = PDATA_MAX;
+		SENSOR_INFO("stk,sunlight_thd_h read failed, ret=%d\n", ret);
+	} else {
+		drv_data->sunlight_thd_h = (u16) temp_val;
+		SENSOR_INFO("sunlight_thd_h=%d\n", drv_data->sunlight_thd_h);
+	}
+
+	ret = of_property_read_u32(np, "stk,sunlight_thd_l", &temp_val);
+	if (ret < 0) {
+		drv_data->sunlight_thd_l = PDATA_MAX;
+		SENSOR_INFO("stk,sunlight_thd_l read failed, ret=%d\n", ret);
+	} else {
+		drv_data->sunlight_thd_l = (u16) temp_val;
+		SENSOR_INFO("sunlight_thd_l=%d\n", drv_data->sunlight_thd_l);
+	}
+
+	ret = of_property_read_u32(np, "stk,first_cal_adc_limit", &temp_val);
+	if (ret < 0) {
+		drv_data->first_cal_adc_limit = FIRST_CAL_ADC_LIMIT;
+		SENSOR_INFO("stk,first_cal_adc_limit read failed, ret=%d\n", ret);
+	} else {
+		drv_data->first_cal_adc_limit = (u16) temp_val;
+		SENSOR_INFO("first_cal_adc_limit=%d\n", drv_data->first_cal_adc_limit);
+	}
+
+	ret = of_property_read_u32(np, "stk,first_cal_thd_h", &temp_val);
+	if (ret < 0) {
+		drv_data->first_cal_thd_h = PDATA_MAX;
+		SENSOR_INFO("stk,first_cal_thd_h read failed, ret=%d\n", ret);
+	} else {
+		drv_data->first_cal_thd_h = (u16) temp_val;
+		SENSOR_INFO("first_cal_thd_h=%d\n", drv_data->first_cal_thd_h);
+	}
+
+	ret = of_property_read_u32(np, "stk,first_cal_thd_l", &temp_val);
+	if (ret < 0) {
+		drv_data->first_cal_thd_l = PDATA_MAX;
+		SENSOR_INFO("stk,first_cal_thd_l read failed, ret=%d\n", ret);
+	} else {
+		drv_data->first_cal_thd_l = (u16) temp_val;
+		SENSOR_INFO("first_cal_thd_l=%d\n", drv_data->first_cal_thd_l);
+	}
+
+	if (drv_data->prox_thd_h == 0 && drv_data->prox_thd_l == 0)
+			drv_data->first_limit_skip = true;
 
 	ret = of_property_read_u32(np, "stk,intel_prst", &temp_val);
 	if (ret < 0) {
@@ -1390,6 +1709,7 @@ int stk3x3x_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	wake_lock_init(&drv_data->prox_wakelock, WAKE_LOCK_SUSPEND, "prox_wakelock");
 	device_init_wakeup(&client->dev, true);
 
+	drv_data->first_limit_skip = false;
 	ret = stk3x3x_parse_dt(&client->dev, drv_data);
 	if (ret) {
 		SENSOR_ERR("stk3x3x_parse_dt failed, ret=%d\n", ret);
@@ -1435,24 +1755,39 @@ int stk3x3x_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		SENSOR_ERR("could not create prox cal workqueue\n");
 		goto err_create_prox_cal_workqueue;
 	}
+
+	drv_data->prox_pocket_wq = create_singlethread_workqueue("stk3x3x_prox_pocket");
+	if (!drv_data->prox_pocket_wq) {
+		ret = -ENOMEM;
+		SENSOR_ERR("could not create prox_pocket workqueue\n");
+		goto err_create_prox_pocket_workqueue;
+	}
+
 	INIT_WORK(&drv_data->work_cal_prox, stk3x3x_work_func_prox_cal);
+	INIT_WORK(&drv_data->work_pocket, stk3x3x_work_func_pocket_read);
 
 	ret = stk3x3x_setup_irq(drv_data);
 	if (ret < 0) {
 		SENSOR_ERR("stk3x3x_setup_irq failed, ret=%d\n", ret);
 		goto err_stk3x3x_setup_irq;
 	}
-
 	drv_data->cal_status = STK3X3X_FIRST_CAL;
-	SENSOR_INFO("call calibration work\n");	
+	drv_data->factory_cal = false;
+	drv_data->pocket_running = false;
+	drv_data->pocket_enable = false;
+	SENSOR_INFO("call calibration work\n");
 	queue_work(drv_data->prox_cal_wq, &drv_data->work_cal_prox);
 	drv_data->check_far_state = 0;
+	drv_data->close_cnt = 0;
+	drv_data->pocket_prox = STK3X3X_POCKET_UNKNOWN;
 
 	SENSOR_INFO("probe done\n");
 
 	return 0;
 
 err_stk3x3x_setup_irq:
+	destroy_workqueue(drv_data->prox_pocket_wq);
+err_create_prox_pocket_workqueue:
 	destroy_workqueue(drv_data->prox_cal_wq);
 err_create_prox_cal_workqueue:    
 	destroy_workqueue(drv_data->prox_wq);
@@ -1486,6 +1821,9 @@ int stk3x3x_remove(struct i2c_client *client)
 		cancel_work_sync(&drv_data->work_cal_prox);
 	destroy_workqueue(drv_data->prox_cal_wq);
 	destroy_workqueue(drv_data->prox_irq_wq);
+    if (drv_data->pocket_running)
+		cancel_work_sync(&drv_data->work_pocket);
+	destroy_workqueue(drv_data->prox_pocket_wq);
 
 	sensors_unregister(drv_data->dev, prox_sysfs_attrs);
 	destroy_workqueue(drv_data->prox_wq);

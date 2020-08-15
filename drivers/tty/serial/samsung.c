@@ -123,6 +123,37 @@ EXPORT_SYMBOL_GPL(s3c2410_serial_wake_peer);
 #define RTS_PINCTRL			(1)
 #define DEFAULT_PINCTRL		(0)
 
+/* Allocate 800KB of buffer for UART logging */
+#define LOG_BUFFER_SIZE		(0xC8000)
+
+static void uart_sfr_dump(struct s3c24xx_uart_port *ourport)
+{
+	struct uart_port *port = &ourport->port;
+
+	dev_err(ourport->port.dev, " Register dump\n"
+		"ULCON	0x%08x	"
+		"UCON	0x%08x	"
+		"UFCON	0x%08x	\n"
+		"UMCON	0x%08x	"
+		"UTRSTAT	0x%08x	"
+		"UERSTAT	0x%08x	"
+		"UMSTAT	0x%08x	\n"
+		"UBRDIV	0x%08x	"
+		"UINTP	0x%08x	"
+		"UINTM	0x%08x	\n"
+		, readl(port->membase + S3C2410_ULCON)
+		, readl(port->membase + S3C2410_UCON)
+		, readl(port->membase + S3C2410_UFCON)
+		, readl(port->membase + S3C2410_UMCON)
+		, readl(port->membase + S3C2410_UTRSTAT)
+		, readl(port->membase + S3C2410_UERSTAT)
+		, readl(port->membase + S3C2410_UMSTAT)
+		, readl(port->membase + S3C2410_UBRDIV)
+		, readl(port->membase + S3C64XX_UINTP)
+		, readl(port->membase + S3C64XX_UINTM)
+	);
+}
+
 static void change_uart_gpio(int value, struct s3c24xx_uart_port *ourport)
 {
 	int status = 0;
@@ -524,7 +555,7 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
 		if (unlikely(uerstat & S3C2410_UERSTAT_ANY)) {
 			dbg("rxerr: port ch=0x%02x, rxs=0x%08x\n",
 			    ch, uerstat);
-
+			uart_sfr_dump(ourport);
 			/* check for break */
 			if (uerstat & S3C2410_UERSTAT_BREAK) {
 				dbg("break!\n");
@@ -1130,11 +1161,14 @@ static void s3c24xx_serial_set_termios(struct uart_port *port,
 	wr_regl(port, S3C2410_ULCON, ulcon);
 	wr_regl(port, S3C2410_UBRDIV, quot);
 
+	port->status &= ~UPSTAT_AUTOCTS;
+
 	umcon = rd_regl(port, S3C2410_UMCON);
 	if (termios->c_cflag & CRTSCTS) {
 		umcon |= S3C2410_UMCOM_AFC;
 		/* Disable RTS when RX FIFO contains 63 bytes */
 		umcon &= ~S3C2412_UMCON_AFC_8;
+		port->status = UPSTAT_AUTOCTS;
 	} else {
 		umcon &= ~S3C2410_UMCOM_AFC;
 	}
@@ -1801,6 +1835,11 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 
 	dbg("s3c24xx_serial_probe(%p) %d\n", pdev, index);
 
+	if (index >= ARRAY_SIZE(s3c24xx_serial_ports)) {
+		dev_err(&pdev->dev, "serial%d out of range\n", index);
+		return -EINVAL;
+	}
+	
 	if (pdev->dev.of_node) {
 		ret = of_alias_get_id(pdev->dev.of_node, "uart");
 		if (ret < 0) {
@@ -1810,10 +1849,12 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 			port_index = ret;
 		}
 	}
+	
 	ourport = &s3c24xx_serial_ports[port_index];
 
 	if (ourport->port.line != port_index)
 		ourport = exynos_serial_default_port(port_index);
+
 
 	if (ourport->port.line >= CONFIG_SERIAL_SAMSUNG_UARTS) {
 		dev_err(&pdev->dev,
@@ -1909,11 +1950,6 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 		ourport->uart_logging = 1;
 	else
 		ourport->uart_logging = 0;
-
-	if (of_find_property(pdev->dev.of_node, "samsung,lpass-subip", NULL))
-		ourport->domain = DOMAIN_AUD;
-	else
-		ourport->domain = DOMAIN_TOP;
 
 	if (of_find_property(pdev->dev.of_node, "samsung,use-default-irq", NULL))
 		ourport->use_default_irq =1;

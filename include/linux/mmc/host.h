@@ -23,6 +23,12 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/pm.h>
 
+#define MMC_DRIVER_TYPE_0	0	/* Default, x1 */
+#define MMC_DRIVER_TYPE_1	1	/* x1.5 */
+#define MMC_DRIVER_TYPE_2	2	/* x0.75 */
+#define MMC_DRIVER_TYPE_3	3	/* x0.5 */
+#define MMC_DRIVER_TYPE_4	4	/* x1.2 */
+
 struct mmc_ios {
 	unsigned int	clock;			/* clock rate */
 	unsigned short	vdd;
@@ -92,6 +98,7 @@ struct mmc_cmdq_host_ops {
 	int (*halt)(struct mmc_host *host, bool halt);
 	void (*reset)(struct mmc_host *host, bool soft);
 	void (*dumpstate)(struct mmc_host *host);
+	void (*pclear)(struct mmc_host *host);
 };
 
 struct mmc_host_ops {
@@ -251,6 +258,7 @@ struct mmc_cmdq_context_info {
 #define	CMDQ_STATE_PREV_DCMD 3
 #define	CMDQ_STATE_ERR_HOST 4
 #define	CMDQ_STATE_ERR_RCV_DONE 5
+#define	CMDQ_STATE_DO_RECOVERY 6
 	wait_queue_head_t	queue_empty_wq;
 	wait_queue_head_t	wait;
 	int active_small_sector_read_reqs;
@@ -292,6 +300,7 @@ struct mmc_host {
 	unsigned int		f_min;
 	unsigned int		f_max;
 	unsigned int		f_init;
+	u32 			device_drv;     /* device strength */
 	u32			ocr_avail;
 	u32			ocr_avail_sdio;	/* SDIO-specific OCR */
 	u32			ocr_avail_sd;	/* SD-specific OCR */
@@ -483,7 +492,8 @@ struct mmc_host {
 	struct mmc_request	*err_mrq;
 #ifdef CONFIG_BLOCK
 	int			latency_hist_enabled;
-	struct io_latency_state io_lat_s;
+	struct io_latency_state io_lat_read;
+	struct io_latency_state io_lat_write;
 #endif
 
 	int (*sdcard_uevent)(struct mmc_card *card);

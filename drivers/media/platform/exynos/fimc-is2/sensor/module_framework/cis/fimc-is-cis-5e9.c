@@ -174,6 +174,11 @@ int sensor_5e9_cis_init(struct v4l2_subdev *subdev)
 	bool skip_cal_write = false;
 #endif
 
+#ifdef USE_CAMERA_HW_BIG_DATA
+	struct cam_hw_param *hw_param = NULL;
+	struct fimc_is_device_sensor_peri *sensor_peri = NULL;
+#endif
+
 	setinfo.param = NULL;
 	setinfo.return_value = 0;
 
@@ -202,6 +207,13 @@ int sensor_5e9_cis_init(struct v4l2_subdev *subdev)
 	info("[%s] start\n", __func__);
 	ret = sensor_cis_check_rev(cis);
 	if (ret < 0) {
+#ifdef USE_CAMERA_HW_BIG_DATA
+		sensor_peri = container_of(cis, struct fimc_is_device_sensor_peri, cis);
+		if (sensor_peri)
+			fimc_is_sec_get_hw_param(&hw_param, sensor_peri->module->position);
+		if (hw_param)
+			hw_param->i2c_sensor_err_cnt++;
+#endif
 		warn("sensor_5e9_check_rev is fail when cis init");
 		cis->rev_flag = true;
 		goto p_err;
@@ -450,11 +462,13 @@ int sensor_5e9_cis_group_param_hold(struct v4l2_subdev *subdev, bool hold)
 	BUG_ON(!cis);
 	BUG_ON(!cis->cis_data);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	ret = sensor_5e9_cis_group_param_hold_func(subdev, hold);
 	if (ret < 0)
 		goto p_err;
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -468,6 +482,7 @@ int sensor_5e9_cis_set_global_setting(struct v4l2_subdev *subdev)
 	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
 	BUG_ON(!cis);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	/* setfile global setting is at camera entrance */
 	ret = sensor_cis_set_registers(subdev, sensor_5e9_global, sensor_5e9_global_size);
 	if (ret < 0) {
@@ -478,6 +493,7 @@ int sensor_5e9_cis_set_global_setting(struct v4l2_subdev *subdev)
 	dbg_sensor(1, "[%s] global setting done\n", __func__);
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -508,6 +524,7 @@ int sensor_5e9_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 		}
 	}
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	sensor_5e9_cis_data_calculation(sensor_5e9_pllinfos[mode], cis->cis_data);
 
 	ret = sensor_cis_set_registers(subdev, sensor_5e9_setfiles[mode], sensor_5e9_setfile_sizes[mode]);
@@ -524,6 +541,7 @@ int sensor_5e9_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 	dbg_sensor(1, "[%s] mode changed(%d)\n", __func__, mode);
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -588,6 +606,7 @@ int sensor_5e9_cis_set_size(struct v4l2_subdev *subdev, cis_shared_data *cis_dat
 		goto p_err;
 	}
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	/* 2. pixel address region setting */
 	start_x = ((SENSOR_5E9_MAX_WIDTH - cis_data->cur_width * ratio_w) / 2) & (~0x1);
 	start_y = ((SENSOR_5E9_MAX_HEIGHT - cis_data->cur_height * ratio_h) / 2) & (~0x1);
@@ -676,6 +695,7 @@ int sensor_5e9_cis_set_size(struct v4l2_subdev *subdev, cis_shared_data *cis_dat
 #endif
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -710,6 +730,7 @@ int sensor_5e9_cis_stream_on(struct v4l2_subdev *subdev)
 
 	dbg_sensor(1, "[MOD:D:%d] %s\n", cis->id, __func__);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	ret = sensor_5e9_cis_group_param_hold_func(subdev, 0x00);
 
 	core = (struct fimc_is_core *)dev_get_drvdata(fimc_is_dev);
@@ -759,6 +780,7 @@ int sensor_5e9_cis_stream_on(struct v4l2_subdev *subdev)
 #endif
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -792,6 +814,7 @@ int sensor_5e9_cis_stream_off(struct v4l2_subdev *subdev)
 
 	dbg_sensor(1, "[MOD:D:%d] %s\n", cis->id, __func__);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	ret = sensor_5e9_cis_group_param_hold_func(subdev, 0x00);
 	if (ret < 0)
 		err("[%s] sensor_5e9_cis_group_param_hold_func fail\n", __func__);
@@ -809,6 +832,7 @@ int sensor_5e9_cis_stream_off(struct v4l2_subdev *subdev)
 #endif
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -895,6 +919,7 @@ int sensor_5e9_cis_set_exposure_time(struct v4l2_subdev *subdev, struct ae_param
 	dbg_sensor(1, "[MOD:D:%d] %s, frame_length_lines(%#x), long_coarse_int %#x, short_coarse_int %#x\n",
 		cis->id, __func__, cis_data->frame_length_lines, long_coarse_int, short_coarse_int);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_5e9_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -924,7 +949,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1136,6 +1161,7 @@ int sensor_5e9_cis_set_frame_duration(struct v4l2_subdev *subdev, u32 frame_dura
 		KERN_CONT "(line_length_pck%#x), frame_length_lines(%#x)\n",
 		cis->id, __func__, vt_pic_clk_freq_mhz, frame_duration, line_length_pck, frame_length_lines);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_5e9_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1161,7 +1187,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1314,6 +1340,7 @@ int sensor_5e9_cis_set_analog_gain(struct v4l2_subdev *subdev, struct ae_param *
 	dbg_sensor(1, "[MOD:D:%d] %s, input_again = %d us, analog_gain(%#x)\n",
 			cis->id, __func__, again->val, analog_gain);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_5e9_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1335,7 +1362,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1367,6 +1394,7 @@ int sensor_5e9_cis_get_analog_gain(struct v4l2_subdev *subdev, u32 *again)
 		goto p_err;
 	}
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_5e9_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1393,7 +1421,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1569,6 +1597,7 @@ int sensor_5e9_cis_set_digital_gain(struct v4l2_subdev *subdev, struct ae_param 
 	dbg_sensor(1, "[MOD:D:%d] %s, input_dgain = %d/%d us, long_gain(%#x), short_gain(%#x)\n",
 			cis->id, __func__, dgain->long_val, dgain->short_val, long_gain, short_gain);
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_5e9_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1599,7 +1628,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 #endif
@@ -1632,6 +1661,7 @@ int sensor_5e9_cis_get_digital_gain(struct v4l2_subdev *subdev, u32 *dgain)
 		goto p_err;
 	}
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	hold = sensor_5e9_cis_group_param_hold_func(subdev, 0x01);
 	if (hold < 0) {
 		ret = hold;
@@ -1658,7 +1688,7 @@ p_err:
 		if (hold < 0)
 			ret = hold;
 	}
-
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -1668,7 +1698,6 @@ int sensor_5e9_cis_get_min_digital_gain(struct v4l2_subdev *subdev, u32 *min_dga
 	struct fimc_is_cis *cis;
 	struct i2c_client *client;
 	cis_shared_data *cis_data;
-
 	u16 read_value = 0;
 
 #ifdef DEBUG_SENSOR_TIME
@@ -1768,6 +1797,75 @@ p_err:
 	return ret;
 }
 
+
+int sensor_5e9_cis_wait_streamoff(struct v4l2_subdev *subdev)
+{
+	int ret = 0;
+	struct fimc_is_cis *cis;
+	struct i2c_client *client;
+	cis_shared_data *cis_data;
+	u32 wait_cnt = 0, time_out_cnt = 250;
+	u8 sensor_fcount = 0;
+
+	BUG_ON(!subdev);
+
+	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
+	if (unlikely(!cis)) {
+		err("cis is NULL");
+		ret = -EINVAL;
+		goto p_err;
+	}
+
+	cis_data = cis->cis_data;
+	if (unlikely(!cis_data)) {
+		err("cis_data is NULL");
+		ret = -EINVAL;
+		goto p_err;
+	}
+
+	client = cis->client;
+	if (unlikely(!client)) {
+		err("client is NULL");
+		ret = -EINVAL;
+		goto p_err;
+	}
+
+	I2C_MUTEX_LOCK(cis->i2c_lock);
+	ret = fimc_is_sensor_read8(client, 0x0005, &sensor_fcount);
+	if (ret < 0)
+		err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x0005, sensor_fcount, ret);
+
+	/*
+	 * Read sensor frame counter (sensor_fcount address = 0x0005)
+	 * stream on (0x00 ~ 0xFE), stream off (0xFF)
+	 */
+	while (sensor_fcount != 0xFF) {
+		ret = fimc_is_sensor_read8(client, 0x0005, &sensor_fcount);
+		if (ret < 0)
+			err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x0005, sensor_fcount, ret);
+
+		usleep_range(CIS_STREAM_OFF_WAIT_TIME, CIS_STREAM_OFF_WAIT_TIME);
+		wait_cnt++;
+
+		if (wait_cnt >= time_out_cnt) {
+			err("[MOD:D:%d] %s, time out, wait_limit(%d) > time_out(%d), sensor_fcount(%d)",
+					cis->id, __func__, wait_cnt, time_out_cnt, sensor_fcount);
+			ret = -EINVAL;
+			goto p_err;
+		}
+
+		dbg_sensor(1, "[MOD:D:%d] %s, sensor_fcount(%d), (wait_limit(%d) < time_out(%d))\n",
+				cis->id, __func__, sensor_fcount, wait_cnt, time_out_cnt);
+	}
+
+	usleep_range(30000, 30000);
+
+p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
+	return ret;
+}
+
+
 static struct fimc_is_cis_ops cis_ops = {
 	.cis_init = sensor_5e9_cis_init,
 	.cis_log_status = sensor_5e9_cis_log_status,
@@ -1793,7 +1891,7 @@ static struct fimc_is_cis_ops cis_ops = {
 	.cis_get_min_digital_gain = sensor_5e9_cis_get_min_digital_gain,
 	.cis_get_max_digital_gain = sensor_5e9_cis_get_max_digital_gain,
 	.cis_compensate_gain_for_extremely_br = sensor_cis_compensate_gain_for_extremely_br,
-	.cis_wait_streamoff = sensor_cis_wait_streamoff,
+	.cis_wait_streamoff = sensor_5e9_cis_wait_streamoff,
 	.cis_set_initial_exposure = sensor_cis_set_initial_exposure,
 };
 

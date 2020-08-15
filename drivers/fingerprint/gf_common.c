@@ -138,11 +138,53 @@ static ssize_t gfspi_adm_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", DETECT_ADM);
 }
 
+static ssize_t gfspi_intcnt_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct gf_device *data = dev_get_drvdata(dev);
+	return snprintf(buf, PAGE_SIZE, "%d\n", data->interrupt_count);
+}
+
+static ssize_t gfspi_intcnt_store(struct device *dev,
+				struct device_attribute *attr, const char *buf,
+				size_t size)
+{
+	struct gf_device *data = dev_get_drvdata(dev);
+
+	if (sysfs_streq(buf, "c")) {
+		data->interrupt_count = 0;
+		pr_info("initialization is done\n");
+	}
+	return size;
+}
+
+static ssize_t gfspi_resetcnt_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct gf_device *data = dev_get_drvdata(dev);
+	return snprintf(buf, PAGE_SIZE, "%d\n", data->reset_count);
+}
+
+static ssize_t gfspi_resetcnt_store(struct device *dev,
+				struct device_attribute *attr, const char *buf,
+				size_t size)
+{
+	struct gf_device *data = dev_get_drvdata(dev);
+
+	if (sysfs_streq(buf, "c")) {
+		data->reset_count = 0;
+		pr_info("initialization is done\n");
+	}
+	return size;
+}
+
 static DEVICE_ATTR(bfs_values, 0444, gfspi_bfs_values_show, NULL);
 static DEVICE_ATTR(type_check, 0444, gfspi_type_check_show, NULL);
 static DEVICE_ATTR(vendor, 0444,	gfspi_vendor_show, NULL);
 static DEVICE_ATTR(name, 0444, gfspi_name_show, NULL);
 static DEVICE_ATTR(adm, 0444, gfspi_adm_show, NULL);
+static DEVICE_ATTR(intcnt, 0664, gfspi_intcnt_show, gfspi_intcnt_store);
+static DEVICE_ATTR(resetcnt, 0664, gfspi_resetcnt_show, gfspi_resetcnt_store);
 
 static struct device_attribute *fp_attrs[] = {
 	&dev_attr_bfs_values,
@@ -150,6 +192,8 @@ static struct device_attribute *fp_attrs[] = {
 	&dev_attr_vendor,
 	&dev_attr_name,
 	&dev_attr_adm,
+	&dev_attr_intcnt,
+	&dev_attr_resetcnt,
 	NULL,
 };
 
@@ -351,6 +395,7 @@ static irqreturn_t gfspi_irq(int irq, void *handle)
 	wake_lock_timeout(&gf_dev->wake_lock,
 			msecs_to_jiffies(WAKELOCK_HOLD_TIME));
 	gfspi_netlink_send(gf_dev, GF_NETLINK_IRQ);
+	gf_dev->interrupt_count++;
 
 	return IRQ_HANDLED;
 }
@@ -723,7 +768,7 @@ void gfspi_hw_power_enable(struct gf_device *gf_dev, u8 onoff)
 			exynos_smc(FP_CSMC_HANDLER_ID, FP_HANDLER_MAIN, FP_SET_POWERON_INACTIVE, 0));
 #endif
 		if (gf_dev->reset_gpio) {
-			mdelay(11);
+			usleep_range(11000, 11050);
 			gpio_set_value(gf_dev->reset_gpio, 1);
 		}
 		gf_dev->ldo_onoff = 1;
@@ -742,7 +787,7 @@ void gfspi_hw_power_enable(struct gf_device *gf_dev, u8 onoff)
 #endif
 		if (gf_dev->reset_gpio) {
 			gpio_set_value(gf_dev->reset_gpio, 0);
-			mdelay(11);
+			usleep_range(11000, 11050);
 		}
 		if (gf_dev->pwr_gpio)
 			gpio_set_value(gf_dev->pwr_gpio, 0);
@@ -766,9 +811,10 @@ void gfspi_hw_reset(struct gf_device *gf_dev, u8 delay)
 	}
 	gpio_direction_output(gf_dev->reset_gpio, 1);
 	gpio_set_value(gf_dev->reset_gpio, 0);
-	mdelay(3);
+	usleep_range(3000, 3050);
 	gpio_set_value(gf_dev->reset_gpio, 1);
-	mdelay(delay);
+	usleep_range((delay * 1000), ((delay * 1000) + 50));
+	gf_dev->reset_count++;
 }
 
 #ifndef ENABLE_SENSORS_FPRINT_SECURE
@@ -842,6 +888,8 @@ static int gfspi_probe(struct spi_device *spi)
 	gf_dev->need_update = 0;
 	gf_dev->ldo_onoff = 0;
 	gf_dev->pid = 0;
+	gf_dev->reset_count = 0;
+	gf_dev->interrupt_count = 0;
 #ifdef ENABLE_SENSORS_FPRINT_SECURE
 	gf_dev->enabled_clk = 0;
 	gf_dev->tz_mode = true;

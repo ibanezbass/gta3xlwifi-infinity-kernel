@@ -31,6 +31,13 @@
 #define VIRTUAL_COORDINATE_WIDTH		32768
 #define VIRTUAL_COORDINATE_HEIGHT		32768
 
+#ifdef USE_CAMERA_ACT_DRIVER_SOFT_LANDING 
+enum HW_SOFTLANDING_STATE{
+	HW_SOFTLANDING_PASS = 0,
+	HW_SOFTLANDING_FAIL = -200,
+};
+#endif
+
 struct fimc_is_cis {
 	u32				id;
 	struct v4l2_subdev		*subdev; /* connected module subdevice */
@@ -80,9 +87,9 @@ struct fimc_is_cis {
 	u32				max_fps;
 	struct mutex			*i2c_lock;
 	struct mutex			control_lock;
-#ifdef USE_AP_PDAF
+#if defined(USE_AP_PDAF) || defined (USE_MS_PDAF)
 	bool				use_pdaf;
-#endif
+#endif /* defined(USE_AP_PDAF) || defined (USE_MS_PDAF) */
 
 	/* Long Term Exposure Mode(LTE mode) structure */
 	struct fimc_is_long_term_expo_mode	long_term_mode;
@@ -175,6 +182,7 @@ struct fimc_is_flash_data {
 	struct work_struct		flash_fire_work;
 	struct timer_list		flash_expire_timer;
 	struct work_struct		flash_expire_work;
+	struct work_struct		work_flash_muic_ctrl_and_fire;
 };
 
 struct fimc_is_flash {

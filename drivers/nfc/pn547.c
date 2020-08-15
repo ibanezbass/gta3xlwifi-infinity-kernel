@@ -95,6 +95,7 @@ struct pn547_dev {
 };
 
 static struct pn547_dev *pn547_dev;
+static atomic_t s_Device_opened = ATOMIC_INIT(1);
 
 #ifdef CONFIG_NFC_PN547_ESE_SUPPORT
 static struct semaphore ese_access_sema;
@@ -196,6 +197,7 @@ static irqreturn_t pn547_nfc_clk_irq(int irq, void *dev_id)
 {
 	struct pn547_dev *pn547_dev = dev_id;
 
+#if 0
 	if (gpio_get_value(pn547_dev->clk_req_gpio)) {
 		if(!wake_lock_active(&pn547_dev->nfc_clk_wake_lock))
 			wake_lock(&pn547_dev->nfc_clk_wake_lock);
@@ -203,6 +205,10 @@ static irqreturn_t pn547_nfc_clk_irq(int irq, void *dev_id)
 		if (wake_lock_active(&pn547_dev->nfc_clk_wake_lock))
 			wake_unlock(&pn547_dev->nfc_clk_wake_lock);
 	}
+#else
+	wake_lock_timeout(&pn547_dev->nfc_clk_wake_lock, 2*HZ);
+
+#endif
 
 	return IRQ_HANDLED;
 }
@@ -478,10 +484,21 @@ static int pn547_dev_open(struct inode *inode, struct file *filp)
 	struct pn547_dev *pn547_dev = container_of(filp->private_data,
 						   struct pn547_dev,
 						   pn547_device);
+	if (!atomic_dec_and_test(&s_Device_opened)) {
+		atomic_inc(&s_Device_opened);
+		pr_err("%s: already opened!\n", __func__);
+		return -EBUSY;
+	}
 	filp->private_data = pn547_dev;
 
 	pr_debug("%s : %d,%d\n", __func__, imajor(inode), iminor(inode));
 
+	return 0;
+}
+
+static int pn547_dev_release(struct inode *inode, struct file *filp)
+{
+	atomic_inc(&s_Device_opened);
 	return 0;
 }
 
@@ -1003,12 +1020,14 @@ static void release_ese_lock(p61_access_state_t  p61_current_state)
 }
 #endif
 
+
 static const struct file_operations pn547_dev_fops = {
 	.owner = THIS_MODULE,
 	.llseek = no_llseek,
 	.read = pn547_dev_read,
 	.write = pn547_dev_write,
 	.open = pn547_dev_open,
+	.release = pn547_dev_release,
 	.unlocked_ioctl = pn547_dev_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = pn547_compat_ioctl,
@@ -1267,6 +1286,13 @@ static CLASS_ATTR(test, 0664, pn547_class_show, pn547_class_store);
 
 #endif //FEATURE_SEC_NFC_TEST
 
+static ssize_t pn547_support_show(struct class * class, struct class_attribute *attr, char *buf)
+{
+	pr_info("\n");
+	return 0;
+}
+static CLASS_ATTR(nfc_support, 0444, pn547_support_show, NULL);
+
 static int pn547_probe(struct i2c_client *client,
 		       const struct i2c_device_id *id)
 {
@@ -1299,7 +1325,7 @@ static int pn547_probe(struct i2c_client *client,
 	if (IS_ERR(&nfc_class)) 
 	{
 
-		pr_err("NFC: failed to create nfc class\n");
+		pr_err("NFC: failed to create nfc_test class\n");
 	}
 	else
 	{
@@ -1308,6 +1334,18 @@ static int pn547_probe(struct i2c_client *client,
 		    pr_err("NFC: failed to create attr_test\n");
 	}
 #endif //FEATURE_SEC_NFC_TEST
+	nfc_class = class_create(THIS_MODULE, "nfc");
+	if (IS_ERR(&nfc_class)) 
+	{
+
+		pr_err("NFC: failed to create nfc class\n");
+	}
+	else
+	{
+		ret = class_create_file(nfc_class, &class_attr_nfc_support);
+		if (ret)
+		    pr_err("NFC: failed to create attr_nfc_support\n");
+	}
 
 	pr_info("%s entered\n", __func__);
 

@@ -176,7 +176,7 @@ static struct bts_info exynos_bts[] = {
 #ifdef CONFIG_EXYNOS7885_BTS_VM
 		.table[BS_DEFAULT].stat.priority = 0x7,
 #else
-		.table[BS_DEFAULT].stat.priority = 0xC,
+		.table[BS_DEFAULT].stat.priority = 0xA,
 #endif
 	},
 	[BTS_IDX_CPU_DMC0] = {

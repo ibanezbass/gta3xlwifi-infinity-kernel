@@ -183,6 +183,7 @@ struct lis2ds_data {
 	struct mutex mutex_enable;
 
 	struct regulator *reg_vdd;
+	struct notifier_block dump_nb;
 
 	int lis2ds_ldo_pin;
 };

@@ -166,6 +166,7 @@
 #define  STK3X3X_PS_IT200               0x01
 #define  STK3X3X_PS_IT400               0x02
 #define  STK3X3X_PS_IT800               0x03
+#define  STK3X3X_PS_IT1540              0x04
 
 #define  STK3X3X_ALS_PRS1               0x00
 #define  STK3X3X_ALS_PRS2               0x40
@@ -266,6 +267,13 @@ typedef enum
     STK3X3X_PRX_FAR_AWAY,
 } stk3x3x_prx_nearby_type;
 
+typedef enum
+{
+    STK3X3X_POCKET_UNKNOWN = 0,
+    STK3X3X_POCKET_NEAR_BY = 1,
+    STK3X3X_POCKET_FAR_AWAY = 2
+} stk3x3x_pocket_nearby_type;
+
 typedef struct stk3x3x_irq_info
 {
     bool                        irq_is_active;
@@ -276,7 +284,8 @@ typedef enum
 {
     STK3X3X_FIRST_CAL,
     STK3X3X_CAL_ONGOING,
-    STK3X3X_CAL_DISABLED
+    STK3X3X_CAL_DISABLED,
+    STX3X3X_CAL_SKIP
 } stk3x3x_cal_status;
 
 typedef struct stk3x3x_data
@@ -302,12 +311,23 @@ typedef struct stk3x3x_data
     atomic_t                recv_reg;
     bool                    first_init;
 
-	struct wake_lock        prox_wakelock;
+    struct wake_lock        prox_wakelock;
 
-    bool                        enable;
-    uint16_t                 prox_thd_h;
-    uint16_t                 prox_thd_l;
-    uint16_t                 adc;
+    bool                    enable;
+    bool                    first_limit_skip;
+    uint16_t                prox_default_thd_h;
+    uint16_t                prox_default_thd_l;
+    bool                    pocket_enable;
+    bool                    pocket_running; 
+    uint16_t                prox_thd_h;
+    uint16_t                prox_thd_l;
+    uint16_t                thd_h_offset;
+    uint16_t                sunlight_thd_h;
+    uint16_t                sunlight_thd_l;
+    uint16_t                first_cal_adc_limit;
+    uint16_t                first_cal_thd_h;
+    uint16_t                first_cal_thd_l;
+    uint16_t                adc;
     int                     avg[3];
     struct hrtimer          prox_timer;
     struct workqueue_struct *prox_wq;
@@ -315,11 +335,16 @@ typedef struct stk3x3x_data
     ktime_t	                 prox_poll_delay;
 
     struct workqueue_struct *prox_cal_wq;
+    struct workqueue_struct *prox_pocket_wq;
     struct work_struct      work_cal_prox;
+    struct work_struct      work_pocket;
     char                    cal_status;
+    bool                    factory_cal;
     int                     check_far_state;
-	uint8_t                 intel_prst;
-	uint8_t                 ps_it;
+    int                     pocket_prox;
+    uint8_t                 intel_prst;
+    uint8_t                 ps_it;
+    uint8_t                 close_cnt;
 } stk3x3x_data;
 
 struct stk3x3x_bus_ops

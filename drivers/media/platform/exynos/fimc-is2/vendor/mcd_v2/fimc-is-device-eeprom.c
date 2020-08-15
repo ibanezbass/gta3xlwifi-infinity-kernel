@@ -157,7 +157,7 @@ static const struct of_device_id exynos_fimc_is_sensor_eeprom_match[] = {
 		.compatible = "samsung,rear2-eeprom-i2c", .data = (void *)SENSOR_POSITION_REAR2
 	},
 	{
-		.compatible = "samsung,rear3-eeprom-i2c",
+		.compatible = "samsung,rear3-eeprom-i2c", .data = (void *)SENSOR_POSITION_REAR3
 	},
 	{},
 };

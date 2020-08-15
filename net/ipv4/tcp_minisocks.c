@@ -236,8 +236,9 @@ kill:
 				inet_twsk_deschedule_put(tw);
 				return TCP_TW_SUCCESS;
 			}
+		} else {
+			inet_twsk_reschedule(tw, TCP_TIMEWAIT_LEN);
 		}
-		inet_twsk_reschedule(tw, TCP_TIMEWAIT_LEN);
 
 		if (tmp_opt.saw_tstamp) {
 			tcptw->tw_ts_recent	  = tmp_opt.rcv_tsval;
@@ -562,7 +563,6 @@ struct sock *tcp_create_openreq_child(const struct sock *sk,
 		newtp->snd_cwnd_cnt = 0;
 
 		tcp_init_xmit_timers(newsk);
-		__skb_queue_head_init(&newtp->out_of_order_queue);
 		newtp->write_seq = newtp->pushed_seq = treq->snt_isn + 1;
 
 		newtp->rx_opt.saw_tstamp = 0;
@@ -654,10 +654,6 @@ struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
 	__be32 flg = tcp_flag_word(th) & (TCP_FLAG_RST|TCP_FLAG_SYN|TCP_FLAG_ACK);
 	bool paws_reject = false;
 	bool own_req;
-
-#ifdef CONFIG_MPTCP
-	BUG_ON(!mptcp(tcp_sk(sk)) && fastopen == (sk->sk_state == TCP_LISTEN));
-#endif
 
 	tmp_opt.saw_tstamp = 0;
 #ifdef CONFIG_MPTCP

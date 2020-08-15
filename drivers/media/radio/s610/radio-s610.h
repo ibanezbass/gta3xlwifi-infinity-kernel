@@ -14,7 +14,7 @@
 /*#undef	USE_FM_LNA_ENABLE*/
 
 #define USE_AUDIO_PM
-#undef USE_AUDIO_PM
+/*#undef USE_AUDIO_PM*/
 
 #define	RDS_POLLING_ENABLE
 

@@ -41,6 +41,8 @@
 #include "fimc-is-device-module-base.h"
 #include "fimc-is-device-module-imx576.h"
 
+static int _sensor_module_get_drv_data(struct platform_device *pdev);
+
 // Reference Version : 'IMX576-AAKH5_SAM-Set-26MHz-DPHY_RegisterSetting_ver2.00-9.00_MP_180712.xlsx'
 // Reference Version : 'IMX576-AAKH5_SAM-Set-26MHz-DPHY_RegisterSetting_ver2.00-8.00_MP0_180712.xlsx'
 
@@ -70,7 +72,7 @@
  *	[12]REG_M: Super Slow Motion (16:9)     : 1872x1052@240,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
  *	[13]REG_N: Super Slow Motion (16:9)     : 1920x1080@120,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
  *	[14]REG_O: Super Slow Motion (16:9)     : 1280x720 @240,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
- *	[15]REG_U: Super Slow Motion (16:9)     : 1280x720 @120,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054 
+ *	[15]REG_U: Super Slow Motion (16:9)     : 1280x720 @120,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
  *
  *	- FAST AE -
  *	[16]REG_R: Single Preview Fast(4:3)     : 2832x2124@117,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
@@ -121,6 +123,116 @@ static struct fimc_is_sensor_cfg config_imx576[] = {
 	FIMC_IS_SENSOR_CFG_EXT(2832, 2124, 117, 46, 16, CSI_DATA_LANES_4, 2054, 0, 0, 0),
 	FIMC_IS_SENSOR_CFG_EXT(2832, 2124,  60, 46, 17, CSI_DATA_LANES_4, 2054, 0, 0, 0),
 	FIMC_IS_SENSOR_CFG_EXT(2832, 1592, 120, 46, 18, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+
+	/* 19: REG_R: 4800x3600@30fps */
+	/* 20: REG_S: 2400x1800@30fps */
+	/* 21: REG_T: 2400x1352@30fps */
+	/* 22: REG_T: 2400x1168@30fps */
+	/* 23: REG_T: 1800x1800@30fps */
+	/* 24: REG_T: 4800x2700@30fps */
+	/* 25: REG_T: 4800x2336@30fps */
+	/* 26: REG_T: 3600x3600@30fps */
+	FIMC_IS_SENSOR_CFG_EXT(4800, 3600, 30, 46, 19, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2400, 1800, 30, 46, 20, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2400, 1352, 30, 46, 21, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2400, 1168, 30, 46, 22, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(1800, 1800, 30, 46, 23, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(4800, 2700, 30, 46, 24, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(4800, 2336, 30, 46, 25, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(3600, 3600, 30, 46, 26, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+};
+
+
+/*  Reference Version : 'IMX576-AAKH5_SAM-Set-26MHz-DPHY_RegisterSetting_ver5.00-9.00_MP_190418.xlsx'
+ *
+ * [Mode Information]
+ *	- Global Setting -
+ *
+ *	- 2X2 BINNING -
+ *	[0] REG_Z : Single Still Preview (4:3)_Ver2    : 2880x2156@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[1] REG_AA: Single Still Preview (16:9)_Ver2   : 2880x1620@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[2] REG_AB: Single Still Preview (18.5:9)_Ver2 : 2880x1400@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[3] REG_AC: Single Still Preview (1:1)_Ver2    : 2156x2156@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[4] REG_AI: Single Still Preview (19.5:9)_Ver2 : 2880x1332@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *
+ *	- QBC_HDR -
+ *	[5]REG_AK: Single Still 3HDR (4:3)_Ver2       : 2880x2156@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[6]REG_AL: Single Still 3HDR (16:9)_Ver2      : 2880x1620@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[7]REG_AM: Single Still 3HDR (18.5:9)_Ver2    : 2880x1400@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[8]REG_AO: Single Still 3HDR (1:1)_Ver2       : 2156x2156@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[9]REG_AN: Single Still 3HDR (19.5:9)_Ver2    : 2880x1332@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *
+ *	- QBC_REMOSAIC -
+ *	[10] REG_P : Full                               : 5760x4312@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[11] REG_AD: Single Still Capture (16:9)_Ver2   : 5760x3240@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[12] REG_AE: Single Still Capture (18.5:9)_Ver2 : 5760x2800@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[13] REG_AF: Single Still Capture (1:1)_Ver2    : 4312x4312@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[14] REG_AJ: Single Still Capture (19.5:9)_Ver2 : 5760x2664@30,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+
+ *	- Super Slow Motion (SSM) -
+ *	[15]REG_M : Super Slow Motion (16:9)           : 1872x1052@240,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[16]REG_N : Super Slow Motion (16:9)           : 1920x1080@120,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[17]REG_O : Super Slow Motion (16:9)           : 1280x720 @240,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[18]REG_U : Super Slow Motion (16:9)           : 1280x720 @120,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *
+ *	- FAST AE -
+ *	[19]REG_R : Single Preview Fast(4:3)           : 2832x2124@117,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[20]REG_S : Single Preview Fast(4:3)           : 2832x2124@ 60,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[21]REG_T : Single Preview Fast(16:9)          : 2832x1592@120,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ *	[22]REG_AG: Single Preview Fast(4:3)_Ver2      : 2880x2156@114,  MIPI lane: 4, MIPI data rate(Mbps/lane) Sensor: 2054
+ */
+
+ static struct fimc_is_sensor_cfg config_imx576_25M[] = {
+	/*[0] REG_Z : Single Still Preview (4:3)_Ver2    : 2880x2156@30*/
+	/*[1] REG_AA: Single Still Preview (16:9)_Ver2   : 2880x1620@30*/
+	/*[2] REG_AB: Single Still Preview (18.5:9)_Ver2 : 2880x1400@30*/
+	/*[3] REG_AC: Single Still Preview (1:1)_Ver2    : 2156x2156@30*/
+	/*[4] REG_AI: Single Still Preview (19.5:9)_Ver2 : 2880x1332@30*/
+	FIMC_IS_SENSOR_CFG_EXT(2880, 2156,  30, 46,  0, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2880, 1620,  30, 46,  1, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2880, 1400,  30, 46,  2, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2156, 2156,  30, 46,  3, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2880, 1332,  30, 46,  4, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+
+	/*[5]REG_AK: Single Still 3HDR (4:3)_Ver2       : 2880x2156@30*/
+	/*[6]REG_AL: Single Still 3HDR (16:9)_Ver2      : 2880x1620@30*/
+	/*[7]REG_AM: Single Still 3HDR (18.5:9)_Ver2    : 2880x1400@30*/
+	/*[8]REG_AO: Single Still 3HDR (1:1)_Ver2       : 2156x2156@30*/
+	/*[9]REG_AN: Single Still 3HDR (19.5:9)_Ver2    : 2880x1332@30*/
+	FIMC_IS_SENSOR_CFG_EXT(2880, 2156,  30, 46, 5, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2880, 1620,  30, 46, 6, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2880, 1400,  30, 46, 7, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2156, 2156,  30, 46, 8, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2880, 1332,  30, 46, 9, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+
+	/*[10] REG_P : Full                               : 5760x4312@30*/
+	/*[11] REG_AD: Single Still Capture (16:9)_Ver2   : 5760x3240@30*/
+	/*[12] REG_AE: Single Still Capture (18.5:9)_Ver2 : 5760x2800@30*/
+	/*[13] REG_AF: Single Still Capture (1:1)_Ver2    : 4312x4312@30*/
+	/*[14] REG_AJ: Single Still Capture (19.5:9)_Ver2 : 5760x2664@30*/
+	FIMC_IS_SENSOR_CFG_EXT(5760, 4312,  30, 46,  10, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(5760, 3240,  30, 46,  11, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(5760, 2800,  30, 46,  12, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(4312, 4312,  30, 46,  13, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(5760, 2664,  30, 46,  14, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+
+	/*[15]REG_M : Super Slow Motion (16:9)           : 1872x1052@240*/
+	/*[16]REG_N : Super Slow Motion (16:9)           : 1920x1080@120*/
+	/*[17]REG_O : Super Slow Motion (16:9)           : 1280x720 @240*/
+	/*[18]REG_U : Super Slow Motion (16:9)           : 1280x720 @120*/
+	FIMC_IS_SENSOR_CFG_EXT(1872, 1052, 240, 46, 15, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(1920, 1080, 120, 46, 16, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(1280,  720, 240, 46, 17, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(1280,  720, 120, 46, 18, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+
+	/*[19]REG_R : Single Preview Fast(4:3)           : 2832x2124@117*/
+	/*[20]REG_S : Single Preview Fast(4:3)           : 2832x2124@ 60*/
+	/*[21]REG_T : Single Preview Fast(16:9)          : 2832x1592@120*/
+	/*[22]REG_AG: Single Preview Fast(4:3)_Ver2      : 2880x2156@114*/
+	FIMC_IS_SENSOR_CFG_EXT(2832, 2124, 117, 46, 19, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2832, 2124,  60, 46, 20, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2832, 1592, 120, 46, 21, CSI_DATA_LANES_4, 2054, 0, 0, 0),
+	FIMC_IS_SENSOR_CFG_EXT(2880, 2156, 114, 46, 22, CSI_DATA_LANES_4, 2054, 0, 0, 0),
 };
 
 static struct fimc_is_vci vci_module_imx576[] = {
@@ -178,6 +290,10 @@ static int module_imx576_power_setpin(struct device *dev,
 	struct fimc_is_core *core;
 	bool shared_mclk = false;
 	bool shared_camio_1p8 = false;
+	char *cam_dvdd_1p2 = NULL;
+	char *cam_avdd_2p8 = NULL;
+	char *cam_iovdd_1p8 = NULL;
+	char *cam_afvdd_2p8 = NULL;
 
 	BUG_ON(!dev);
 
@@ -219,7 +335,11 @@ static int module_imx576_power_setpin(struct device *dev,
 
 	gpio_cam_dcdc_en = of_get_named_gpio(dnode, "gpio_cam_dcdc_en", 0);
 	if (!gpio_is_valid(gpio_cam_dcdc_en)) {
-		dev_err(dev, "failed to get gpio_cam_dcdc_en\n");
+		dev_info(dev, "failed to get gpio_cam_dcdc_en\n");
+		if (of_property_read_string(dnode, "cam_dvdd_1p2", (const char **) &cam_dvdd_1p2)) {
+			dev_err(dev, "Failed to get regulator_dvdd name property also\n");
+			return -EINVAL;
+		}
 	} else {
 		gpio_request_one(gpio_cam_dcdc_en, GPIOF_OUT_INIT_LOW, "CAM_DCDC_1P8_EN");
 		gpio_free(gpio_cam_dcdc_en);
@@ -227,8 +347,11 @@ static int module_imx576_power_setpin(struct device *dev,
 
 	gpio_cam_core_en = of_get_named_gpio(dnode, "gpio_cam_core_en", 0);
 	if (!gpio_is_valid(gpio_cam_core_en)) {
-		dev_err(dev, "failed to get gpio_cam_core_en\n");
-		return -EINVAL;
+		dev_info(dev, "failed to get gpio_cam_core_en\n");
+		if (of_property_read_string(dnode, "cam_avdd_2p8", (const char **) &cam_avdd_2p8)) {
+			dev_err(dev, "Failed to get regulator_avdd name property also\n");
+			return -EINVAL;
+		}
 	} else {
 		gpio_request_one(gpio_cam_core_en, GPIOF_OUT_INIT_LOW, "CAM_CORE_AVDD_EN");
 		gpio_free(gpio_cam_core_en);
@@ -236,8 +359,11 @@ static int module_imx576_power_setpin(struct device *dev,
 
 	gpio_camio_1p8_en = of_get_named_gpio(dnode, "gpio_camio_1p8_en", 0);
 	if (!gpio_is_valid(gpio_camio_1p8_en)) {
-		dev_err(dev, "failed to get gpio_camio_1p8_en\n");
-		return -EINVAL;
+		dev_info(dev, "failed to get gpio_camio_1p8_en\n");
+		if (of_property_read_string(dnode, "cam_iovdd_1p8", (const char **) &cam_iovdd_1p8)) {
+			dev_err(dev, "Failed to get regulator_iovdd name property also\n");
+			return -EINVAL;
+		}
 	} else {
 		gpio_request_one(gpio_camio_1p8_en, GPIOF_OUT_INIT_LOW, "CAM_VDDIO_EN");
 		gpio_free(gpio_camio_1p8_en);
@@ -246,8 +372,11 @@ static int module_imx576_power_setpin(struct device *dev,
 	if(actuator) {
 		gpio_camaf_2p8_en = of_get_named_gpio(dnode, "gpio_camaf_2p8_en", 0);
 		if (!gpio_is_valid(gpio_camaf_2p8_en)) {
-			dev_err(dev, "failed to get gpio_camaf_2p8_en\n");
-			return -EINVAL;
+			dev_info(dev, "failed to get gpio_camaf_2p8_en\n");
+			if (of_property_read_string(dnode, "cam_afvdd_2p8", (const char **) &cam_afvdd_2p8)) {
+				dev_err(dev, "Failed to get regulator_afvdd name property also\n");
+				return -EINVAL;
+			}
 		} else {
 			gpio_request_one(gpio_camaf_2p8_en, GPIOF_OUT_INIT_LOW, "CAM_AFVDD_EN");
 			gpio_free(gpio_camaf_2p8_en);
@@ -264,17 +393,29 @@ static int module_imx576_power_setpin(struct device *dev,
 
 	/* Normal on */
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_reset, "sen_rst low", PIN_OUTPUT, 0, 0);
-	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_dcdc_en, "cam_dcdc_en", PIN_OUTPUT, 1, 1000);
 
-	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_core_en, "cam_core_en", PIN_OUTPUT, 1, 0);
-	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 1, 1000);
+	if (gpio_is_valid(gpio_cam_dcdc_en))
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_dcdc_en, "cam_dcdc_en", PIN_OUTPUT, 1, 1000);
+	else
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, cam_dvdd_1p2, PIN_REGULATOR, 1, 1000);
+
+	if (gpio_is_valid(gpio_cam_core_en))
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_core_en, "cam_core_en", PIN_OUTPUT, 1, 0);
+	else
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, cam_avdd_2p8, PIN_REGULATOR, 1, 0);
+
+	if (gpio_is_valid(gpio_camio_1p8_en))
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 1, 1000);
+	else
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, cam_iovdd_1p8, PIN_REGULATOR, 1, 1000);
+
 	if(shared_camio_1p8)
 		SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, SRT_ACQUIRE,
 				&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
 
 	if(actuator)
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_camaf_2p8_en, "camaf_2p8_en", PIN_OUTPUT, 1, 500);
-	
+
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "pin", PIN_FUNCTION, 2, 3000);
 	if(shared_mclk) {
 		SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, SRT_ACQUIRE,
@@ -296,23 +437,41 @@ static int module_imx576_power_setpin(struct device *dev,
 	if(actuator)
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_camaf_2p8_en, "camaf_2p8_en", PIN_OUTPUT, 0, 1000);
 
-	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 0, 0);
+	if (gpio_is_valid(gpio_camio_1p8_en))
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 0, 0);
+	else
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, cam_iovdd_1p8, PIN_REGULATOR, 0, 0);
+
 	if(shared_camio_1p8)
 		SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, SRT_RELEASE,
 				&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
 
-	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_core_en, "cam_core_en", PIN_OUTPUT, 0, 1000);
-	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_dcdc_en, "cam_dcdc_en", PIN_OUTPUT, 0, 0);
+	if (gpio_is_valid(gpio_cam_core_en))
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_core_en, "cam_core_en", PIN_OUTPUT, 0, 1000);
+	else
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, cam_avdd_2p8, PIN_REGULATOR, 0, 1000);
+
+	if (gpio_is_valid(gpio_cam_dcdc_en))
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_dcdc_en, "cam_dcdc_en", PIN_OUTPUT, 0, 0);
+	else
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, cam_dvdd_1p2, PIN_REGULATOR, 0, 0);
+
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "delay", PIN_NONE, 0, 10000);
 
 	/* READ_ROM - POWER ON */
 	if(actuator)
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_camaf_2p8_en, "camaf_2p8_en", PIN_OUTPUT, 1, 2000);
-	SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 1, 2000);
-	
+	if (gpio_is_valid(gpio_camio_1p8_en))
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 1, 2000);
+	else
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, cam_iovdd_1p8, PIN_REGULATOR, 1, 2000);
+
 	/* READ_ROM - POWER OFF */
-	SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 0, 1000);
-	if(actuator)	
+	if (gpio_is_valid(gpio_camio_1p8_en))
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "camio_1p8_en", PIN_OUTPUT, 0, 1000);
+	else
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, cam_iovdd_1p8, PIN_REGULATOR, 0, 1000);
+	if(actuator)
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_camaf_2p8_en, "camaf_2p8_en", PIN_OUTPUT, 0, 5000);
 
 	dev_info(dev, "%s X v4\n", __func__);
@@ -332,6 +491,7 @@ int sensor_module_imx576_probe(struct platform_device *pdev)
 	struct exynos_platform_fimc_is_module *pdata;
 	struct device *dev;
 	struct pinctrl_state *s;
+	int module_position = SENSOR_MODULE_IMX576_REAR;
 
 	BUG_ON(!fimc_is_dev);
 
@@ -357,7 +517,7 @@ int sensor_module_imx576_probe(struct platform_device *pdev)
 		goto p_err;
 	}
 
-	probe_info("%s pdata->id(%d), module_enum id(%d), position(%d) \n", 
+	probe_info("%s pdata->id(%d), module_enum id(%d), position(%d) \n",
 		__func__, pdata->id, atomic_read(&device->module_count), pdata->position);
 	module = &device->module_enum[atomic_read(&device->module_count)];
 	atomic_inc(&device->module_count);
@@ -385,14 +545,31 @@ int sensor_module_imx576_probe(struct platform_device *pdev)
 	module->vci = vci_module_imx576;
 	module->sensor_maker = "SONY";
 	module->sensor_name = "IMX576";
-	if(pdata->id == 1)
+
+	module_position = _sensor_module_get_drv_data(pdev);
+	if (module_position < 0)
+		probe_warn("module_position(%d) is failed", module_position);
+
+	if(module_position == SENSOR_MODULE_IMX576_FRONT)
 		module->setfile_name = "setfile_imx576_front.bin";
 	else
 		module->setfile_name = "setfile_imx576.bin";
-	module->cfgs = ARRAY_SIZE(config_imx576);
-	module->cfg = config_imx576;
+
+	if (of_property_read_bool(dev->of_node, "enable_25M")) {
+		probe_info("25M enabled \n");
+		module->cfgs = ARRAY_SIZE(config_imx576_25M);
+		module->cfg = config_imx576_25M;
+		module->active_width = 5760;
+		module->active_height = 4312;
+		module->pixel_width = module->active_width + 0;
+		module->pixel_height = module->active_height + 0;
+	} else {
+		probe_info("25M not enabled \n");
+		module->cfgs = ARRAY_SIZE(config_imx576);
+		module->cfg = config_imx576;
+	}
 	module->ops = NULL;
-	
+
     /* Sensor peri */
 	module->private_data = kzalloc(sizeof(struct fimc_is_device_sensor_peri), GFP_KERNEL);
 	if (!module->private_data) {
@@ -497,35 +674,36 @@ static int sensor_module_imx576_remove(struct platform_device *pdev)
 static const struct of_device_id exynos_fimc_is_sensor_module_imx576_match[] = {
 	{
 		.compatible = "samsung,sensor-rear-module-imx576",
+		.data = (void *)SENSOR_MODULE_IMX576_REAR,
 	},
 	{
 		.compatible = "samsung,sensor-front-module-imx576",
+		.data = (void *)SENSOR_MODULE_IMX576_FRONT,
 	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, exynos_fimc_is_sensor_module_imx576_match);
 
-static struct platform_driver rear_sensor_module_imx576_driver = {
+static int _sensor_module_get_drv_data(struct platform_device *pdev)
+{
+	int ret_data = -1;
+
+	if (pdev->dev.of_node) {
+		const struct of_device_id *match;
+		match = of_match_node(of_match_ptr(exynos_fimc_is_sensor_module_imx576_match), pdev->dev.of_node);
+		if (match)
+			ret_data = (enum sensor_module_imx576_position)match->data;
+	}
+	return ret_data;
+}
+
+static struct platform_driver sensor_module_imx576_driver = {
 	.probe  = sensor_module_imx576_probe,
 	.remove = sensor_module_imx576_remove,
 	.driver = {
-		.name   = REAR_SENSOR_MODULE_NAME,
+		.name   = SENSOR_MODULE_NAME,
 		.owner  = THIS_MODULE,
 		.of_match_table = exynos_fimc_is_sensor_module_imx576_match,
 	}
 };
-
-module_platform_driver(rear_sensor_module_imx576_driver);
-
-static struct platform_driver front_sensor_module_imx576_driver = {
-	.probe  = sensor_module_imx576_probe,
-	.remove = sensor_module_imx576_remove,
-	.driver = {
-		.name   = FRONT_SENSOR_MODULE_NAME,
-		.owner  = THIS_MODULE,
-		.of_match_table = exynos_fimc_is_sensor_module_imx576_match,
-	}
-};
-
-module_platform_driver(front_sensor_module_imx576_driver);
-
+module_platform_driver(sensor_module_imx576_driver);

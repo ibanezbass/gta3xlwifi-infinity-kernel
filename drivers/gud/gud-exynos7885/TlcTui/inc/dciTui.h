@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2016 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -15,14 +15,14 @@
 #ifndef __DCITUI_H__
 #define __DCITUI_H__
 
+/**< Responses have bit 31 set */
+
 /* Linux checkpatch suggests to use the BIT macro */
 #ifndef BIT
 #define BIT(n) (1U << (n))
 #endif
 
-/**< Responses have bit 31 set */
 #define RSP_ID_MASK BIT(31)
-
 #define RSP_ID(cmd_id) (((uint32_t)(cmd_id)) | RSP_ID_MASK)
 #define IS_CMD(cmd_id) ((((uint32_t)(cmd_id)) & RSP_ID_MASK) == 0)
 #define IS_RSP(cmd_id) ((((uint32_t)(cmd_id)) & RSP_ID_MASK) == RSP_ID_MASK)

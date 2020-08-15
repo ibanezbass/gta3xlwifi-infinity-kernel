@@ -446,7 +446,7 @@ config:
 	}
 
 	ret = fimc_is_hw_isp_set_yuv_range(hw_ip, param_set, frame->fcount, hw_map);
-	fimc_is_lib_isp_shot(hw_ip, &hw_isp->lib[frame->instance], param_set, frame->shot);
+	ret |= fimc_is_lib_isp_shot(hw_ip, &hw_isp->lib[frame->instance], param_set, frame->shot);
 
 	set_bit(HW_CONFIG, &hw_ip->state);
 
@@ -744,6 +744,28 @@ static int fimc_is_hw_isp_delete_setfile(struct fimc_is_hw_ip *hw_ip, u32 instan
 	return ret;
 }
 
+int fimc_is_hw_isp_restore(struct fimc_is_hw_ip *hw_ip, u32 instance)
+{
+	int ret = 0;
+	struct fimc_is_hw_isp *hw_isp = NULL;
+
+	BUG_ON(!hw_ip);
+	BUG_ON(!hw_ip->priv_info);
+
+	if (!test_bit(HW_OPEN, &hw_ip->state))
+		return -EINVAL;
+
+	hw_isp = (struct fimc_is_hw_isp *)hw_ip->priv_info;
+
+	ret = fimc_is_lib_isp_reset_recovery(hw_ip, &hw_isp->lib[instance], instance);
+	if (ret) {
+		mserr_hw("fimc_is_lib_isp_reset_recovery fail ret(%d)",
+				instance, hw_ip, ret);
+	}
+
+	return ret;
+}
+
 const struct fimc_is_hw_ip_ops fimc_is_hw_isp_ops = {
 	.open			= fimc_is_hw_isp_open,
 	.init			= fimc_is_hw_isp_init,
@@ -758,7 +780,8 @@ const struct fimc_is_hw_ip_ops fimc_is_hw_isp_ops = {
 	.load_setfile		= fimc_is_hw_isp_load_setfile,
 	.apply_setfile		= fimc_is_hw_isp_apply_setfile,
 	.delete_setfile		= fimc_is_hw_isp_delete_setfile,
-	.clk_gate		= fimc_is_hardware_clk_gate
+	.clk_gate		= fimc_is_hardware_clk_gate,
+	.restore		= fimc_is_hw_isp_restore
 };
 
 int fimc_is_hw_isp_probe(struct fimc_is_hw_ip *hw_ip, struct fimc_is_interface *itf,

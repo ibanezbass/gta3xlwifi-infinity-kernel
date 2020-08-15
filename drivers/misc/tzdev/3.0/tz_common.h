@@ -51,7 +51,6 @@
 #define SYSCONF_NWD_CRYPTO_CLOCK_MANAGEMENT	(1 << 0)
 #define SYSCONF_NWD_CPU_HOTPLUG			(1 << 1)
 #define SYSCONF_NWD_TZDEV_DEPLOY_TZAR		(1 << 2)
-#define SYSCONF_NWD_TZDEV_INDICATOR_TZSL	(1 << 3)
 
 struct tzio_swd_sysconf {
 	uint32_t os_version;			/* SWd OS version */

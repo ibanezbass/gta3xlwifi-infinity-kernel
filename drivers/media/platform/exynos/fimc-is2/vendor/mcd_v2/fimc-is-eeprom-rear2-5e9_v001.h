@@ -15,7 +15,7 @@ const struct fimc_is_vender_rom_addr rear2_5e9_cal_addr = {
 	/* Set '-1' if not used */
 
 	'A',				//char		camera_module_es_version;
-	'1',				//char		cal_map_es_version;
+	'1',				//char			cal_map_es_version;
 	FIMC_IS_REAR2_MAX_CAL_SIZE,		//int32_t		rom_max_cal_size;
 
 	0x00,			//int32_t		rom_header_cal_data_start_addr;
@@ -50,7 +50,7 @@ const struct fimc_is_vender_rom_addr rear2_5e9_cal_addr = {
 	-1,				//int32_t		rom_header_sub_shading_start_addr;
 	-1,				//int32_t		rom_header_sub_shading_end_addr;
 
-	0x40,			//int32_t		rom_header_main_mtf_data_addr;
+	-1,			//int32_t		rom_header_main_mtf_data_addr;
 	-1,				//int32_t		rom_header_sub_mtf_data_addr;
 
 	0xFC,			//int32_t		rom_header_checksum_addr;

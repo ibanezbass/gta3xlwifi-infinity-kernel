@@ -237,7 +237,9 @@ struct cmdq_host {
 	u32 cmd_log_idx[NUM_SLOTS];
 	void *private;
 
+	struct list_head	active_mrq;
 	spinlock_t lock;
+	spinlock_t list_lock;
 	struct cmdq_sfr_ramdump		*cq_dump;
 };
 

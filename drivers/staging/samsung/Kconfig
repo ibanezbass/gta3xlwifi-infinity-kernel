@@ -25,7 +25,7 @@ menuconfig SEC_DEBUG
 	depends on EXYNOS_SNAPSHOT && SEC_REBOOT
 	default y
 
- config SEC_DEBUG_RESET_REASON
+config SEC_DEBUG_RESET_REASON
 	bool "Enable TN reset reason"
 	depends on SEC_DEBUG
 	default y
@@ -73,6 +73,30 @@ config SEC_DEBUG_LAST_KMSG
 	depends on SEC_DEBUG
 	default y
 
+config SEC_DEBUG_INIT_LOG
+	bool "support hooking of init task log"
+	depends on SEC_DEBUG
+	default y
+	help
+	  This option enables hooking of init task log. 
+	  It can be used for debugging purpose in case of booting failure or something else.
+
+config SEC_DEBUG_LIMIT_BACKTRACE
+	bool "Forcely break infinity backtrace"
+	depends on SEC_DEBUG
+	default y
+	help
+	  This option kick watchdog reset timer forcely in case of infinity backtrace.
+  	  It can be used for debugging purpose to find why infinicy bactrace occurs.
+
+config SEC_DEBUG_AVOID_UNNECESSARY_TRAP
+	bool "support avoiding unnecessary trap"
+	depends on SEC_DEBUG
+	default y
+	help
+	  This option helps to obtain normal log by avoiding unnessary trap again
+	  after exception handling
+
 config SEC_DEBUG_FILE_LEAK
 	bool "Panic when file leak detected"
 	depends on !SAMSUNG_PRODUCT_SHIP
@@ -93,6 +117,13 @@ config CM_OFFSET
 	help
 	  set Charging Mode Offset when you enable SEC_PARAM.
 
+config FMM_LOCK_OFFSET
+	int "FMM lock Offset"
+	default 0
+	depends on SEC_PARAM
+	help
+	  set FMM lock Offset when you enable SEC_PARAM.
+
 config SEC_EVENT_LOG
 	bool "Enable Event log parser"
 	depends on SEC_EXT
@@ -107,7 +138,12 @@ config SEC_INITCALL_DEBUG
 	bool "Enable TN Initcall logging"
 	depends on SEC_EXT && !SAMSUNG_PRODUCT_SHIP
 	default y
-
+	
+config SEC_RESUME_SUSPEND_DEBUG
+	bool "Enable TN resume and suspend logging"
+	depends on SEC_EXT && !SAMSUNG_PRODUCT_SHIP
+	default y
+	  
 config ARGOS
 	bool "Throughput monitoring Feature"
 	default n
@@ -155,6 +191,22 @@ config SEC_DEBUG_TSP_LOG
 	depends on SEC_EXT
 	help
 	  This option enables additional log buffer for tsp log.
+
+config SEC_DEBUG_INIT_EXIT_PANIC
+	bool "Trigger panic when exiting init task group"
+	depends on SEC_DEBUG
+	default y
+	help
+	  This option enables early panic when it attempt to kill init tasks.
+	  It may happen before init task stack is destroyed for debugging.
+
+config SEC_DEBUG_SOFTDOG_PWDT
+	bool "Enable Soft Watchdog for Platform"
+	default y
+	depends on WATCHDOG
+	select SOFT_WATCHDOG
+	help
+	  This option enables soft watchdog device and soft_panic.
 
 comment "Samsung TN Power Management Options"
 menuconfig SEC_PM
@@ -224,7 +276,19 @@ config SEC_GPIO
 	default n
 	bool "Enable gpio detection for PCB type"
 	help
-	  Return FPCB type for factory test
+	  Return FPCB type for factory test use GPIO
+
+config SEC_SPD_ADC
+	default n
+	bool "Enable adc detection for PCB type"
+	help
+	  Return FPCB type for factory test use ADC
+
+config SEC_SPD_ADC_DEBUG
+	default n
+	bool "Enable debug option for adc detection"
+	help
+	  This option enable ADC detection debug support.
 
 config SEC_DEBUG_SUPPORT_FORCE_UPLOAD
 	bool "Support force upload mode"
@@ -239,29 +303,20 @@ config SEC_VTS_TEST
 	help
 	  This option notices this binary for VTS test.
 
-choice
-	prompt "Version of GAF structure"
-	depends on SEC_DEBUG
-	default SEC_DEBUG_GAF_V5 if PROCA
-	default SEC_DEBUG_GAF_V4 if FIVE && !PROCA
-	default SEC_DEBUG_GAF_V3
+config SEC_PERIPHERAL_SECURE_CHK
+	bool "PERIPHERAL SECURE CHK"
+	default n
+	help
+	  This option supports secure check
 
-	config SEC_DEBUG_GAF_V3
-		bool "Use GAF structure version 3"
-		default n
-		help
-		  Default option for FIVE-disabled kernel
+config SEC_DEBUG_SNAPSHOT_DISABLE
+	bool "Disable EXYNOS SNAPSHOT logging"
+	default n
+	help
+	  This option blocks exynos snapshot logging
 
-	config SEC_DEBUG_GAF_V4
-		bool "Use GAF structure version 4"
-		default n
-		help
-		  Default option for kernel without PROCA LSM module.
-
-	config SEC_DEBUG_GAF_V5
-		bool "Use GAF structure version 5"
-		default n
-		help
-		  Default option for kernel with PROCA LSM module.
-endchoice
-
+config SEC_DEBUG_SMALL_DEBUG_MODE
+	bool "Enable small debug mode"
+	default n
+	help
+	  This option supports small debug mode

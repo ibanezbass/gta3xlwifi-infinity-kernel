@@ -102,7 +102,7 @@ unsigned long CFG_VER_MAJ_FLASH_ADDR;
 unsigned long CFG_VER_MIN_FLASH_ADDR;
 unsigned long CID_VER_MAJ_FLASH_ADDR;
 unsigned long CID_VER_MIN_FLASH_ADDR;
-/*unsigned long	PANEL_VERSION_ADDR;*/
+unsigned long	PANEL_VERSION_ADDR;
 
 unsigned long FW_VER_MAJ_FLASH_LENG;
 unsigned long FW_VER_MIN_FLASH_LENG;
@@ -110,7 +110,7 @@ unsigned long CFG_VER_MAJ_FLASH_LENG;
 unsigned long CFG_VER_MIN_FLASH_LENG;
 unsigned long CID_VER_MAJ_FLASH_LENG;
 unsigned long CID_VER_MIN_FLASH_LENG;
-/*unsigned long	PANEL_VERSION_LENG;*/
+unsigned long	PANEL_VERSION_LENG;
 
 unsigned long FW_CFG_VER_FLASH_ADDR;
 
@@ -2653,6 +2653,8 @@ GET_TOUCH_FAIL:
 			HIMAX_LOG_TAG, __func__);
 #ifdef HX_RST_PIN_FUNC
 	g_core_fp.fp_ic_reset(false, true);
+#else
+	g_core_fp.fp_system_reset();
 #endif
 END_FUNCTION:
 	if (debug_data != NULL)
@@ -3270,3 +3272,10 @@ ESCAPE_0F_UPDATE:
 			__func__);
 	return 0;
 }
+
+#ifdef CONFIG_SAMSUNG_TUI
+void stui_report_all_leave_event(struct himax_ts_data *ts)
+{
+	himax_report_all_leave_event(ts);
+}
+#endif

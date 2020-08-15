@@ -1222,7 +1222,7 @@ static int mmc_select_hs400(struct mmc_card *card)
 
 		err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 				EXT_CSD_HS_TIMING,
-				EXT_CSD_TIMING_HS400,
+				EXT_CSD_TIMING_HS400 | host->device_drv,
 				card->ext_csd.generic_cmd6_time,
 				true, true, true);
 		if (err) {
@@ -1882,9 +1882,11 @@ reinit:
 		if (err) {
 			pr_warn("%s: Enabling HPI failed\n",
 				mmc_hostname(card->host));
+			card->ext_csd.hpi_en = 0;
 			err = 0;
-		} else
+		} else {
 			card->ext_csd.hpi_en = 1;
+		}
 	}
 
 	/*

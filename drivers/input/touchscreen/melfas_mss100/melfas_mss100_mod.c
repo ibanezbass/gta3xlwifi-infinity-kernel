@@ -96,7 +96,7 @@ out:
 	if (!enable)
 		usleep_range(10 * 1000, 11 * 1000);
 	else
-		msleep(70);
+		msleep(90);
 
 	input_info(true, &info->client->dev, "%s [DONE %s]\n",
 			__func__, enable ? "on":"off");
@@ -124,6 +124,7 @@ void mms_clear_input(struct mms_ts_info *info)
 
 	info->touch_count = 0;
 	info->check_multi = 0;
+	info->print_info_cnt_release = 0;
 
 	input_sync(info->input_dev);
 }
@@ -268,6 +269,7 @@ void mms_ts_location_detect(struct mms_ts_info *info, char *loc, int x, int y)
 		strcat(loc, "N");
 }
 
+static const char finger_mode[10] = { 'N', 'P' };
 /**
  * Input event handler - Report touch input event
  */
@@ -287,6 +289,7 @@ void mms_input_event_handler(struct mms_ts_info *info, u8 sz, u8 *buf)
 	int touch_major = 0;
 	int touch_minor = 0;
 	char location[6] = { 0, };
+	char pos[5];
 
 	input_dbg(false, &client->dev, "%s [START]\n", __func__);
 	input_dbg(false, &client->dev, "%s - sz[%d] buf[0x%02X]\n", __func__, sz, buf[0]);
@@ -383,6 +386,7 @@ void mms_input_event_handler(struct mms_ts_info *info, u8 sz, u8 *buf)
 			info->coord[id].major = touch_major;
 			info->coord[id].minor = touch_minor;
 			info->coord[id].palm = palm;
+			info->coord[id].type = palm;
 
 			if (state == MMS_TS_COORDINATE_ACTION_RELEASE) {
 				/* Release */
@@ -399,28 +403,29 @@ void mms_input_event_handler(struct mms_ts_info *info, u8 sz, u8 *buf)
 						input_report_key(info->input_dev,
 									BTN_TOOL_FINGER, 0);
 						info->check_multi = 0;
+						info->print_info_cnt_release = 0;
 					}
 					info->finger_state[id] = 0;
 
 					mms_ts_location_detect(info, location, info->coord[id].x, info->coord[id].y);
 #ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
 					input_info(true, &info->client->dev,
-							"[R] tID:%d loc:%s dd:%d,%d mc:%d tc:%d V[%04x] D:%X ed:%d\n",
+							"[R] tID:%d loc:%s dd:%d,%d mc:%d tc:%d | ed:%d\n",
 							id, location,
 							info->coord[id].x - info->coord[id].p_x,
 							info->coord[id].y - info->coord[id].p_y,
 							info->coord[id].mcount, info->touch_count,
-							info->fw_ver_ic, info->defect_probability, info->ed_enable);
+							info->ed_enable);
 
 #else
 					input_info(true, &info->client->dev,
-							"[R] tID:%d loc:%s dd:%d,%d mc:%d tc:%d lx:%d ly:%d V[%04x] D:%X ed:%d\n",
+							"[R] tID:%d loc:%s dd:%d,%d mc:%d tc:%d lx:%d ly:%d | ed:%d\n",
 							id, location,
 							info->coord[id].x - info->coord[id].p_x,
 							info->coord[id].y - info->coord[id].p_y,
 							info->coord[id].mcount, info->touch_count,
 							info->coord[id].x, info->coord[id].y,
-							info->fw_ver_ic, info->defect_probability, info->ed_enable);
+							info->ed_enable);
 #endif
 					info->coord[id].mcount = 0;
 				}
@@ -453,19 +458,19 @@ void mms_input_event_handler(struct mms_ts_info *info, u8 sz, u8 *buf)
 					mms_ts_location_detect(info, location, info->coord[id].x, info->coord[id].y);
 #ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
 					input_info(true, &info->client->dev,
-							"[P] tID:%d.%d z:%d major:%d minor:%d p:%d loc:%s tc:%d\n",
+							"[P] tID:%d.%d z:%d major:%d minor:%d loc:%s tc:%d\n",
 							id, (info->input_dev->mt->trkid - 1) & TRKID_MAX,
 							info->coord[id].z,
 							info->coord[id].major, info->coord[id].minor,
-							info->coord[id].palm, location, info->touch_count);
+							location, info->touch_count);
 
 #else
 					input_info(true, &info->client->dev,
-							"[P] tID:%d.%d x:%d y:%d z:%d major:%d minor:%d p:%d loc:%s tc:%d\n",
+							"[P] tID:%d.%d x:%d y:%d z:%d major:%d minor:%d loc:%s tc:%d\n",
 							id, (info->input_dev->mt->trkid - 1) & TRKID_MAX,
 							info->coord[id].x, info->coord[id].y, info->coord[id].z,
 							info->coord[id].major, info->coord[id].minor,
-							info->coord[id].palm, location, info->touch_count);
+							location, info->touch_count);
 #endif
 					if ((info->touch_count > 2) && (info->check_multi == 0)) {
 						info->check_multi = 1;
@@ -474,6 +479,23 @@ void mms_input_event_handler(struct mms_ts_info *info, u8 sz, u8 *buf)
 				}
 				info->coord[id].mcount++;
 			}
+
+			if (state == MMS_TS_COORDINATE_ACTION_RELEASE)
+				snprintf(pos, 5, "R");
+			if (state == MMS_TS_COORDINATE_ACTION_PRESS_MOVE) {
+				if (info->finger_state[id] == 0)
+					snprintf(pos, 5, "P");
+				else
+					snprintf(pos, 5, "M");
+			}
+
+			if (info->coord[id].pre_type != info->coord[id].type)
+				input_info(true, &info->client->dev, "%s: tID:%d ttype(%c->%c) : %s\n",
+						__func__, id, finger_mode[info->coord[id].pre_type],
+						finger_mode[info->coord[id].type], pos);
+
+			info->coord[id].pre_type = info->coord[id].type;
+
 		} else if (type == MIP4_EVENT_INPUT_TYPE_KEY) {
 			int key_code;
 

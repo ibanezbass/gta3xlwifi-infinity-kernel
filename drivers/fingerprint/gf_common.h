@@ -183,6 +183,8 @@ struct gf_device {
 	unsigned int current_spi_speed;
 	unsigned int orient;
 	int sensortype;
+	int reset_count;
+	int interrupt_count;
 	bool ldo_onoff;
 	bool tz_mode;
 	const char *chipid;

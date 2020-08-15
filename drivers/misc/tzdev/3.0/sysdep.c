@@ -52,7 +52,7 @@ long sysdep_get_user_pages(struct task_struct *task,
 		int write, int force, struct page **pages,
 		struct vm_area_struct **vmas)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 117)
 	unsigned int flags = 0;
 
 	if (write)
@@ -67,6 +67,8 @@ long sysdep_get_user_pages(struct task_struct *task,
 	return get_user_pages_remote(task, mm, start, nr_pages, flags, pages, vmas);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
 	return get_user_pages_remote(task, mm, start, nr_pages, write, force, pages, vmas);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 177)
+	return get_user_pages(task, mm, start, nr_pages, flags, pages, vmas);
 #else
 	return get_user_pages(task, mm, start, nr_pages, write, force, pages, vmas);
 #endif

@@ -225,8 +225,9 @@ static int sec_ts_check_firmware_version(struct sec_ts_data *ts, const u8 *fw_in
 	/* check f/w version
 	 * ver[0] : IC version
 	 * ver[1] : Project version
+	 * ver[2] : Panel infomation
 	 */
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		if (ts->plat_data->img_version_of_ic[i] != ts->plat_data->img_version_of_bin[i]) {
 			if (ts->plat_data->bringup == 3) {
 				input_err(true, &ts->client->dev, "%s: bringup. force update\n", __func__);
@@ -237,10 +238,9 @@ static int sec_ts_check_firmware_version(struct sec_ts_data *ts, const u8 *fw_in
 			return 0;
 		}
 	}
-	for (i = 2; i < 4; i++) {
-		if (ts->plat_data->img_version_of_ic[i] < ts->plat_data->img_version_of_bin[i])
-			return 1;
-	}
+
+	if (ts->plat_data->img_version_of_ic[3] < ts->plat_data->img_version_of_bin[3])
+		return 1;
 
 	return 0;
 }

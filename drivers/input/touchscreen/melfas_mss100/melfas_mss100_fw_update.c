@@ -396,6 +396,9 @@ int mip4_ts_flash_fw(struct mms_ts_info *info, const u8 *fw_data, size_t fw_size
 	/* Load bin data */
 	bin_size = bin_info->bin_length;
 	bin_data = kzalloc(sizeof(u8) * bin_size, GFP_KERNEL);
+	if (!bin_data)
+		goto err_mem_alloc;
+		
 	memcpy(bin_data, fw_data, bin_size);
 
 	if (on_probe) {
@@ -558,6 +561,7 @@ uptodate:
 
 error_update:
 	kfree(bin_data);
+err_mem_alloc:
 error_file:
 	input_err(true, &info->client->dev, "%s [ERROR]\n", __func__);
 exit:

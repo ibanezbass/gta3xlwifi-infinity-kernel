@@ -139,6 +139,55 @@ static ssize_t voldown_adc_show(struct device *dev,
 }
 #endif
 
+#if defined (CONFIG_SND_SOC_COD30XX_EXT_ANT) && defined(CONFIG_SEC_FACTORY)
+static ssize_t force_enable_antenna_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct cod3035x_priv *cod3035x = dev_get_drvdata(dev);
+
+	if ((!size) || (buf[0] != '1')) {
+		dev_info(dev, "%s: antenna disble\n", __func__);
+		cod3035x->jack_det.ignore_ext_ant = 1;
+		if (cod3035x->ant_det_gpio)
+			disable_irq(gpio_to_irq(cod3035x->ant_det_gpio));
+
+		cancel_work_sync(&cod3035x->jack_det_work);
+		queue_work(cod3035x->jack_det_wq, &cod3035x->jack_det_work);
+	} else {
+		dev_info(dev, "%s: update antenna enable\n", __func__);
+		cod3035x->jack_det.ignore_ext_ant = 0;
+		
+		cancel_work_sync(&cod3035x->jack_det_work);
+		queue_work(cod3035x->jack_det_wq, &cod3035x->jack_det_work);
+
+		/* add delay to enable irq after jack_detect_work called */
+		msleep(500);
+
+		if (cod3035x->ant_det_gpio) {
+			enable_irq(gpio_to_irq(cod3035x->ant_det_gpio));
+		}
+	}
+
+	return size;
+}
+
+static ssize_t audio_antenna_state_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct cod3035x_priv *cod3035x = dev_get_drvdata(dev);
+	int report = 0;
+
+	if (cod3035x->jack_det.ant_det)
+		report = 0xA;
+	else if (cod3035x->jack_det.mic_det)
+		report = 0x1;
+	else
+		report = 0;
+
+	return snprintf(buf, 4, "%d\n", report);
+}
+#endif
+
 static DEVICE_ATTR(select_jack, S_IRUGO | S_IWUSR | S_IWGRP,
                         earjack_select_jack_show, earjack_select_jack_store);
 
@@ -157,6 +206,13 @@ static DEVICE_ATTR(send_end_btn_adc, S_IRUGO, hook_adc_show, NULL);
 static DEVICE_ATTR(voc_assist_btn_adc, S_IRUGO, voc_ast_adc_show, NULL);
 static DEVICE_ATTR(vol_up_btn_adc, S_IRUGO, volup_adc_show, NULL);
 static DEVICE_ATTR(vol_down_btn_adc, S_IRUGO, voldown_adc_show, NULL);
+#endif
+
+#if defined (CONFIG_SND_SOC_COD30XX_EXT_ANT) && defined(CONFIG_SEC_FACTORY)
+static DEVICE_ATTR(force_enable_antenna, S_IRUGO | S_IWUSR | S_IWGRP,
+			NULL, force_enable_antenna_store);
+static DEVICE_ATTR(antenna_state, S_IRUGO | S_IWUSR | S_IWGRP,
+			audio_antenna_state_show, NULL);
 #endif
 
 static void create_jack_devices(struct cod3035x_priv *info)
@@ -207,6 +263,16 @@ static void create_jack_devices(struct cod3035x_priv *info)
     if (device_create_file(jack_dev, &dev_attr_vol_down_btn_adc) < 0){
         pr_err("Failed to create (%s)\n", dev_attr_vol_down_btn_adc.attr.name);
     }
+#endif
+
+#if defined (CONFIG_SND_SOC_COD30XX_EXT_ANT) && defined(CONFIG_SEC_FACTORY)
+	if (device_create_file(jack_dev, &dev_attr_force_enable_antenna) < 0){
+		pr_err("Failed to create (%s)\n", dev_attr_force_enable_antenna.attr.name);
+	}
+
+	if (device_create_file(jack_dev, &dev_attr_antenna_state) < 0){
+		pr_err("Failed to create (%s)\n", dev_attr_antenna_state.attr.name);
+	}
 #endif
 }
 

@@ -17,6 +17,7 @@
 
 /* This setfile B is PDAF setting */
 /* Reference : S5K2P6SX_EVT0_Ver_0.12_20171026.xlsx */
+/* Reference : S5K2P6SX_EVT0_Ver_0.17_20181204.xlsx */
 
 const u32 sensor_2p6_setfile_B_Global[] = {
 	0xFCFC, 0x4000, 0x02,
@@ -564,10 +565,48 @@ const u32 sensor_2p6_setfile_B_1152x864_120fps[] = {
 	0x021E, 0x038E, 0x02,
 	0x0216, 0x0000, 0x02,
 	0x6214, 0x7970, 0x02,
-
 };
 
-/* 12. 1152 x 656 / 4-Bin, 16:9, 120fps, EXTCLK 26Mhz */
+/* 12. 1280 x 720 / 2-Bin, 4:3, 120fps, EXTCLK 26Mhz */
+const u32 sensor_2p6_setfile_B_1280x720_120fps[] = {
+	0xFCFC, 0x4000, 0x02,
+	0x6028, 0x2000, 0x02,
+	0x6214, 0x7971, 0x02,
+	0x6218, 0x7150, 0x02,
+	0x30CE, 0x0040, 0x02,
+	0x37F6, 0x0031, 0x02,
+	0x3198, 0x0066, 0x02,
+	0x319A, 0x0000, 0x02,
+	0x319C, 0x0130, 0x02,
+	0x3056, 0x0100, 0x02,
+	0x602A, 0x1BB0, 0x02,
+	0x6F12, 0x0100, 0x02,
+	0x0B0E, 0x0100, 0x02,
+	0x30D8, 0x0000, 0x02,
+	0x31B0, 0x0004, 0x02,
+	0x0340, 0x0388, 0x02,
+	0x0342, 0x1428, 0x02,
+	0x0344, 0x0418, 0x02,
+	0x0346, 0x0400, 0x02,
+	0x0348, 0x0E17, 0x02,
+	0x034A, 0x099F, 0x02,
+	0x034C, 0x0500, 0x02,
+	0x034E, 0x02D0, 0x02,
+	0x0900, 0x0112, 0x02,
+	0x0386, 0x0003, 0x02,
+	0x0400, 0x0001, 0x02,
+	0x0404, 0x0020, 0x02,
+	0x0306, 0x0061, 0x02,
+	0x1130, 0x440E, 0x02,
+	0x030E, 0x0068, 0x02,
+	0x300A, 0x0000, 0x02,
+	0x0202, 0x037E, 0x02,
+	0x021E, 0x037E, 0x02,
+	0x0216, 0x0000, 0x02,
+	0x6214, 0x7970, 0x02,
+};
+
+/* 13. 1152 x 656 / 4-Bin, 16:9, 120fps, EXTCLK 26Mhz */
 const u32 sensor_2p6_setfile_B_1152x656_120fps[] = {
 	0xFCFC, 0x4000, 0x02,
 	0x6028, 0x2000, 0x02,
@@ -693,6 +732,14 @@ const struct sensor_pll_info_compact sensor_2p6_pllinfo_B_2304x1120_30fps = {
 	560440000,  /* pclk  = VT pix CLK * 4(this value is different by cis) */
 	0x0937, /* frame_length_lines	(0x0340) */
 	0x1ED8, /* line_length_pck		(0x0342) */
+};
+
+const struct sensor_pll_info_compact sensor_2p6_pllinfo_B_1280x720_120fps = {
+	EXT_CLK_Mhz * 1000 * 1000, /* ext_clk */
+	1352 * 1000 * 1000, /* mipi_datarate */
+	560440000,  /* pclk  = VT pix CLK * 4(this value is different by cis) */
+	0x0388, /* frame_length_lines	(0x0340) */
+	0x1428, /* line_length_pck		(0x0342) */
 };
 
 const struct sensor_pll_info_compact sensor_2p6_pllinfo_B_1152x864_120fps = {
@@ -920,6 +967,7 @@ static const u32 *sensor_2p6_setfiles_B[] = {
 	sensor_2p6_setfile_B_2304x1312_30fps,
 	sensor_2p6_setfile_B_2304x1296_30fps,
 	sensor_2p6_setfile_B_2304x1120_30fps,
+	sensor_2p6_setfile_B_1280x720_120fps,
 	sensor_2p6_setfile_B_1152x864_120fps,
 	sensor_2p6_setfile_B_1152x656_120fps,
 };
@@ -937,6 +985,7 @@ static const u32 sensor_2p6_setfile_B_sizes[] = {
 	sizeof(sensor_2p6_setfile_B_2304x1312_30fps) / sizeof(sensor_2p6_setfile_B_2304x1312_30fps[0]),
 	sizeof(sensor_2p6_setfile_B_2304x1296_30fps) / sizeof(sensor_2p6_setfile_B_2304x1296_30fps[0]),
 	sizeof(sensor_2p6_setfile_B_2304x1120_30fps) / sizeof(sensor_2p6_setfile_B_2304x1120_30fps[0]),
+	sizeof(sensor_2p6_setfile_B_1280x720_120fps) / sizeof(sensor_2p6_setfile_B_1280x720_120fps[0]),
 	sizeof(sensor_2p6_setfile_B_1152x864_120fps) / sizeof(sensor_2p6_setfile_B_1152x864_120fps[0]),
 	sizeof(sensor_2p6_setfile_B_1152x656_120fps) / sizeof(sensor_2p6_setfile_B_1152x656_120fps[0]),
 };
@@ -959,6 +1008,7 @@ static const struct sensor_pll_info *sensor_2p6_pllinfos_B[] =
 	&sensor_2p6_pllinfo_B_2304x1312_30fps,
 	&sensor_2p6_pllinfo_B_2304x1296_30fps,
 	&sensor_2p6_pllinfo_B_2304x1120_30fps,
+	&sensor_2p6_pllinfo_B_1280x720_120fps,
 	&sensor_2p6_pllinfo_B_1152x864_120fps,
 	&sensor_2p6_pllinfo_B_1152x656_120fps,
 };

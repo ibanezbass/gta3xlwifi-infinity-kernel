@@ -833,11 +833,18 @@ static int abox_uaif_trigger(struct snd_pcm_substream *substream,
 					1 << ABOX_MIC_ENABLE_L);
 		} else {
 			if (id == ABOX_UAIF0) {
-				int mixp_value;
-				mixp_value = readl(data->sfr_base +  ABOX_SPUS_CTRL2);
-				mixp_value |= 0x1;
-				writel(mixp_value, data->sfr_base + ABOX_SPUS_CTRL2);
-				dev_info(dev, "%s(%d), mixp=0x%x\n", __func__, trigger, mixp_value);
+				int route_ctrl0, mixp_value;
+				route_ctrl0 = readl(data->sfr_base + ABOX_ROUTE_CTRL0);
+				if (route_ctrl0 & 0x1) {
+					/* ROUTE_CTRL0[3:0] 0001: Result from SPUS #0(output of MIXP) */
+					mixp_value = readl(data->sfr_base +  ABOX_SPUS_CTRL2);
+					mixp_value |= 0x1;
+					writel(mixp_value, data->sfr_base + ABOX_SPUS_CTRL2);
+					dev_info(dev, "%s(%d), mixp=0x%x\n", __func__, trigger, mixp_value);
+				} else {
+					dev_info(dev, "%s(%d), UAIF0 is not connected to MIXP (%x)\n",
+						__func__, trigger, route_ctrl0 & 0xF);
+				}
 			}
 
 			snd_soc_update_bits(codec, ABOX_UAIF_CTRL0(id),
@@ -4037,7 +4044,7 @@ void abox_request_dram_on(struct platform_device *pdev_abox, void *id, bool on)
 	}
 
 	regmap_write(data->regmap, ABOX_SYSPOWER_CTRL, val);
-	dev_dbg(dev, "%s: SYSPOWER_CTRL=%08x\n", __func__,
+	dev_info(dev, "%s: SYSPOWER_CTRL=%08x\n", __func__,
 			({regmap_read(data->regmap, ABOX_SYSPOWER_CTRL, &val);
 			val; }));
 }
@@ -4441,7 +4448,6 @@ static void abox_boot_done_work_func(struct work_struct *work)
 	abox_cpu_pm_ipc(dev, true);
 	abox_restore_data(dev);
 	abox_request_cpu_gear(dev, data, DEFAULT_CPU_GEAR_ID, 12);
-	abox_request_dram_on(pdev, dev, false);
 	wake_unlock(&data->wake_lock);
 }
 
@@ -5447,6 +5453,8 @@ static int abox_disable(struct device *dev)
 
 	abox_failsafe_report_reset(dev);
 
+	abox_request_dram_on(data->pdev, dev, false);
+
 	return 0;
 }
 
@@ -5486,8 +5494,12 @@ static int abox_suspend(struct device *dev)
 
 	dev_info(dev, "%s\n", __func__);
 
-	if (data->enabled)
+	if (data->enabled) {
+		dev_info(dev, "%s, SYSPOWERn_CTRL = 0x%x, SYSPOWERn_STATUS = 0x%x \n",
+				__func__, readl(data->sfr_base + ABOX_SYSPOWER_CTRL),
+				readl(data->sfr_base + ABOX_SYSPOWER_STATUS));
 		return 0;
+	}
 
 	return abox_disable(dev);
 }

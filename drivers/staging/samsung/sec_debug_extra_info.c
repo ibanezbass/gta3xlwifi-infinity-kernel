@@ -518,7 +518,7 @@ void sec_debug_set_extra_info_zswap(char *str)
 void sec_debug_set_extra_info_mfc_error(char *str)
 {
 	sec_debug_clear_extra_info(INFO_STACK); /* erase STACK */
-	sec_debug_set_extra_info(INFO_STACK, "MFC ERROR");
+//	sec_debug_set_extra_info(INFO_STACK, "MFC ERROR");
 	sec_debug_set_extra_info(INFO_MFC, "%s", str);
 }
 
@@ -568,6 +568,15 @@ void sec_debug_set_extra_info_batt(int cap, int volt, int temp, int curr)
 {
 	sec_debug_clear_extra_info(INFO_BATT);
 	sec_debug_set_extra_info(INFO_BATT, "%03d/%04d/%04d/%06d", cap, volt, temp, curr);
+}
+
+/******************************************************************************
+ * sec_debug_set_extra_info_aud (use RVD1)
+******************************************************************************/
+
+void sec_debug_set_extra_info_aud(char *str)
+{
+	sec_debug_set_extra_info(INFO_RVD1, "%s", str);
 }
 
 void sec_debug_finish_extra_info(void)

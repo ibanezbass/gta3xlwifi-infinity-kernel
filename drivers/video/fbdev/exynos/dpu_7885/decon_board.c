@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) Samsung Electronics Co., Ltd.
  *
@@ -15,6 +16,7 @@
 #include <linux/slab.h>
 #include <linux/ctype.h>
 #include <linux/regulator/consumer.h>
+#include <linux/blkdev.h>
 #include "../../../../pinctrl/core.h"
 
 #include "decon_board.h"
@@ -38,7 +40,7 @@ There are 5 pre-defined types
 - GPIO(HIGH, LOW) needs gpio name information. 1 at a time.
 - REGULATOR(ENABLE, DISABLE) needs regulator name information. 1 at a time.
 - DELAY(MDELAY, MSLEEP) needs delay information for duration. 1 at a time.
-- DELAY(USLEEP) needs delay information. 2 at a time.
+- DELAY(USLEEP) needs delay information. 1 at a time. or 2 at a time.
 - PINCTRL needs pinctrl name information. 1 at a time.
 - TIMER(START, DELAY, CLEAR) needs name which is used for identification keyword. 1 at a time.
 - TIMER(START) also needs delay information. 1 at a time.
@@ -53,7 +55,7 @@ There are 5 pre-defined types
 4. example:
 decon_board = <&node>;
 node: node {
-	compatible = "simple-bus"; <- add this when you need pinctrol to create platform_device with name 'node'
+	compatible = "simple-bus"; <- add this when you need pinctrl to create platform_device with name 'node'
 
 	pinctrl-names = "pin_off", "pin_on", "backlight_pin_only"; <- pinctrl position is here not in each subnode
 	pinctrl-0 = <&backlight_pin_off &lcd_pin_off>;
@@ -67,6 +69,7 @@ node: node {
 		"regulator,enable",	"ldo1",
 		"gpio,high",	"gpio_lcd_en",
 		"delay,usleep",	"10000 11000",
+		"delay,usleep",	"10000", <- fill automatically 2nd delay 15000 (1st delay + 1st delay >> 1)
 		"pinctrl",	"pin_on",
 		"delay,msleep",	"30";
 	};
@@ -96,15 +99,16 @@ run_list(dev, "subnode_4"); pre-configured lcd_pin pinctrl at subnode_1 will be 
 
 /* #define CONFIG_BOARD_DEBUG */
 
-#define DECON_BOARD_DTS_NAME	"decon_board"
+#define BOARD_DTS_NAME	"decon_board"
+#define PANEL_DTS_NAME	"lcd_info"
 
 #if defined(CONFIG_BOARD_DEBUG)
-#define bd_dbg(fmt, ...)		pr_debug(pr_fmt("%s: %3d: %s: " fmt), DECON_BOARD_DTS_NAME, __LINE__, __func__, ##__VA_ARGS__)
+#define dbg_dbg(fmt, ...)		pr_debug(pr_fmt("%s: %3d: %s: " fmt), BOARD_DTS_NAME, __LINE__, __func__, ##__VA_ARGS__)
 #else
-#define bd_dbg(fmt, ...)
+#define dbg_dbg(fmt, ...)
 #endif
-#define bd_info(fmt, ...)		pr_info(pr_fmt("%s: %3d: %s: " fmt), DECON_BOARD_DTS_NAME, __LINE__, __func__, ##__VA_ARGS__)
-#define bd_warn(fmt, ...)		pr_warn(pr_fmt("%s: %3d: %s: " fmt), DECON_BOARD_DTS_NAME, __LINE__, __func__, ##__VA_ARGS__)
+#define dbg_info(fmt, ...)		pr_info(pr_fmt("%s: %3d: %s: " fmt), BOARD_DTS_NAME, __LINE__, __func__, ##__VA_ARGS__)
+#define dbg_warn(fmt, ...)		pr_warn(pr_fmt("%s: %3d: %s: " fmt), BOARD_DTS_NAME, __LINE__, __func__, ##__VA_ARGS__)
 
 #define STREQ(a, b)			(*(a) == *(b) && strcmp((a), (b)) == 0)
 #define STRNEQ(a, b)			(strncmp((a), (b), (strlen(a))) == 0)
@@ -177,44 +181,44 @@ static struct dt_node_info	*dt_nodes[10];
 static int print_action(struct action_info *action)
 {
 	if (!IS_ERR_OR_NULL(action->desc))
-		bd_dbg("[%2d] %s\n", action->idx, action->desc);
+		dbg_dbg("[%2d] %s\n", action->idx, action->desc);
 
 	switch (action->idx) {
 	case ACTION_GPIO_HIGH:
-		bd_dbg("[%2d] gpio(%d) high\n", action->idx, action->gpio);
+		dbg_dbg("[%2d] gpio(%d) high\n", action->idx, action->gpio);
 		break;
 	case ACTION_GPIO_LOW:
-		bd_dbg("[%2d] gpio(%d) low\n", action->idx, action->gpio);
+		dbg_dbg("[%2d] gpio(%d) low\n", action->idx, action->gpio);
 		break;
 	case ACTION_REGULATOR_ENABLE:
-		bd_dbg("[%2d] regulator(%s) enable\n", action->idx, action->supply->supply);
+		dbg_dbg("[%2d] regulator(%s) enable\n", action->idx, action->supply->supply);
 		break;
 	case ACTION_REGULATOR_DISABLE:
-		bd_dbg("[%2d] regulator(%s) disable\n", action->idx, action->supply->supply);
+		dbg_dbg("[%2d] regulator(%s) disable\n", action->idx, action->supply->supply);
 		break;
 	case ACTION_DELAY_MDELAY:
-		bd_dbg("[%2d] mdelay(%d)\n", action->idx, action->delay[0]);
+		dbg_dbg("[%2d] mdelay(%d)\n", action->idx, action->delay[0]);
 		break;
 	case ACTION_DELAY_MSLEEP:
-		bd_dbg("[%2d] msleep(%d)\n", action->idx, action->delay[0]);
+		dbg_dbg("[%2d] msleep(%d)\n", action->idx, action->delay[0]);
 		break;
 	case ACTION_DELAY_USLEEP:
-		bd_dbg("[%2d] usleep(%d %d)\n", action->idx, action->delay[0], action->delay[1]);
+		dbg_dbg("[%2d] usleep(%d %d)\n", action->idx, action->delay[0], action->delay[1]);
 		break;
 	case ACTION_PINCTRL:
-		bd_dbg("[%2d] pinctrl(%s)\n", action->idx, action->state->name);
+		dbg_dbg("[%2d] pinctrl(%s)\n", action->idx, action->state->name);
 		break;
 	case ACTION_TIMER_START:
-		bd_dbg("[%2d] timer,start(%s %d)\n", action->idx, action->timer->name, action->timer->delay);
+		dbg_dbg("[%2d] timer,start(%s %d)\n", action->idx, action->timer->name, action->timer->delay);
 		break;
 	case ACTION_TIMER_DELAY:
-		bd_dbg("[%2d] timer,delay(%s %d)\n", action->idx, action->timer->name, action->timer->delay);
+		dbg_dbg("[%2d] timer,delay(%s %d)\n", action->idx, action->timer->name, action->timer->delay);
 		break;
 	case ACTION_TIMER_CLEAR:
-		bd_dbg("[%2d] timer,clear(%s %d)\n", action->idx, action->timer->name, action->timer->delay);
+		dbg_dbg("[%2d] timer,clear(%s %d)\n", action->idx, action->timer->name, action->timer->delay);
 		break;
 	default:
-		bd_info("[%2d] unknown idx\n", action->idx);
+		dbg_info("[%2d] unknown idx\n", action->idx);
 		break;
 	}
 
@@ -245,7 +249,7 @@ static void print_timer(struct timer_info *timer)
 	len += scnprintf(buf + len, sizeof(buf) - len, ", remain: %s", timer->end < timer->now ? "-" : "");
 	len += secprintf(buf + len, sizeof(buf) - len, remain);
 
-	bd_info("%s: delay: %d, %s\n", timer->name, timer->delay, buf);
+	dbg_info("%s: delay: %d, %s\n", timer->name, timer->delay, buf);
 }
 
 static void dump_list(struct list_head *lh)
@@ -283,7 +287,7 @@ static void dump_list(struct list_head *lh)
 		}
 	}
 
-	bd_info("gpio: %d, regulator: %d, delay: %d, pinctrl: %d, timer: %d\n", gpio, regulator, delay, pinctrl, timer);
+	dbg_info("gpio: %d, regulator: %d, delay: %d, pinctrl: %d, timer: %d\n", gpio, regulator, delay, pinctrl, timer);
 }
 
 static struct timer_info *find_timer(const char *name)
@@ -294,15 +298,15 @@ static struct timer_info *find_timer(const char *name)
 	struct action_info *action;
 	int idx = 0;
 
-	bd_dbg("%s\n", name);
+	dbg_dbg("%s\n", name);
 	while (!IS_ERR_OR_NULL(dt_nodes[idx])) {
 		dt_node = dt_nodes[idx];
 		lh = &dt_node->node;
-		bd_dbg("%dth dt_node name is %s\n", idx, dt_node->name);
+		dbg_dbg("%dth dt_node name is %s\n", idx, dt_node->name);
 		list_for_each_entry(action, lh, node) {
 			if (STRNEQ("timer", action->type)) {
 				if (action->timer && action->timer->name && STREQ(action->timer->name, name)) {
-					bd_dbg("%s is found in %s\n", action->timer->name, dt_node->name);
+					dbg_dbg("%s is found in %s\n", action->timer->name, dt_node->name);
 					return action->timer;
 				}
 			}
@@ -311,7 +315,7 @@ static struct timer_info *find_timer(const char *name)
 		BUG_ON(idx == ARRAY_SIZE(dt_nodes));
 	};
 
-	bd_info("%s is not exist, so create it\n", name);
+	dbg_info("%s is not exist, so create it\n", name);
 	timer = kzalloc(sizeof(struct timer_info), GFP_KERNEL);
 	timer->name = kstrdup(name, GFP_KERNEL);
 
@@ -341,7 +345,7 @@ static int decide_type(struct action_info *action)
 
 exit:
 	if (idx == ACTION_DUMMY || idx == ACTION_MAX) {
-		bd_warn("there is no valid idx for %s\n", type);
+		dbg_warn("there is no valid idx for %s\n", type);
 		idx = ACTION_DUMMY;
 		ret = -EINVAL;
 	}
@@ -360,7 +364,7 @@ static int decide_subinfo(struct device_node *np, struct action_info *action)
 	unsigned int delay = 0;
 
 	if (!action) {
-		bd_warn("invalid action\n");
+		dbg_warn("invalid action\n");
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -368,7 +372,7 @@ static int decide_subinfo(struct device_node *np, struct action_info *action)
 	subinfo = action->subinfo;
 
 	if (!subinfo || !strlen(subinfo)) {
-		bd_warn("invalid subinfo\n");
+		dbg_warn("invalid subinfo\n");
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -378,7 +382,7 @@ static int decide_subinfo(struct device_node *np, struct action_info *action)
 	case ACTION_GPIO_LOW:
 		action->gpio = of_get_named_gpio(np->parent, subinfo, 0);
 		if (!gpio_is_valid(action->gpio)) {
-			bd_warn("of_get_named_gpio fail %d %s\n", action->gpio, subinfo);
+			dbg_warn("of_get_named_gpio fail %d %s\n", action->gpio, subinfo);
 			ret = -EINVAL;
 		}
 		break;
@@ -388,75 +392,76 @@ static int decide_subinfo(struct device_node *np, struct action_info *action)
 		action->supply->supply = subinfo;
 		ret = regulator_bulk_get(NULL, 1, action->supply);
 		if (ret < 0)
-			bd_warn("regulator_bulk_get fail %d %s\n", ret, subinfo);
+			dbg_warn("regulator_bulk_get fail %d %s\n", ret, subinfo);
 		break;
 	case ACTION_DELAY_MDELAY:
 	case ACTION_DELAY_MSLEEP:
 		if (!isdigit(subinfo[0])) {
-			bd_warn("delay need digit parameter %s\n", subinfo);
+			dbg_warn("delay need digit parameter %s\n", subinfo);
 			ret = -EINVAL;
 			goto exit;
 		}
 
 		ret = kstrtouint(subinfo, 0, &action->delay[0]);
 		if (ret < 0)
-			bd_warn("kstrtouint for delay fail %d %s\n", ret, subinfo);
+			dbg_warn("kstrtouint for delay fail %d %s\n", ret, subinfo);
 		break;
 	case ACTION_DELAY_USLEEP:
 		if (!isdigit(subinfo[0])) {
-			bd_warn("delay need digit parameter %s\n", subinfo);
+			dbg_warn("delay need digit parameter %s\n", subinfo);
 			ret = -EINVAL;
 			goto exit;
 		}
 
-		ret = sscanf(subinfo, "%8d %8d", &action->delay[0], &action->delay[1]);
+		ret = sscanf(subinfo, "%8u %8u", &action->delay[0], &action->delay[1]);
 		if (ret < 0) {
-			bd_warn("sscanf for delay fail %d %s\n", ret, subinfo);
+			dbg_warn("sscanf for delay fail %d %s\n", ret, subinfo);
 			ret = -EINVAL;
 		} else if (ret < 2) {
-			bd_warn("usleep need two parameters\n");
-			action->delay[1] = action->delay[0] + (action->delay[0] >> 2);
+			action->delay[1] = action->delay[0] + (action->delay[0] >> 1);
+			action->delay[1] = (action->delay[0] == action->delay[1]) ? action->delay[1] + 1 : action->delay[1];
+			dbg_warn("usleep need two parameters. 2nd delay is %d\n", action->delay[1]);
 		} else if (ret > 2) {
-			bd_warn("usleep need only two parameters\n");
+			dbg_warn("usleep need only two parameters\n");
 			ret = -EINVAL;
 		}
 
 		if (!action->delay[0] || !action->delay[1]) {
-			bd_warn("usleep parameter (%d %d) invalid\n", action->delay[0], action->delay[1]);
+			dbg_warn("usleep parameter (%d %d) invalid\n", action->delay[0], action->delay[1]);
 			ret = -EINVAL;
 		} else if (action->delay[0] > action->delay[1]) {
-			bd_warn("usleep parameter (%d %d) invalid\n", action->delay[0], action->delay[1]);
+			dbg_warn("usleep parameter (%d %d) invalid\n", action->delay[0], action->delay[1]);
 			ret = -EINVAL;
 		} else if (action->delay[0] >= MSEC_TO_USEC(SMALL_MSECS)) {
-			bd_warn("use msleep instead of usleep for (%d)us\n", action->delay[0]);
+			dbg_warn("use msleep instead of usleep for (%d)us\n", action->delay[0]);
 			ret = -EINVAL;
 		}
 		break;
 	case ACTION_PINCTRL:
 		pdev = of_find_device_by_node(np->parent);
 		if (!pdev) {
-			bd_warn("of_find_device_by_node fail\n");
+			dbg_warn("of_find_device_by_node fail\n");
 			ret = -EINVAL;
 			goto exit;
 		} else
-			bd_info("of_find_device_by_node %s for pinctrl %s\n", dev_name(&pdev->dev), subinfo);
+			dbg_info("of_find_device_by_node %s for pinctrl %s\n", dev_name(&pdev->dev), subinfo);
 
 		action->pins = devm_pinctrl_get(&pdev->dev);
 		if (IS_ERR(action->pins)) {
-			bd_warn("devm_pinctrl_get fail\n");
+			dbg_warn("devm_pinctrl_get fail\n");
 			ret = -EINVAL;
 		}
 		action->state = pinctrl_lookup_state(action->pins, subinfo);
 		if (IS_ERR(action->state)) {
-			bd_warn("pinctrl_lookup_state fail %s\n", subinfo);
+			dbg_warn("pinctrl_lookup_state fail %s\n", subinfo);
 			ret = -EINVAL;
 		}
 		break;
 	case ACTION_TIMER_START:
 		timer_name = kzalloc(strlen(subinfo) + 1, GFP_KERNEL);
-		ret = sscanf(subinfo, "%s %8d\n", timer_name, &delay);
+		ret = sscanf(subinfo, "%s %8u\n", timer_name, &delay);
 		if (ret != 2) {
-			bd_warn("timer start parameter invalid %d %s\n", ret, subinfo);
+			dbg_warn("timer start parameter invalid %d %s\n", ret, subinfo);
 			ret = -EINVAL;
 		} else {
 			action->timer = find_timer(timer_name);
@@ -464,7 +469,7 @@ static int decide_subinfo(struct device_node *np, struct action_info *action)
 		}
 
 		if (action->timer->delay < SMALL_MSECS) {
-			bd_warn("use usleep instead of timer for (%d)ms\n", action->timer->delay);
+			dbg_warn("use usleep instead of timer for (%d)ms\n", action->timer->delay);
 			ret = -EINVAL;
 		}
 		kfree(timer_name);
@@ -474,15 +479,94 @@ static int decide_subinfo(struct device_node *np, struct action_info *action)
 		action->timer = find_timer(subinfo);
 		break;
 	default:
-		bd_warn("idx: %d, type: %s is invalid\n", action->idx, action->type);
+		dbg_warn("idx: %d, type: %s is invalid\n", action->idx, action->type);
 		ret = -EINVAL;
 		break;
 	}
 
-	bd_info("idx: %d, type: %s, subinfo: %s\n", action->idx, action->type, action->subinfo);
+	dbg_info("idx: %d, type: %s, subinfo: %s\n", action->idx, action->type, action->subinfo);
 exit:
 
 	return ret;
+}
+
+static bool of_node_is_recommend(const struct device_node *np)
+{
+	struct property *pp;
+
+	if (!np)
+		return false;
+
+	pp = of_find_property(np, "recommend", NULL);
+
+	return pp ? true : false;
+}
+
+static struct device_node *of_find_lcd_info(struct device *dev)
+{
+	struct device_node *parent = NULL;
+	struct device_node *np = NULL;
+
+	parent = (dev && dev->of_node) ? dev->of_node : NULL;
+	parent = of_find_node_with_property(np, PANEL_DTS_NAME);
+	if (parent)
+		dbg_dbg("%s property is in %s\n", PANEL_DTS_NAME, of_node_full_name(parent));
+
+	np = of_parse_phandle(parent, PANEL_DTS_NAME, 0);
+	if (np)
+		dbg_info("%s property in %s has %s\n", PANEL_DTS_NAME, of_node_full_name(parent), of_node_full_name(np));
+	else
+		dbg_warn("%s of_parse_phandle skip\n", PANEL_DTS_NAME);
+
+	return np;
+}
+
+struct device_node *of_find_recommend_lcd_info(struct device *dev)
+{
+	struct device_node *parent = NULL;
+	struct device_node *np = NULL;
+	int count = 0, i;
+
+	np = of_find_lcd_info(dev);
+	if (of_node_is_recommend(np)) {
+		dbg_dbg("%s is recommended\n", of_node_full_name(np));
+		return np;
+	}
+
+	for_each_node_with_property(parent, PANEL_DTS_NAME) {
+		count = of_count_phandle_with_args(parent, PANEL_DTS_NAME, NULL);
+		for (i = 0; i < count; i++) {
+			np = of_parse_phandle(parent, PANEL_DTS_NAME, i);
+			if (of_node_is_recommend(np)) {
+				dbg_dbg("%s is recommended\n", of_node_full_name(np));
+				return np;
+			}
+		}
+	}
+
+	np = of_find_lcd_info(dev);	/* if fail to find recommend, just return 1st lcd_info */
+	if (np)
+		return np;
+
+	return NULL;
+}
+
+struct device_node *of_find_decon_board(struct device *dev)
+{
+	struct device_node *parent = NULL;
+	struct device_node *np = NULL;
+
+	parent = of_find_recommend_lcd_info(dev);
+	if (!parent)
+		parent = of_find_node_with_property(NULL, BOARD_DTS_NAME);
+
+	np = of_parse_phandle(parent, BOARD_DTS_NAME, 0);
+	if (np)
+		dbg_info("%s property in %s has %s\n", BOARD_DTS_NAME, of_node_full_name(parent), of_node_full_name(np));
+	else
+		dbg_warn("%s of_parse_phandle skip\n", BOARD_DTS_NAME);
+
+	return np;
 }
 
 static int make_list(struct device *dev, struct list_head *lh, const char *name)
@@ -493,22 +577,19 @@ static int make_list(struct device *dev, struct list_head *lh, const char *name)
 	const char *type = NULL;
 	const char *subinfo = NULL;
 
-	np = of_parse_phandle(dev->of_node, DECON_BOARD_DTS_NAME, 0);
-	if (!np)
-		bd_warn("%s node does not exist, so create dummy\n", DECON_BOARD_DTS_NAME);
+	np = of_find_decon_board(dev);
 
 	np = of_find_node_by_name(np, name);
 	if (!np) {
-		bd_warn("%s node does not exist, so create dummy\n", name);
+		dbg_info("%s node does not exist in %s so create dummy\n", name, BOARD_DTS_NAME);
 		action = kzalloc(sizeof(struct action_info), GFP_KERNEL);
 		list_add_tail(&action->node, lh);
-		return -EINVAL;
+		return 0;
 	}
 
 	count = of_property_count_strings(np, "type");
-
 	if (count < 0 || !count || count % 2) {
-		bd_info("%s node type count %d invalid\n", name, count);
+		dbg_warn("%s node type count %d invalid so create dummy\n", name, count);
 		action = kzalloc(sizeof(struct action_info), GFP_KERNEL);
 		list_add_tail(&action->node, lh);
 		return -EINVAL;
@@ -521,7 +602,7 @@ static int make_list(struct device *dev, struct list_head *lh, const char *name)
 		of_property_read_string_index(np, "type", i * 2 + 1, &subinfo);
 
 		if (!lcdtype && !STRNEQ("delay", type) && !STRNEQ("timer", type)) {
-			bd_info("lcdtype is zero, so skip to add %s: %2d: %s\n", name, count, type);
+			dbg_info("lcdtype is zero, so skip to add %s: %2d: %s\n", name, count, type);
 			continue;
 		}
 
@@ -562,24 +643,24 @@ static int do_list(struct list_head *lh)
 		case ACTION_GPIO_HIGH:
 			ret = gpio_request_one(action->gpio, GPIOF_OUT_INIT_HIGH, NULL);
 			if (ret < 0)
-				bd_warn("gpio_request_one fail %d, %d, %s\n", ret, action->gpio, action->subinfo);
+				dbg_warn("gpio_request_one fail %d, %d, %s\n", ret, action->gpio, action->subinfo);
 			gpio_free(action->gpio);
 			break;
 		case ACTION_GPIO_LOW:
 			ret = gpio_request_one(action->gpio, GPIOF_OUT_INIT_LOW, NULL);
 			if (ret < 0)
-				bd_warn("gpio_request_one fail %d, %d, %s\n", ret, action->gpio, action->subinfo);
+				dbg_warn("gpio_request_one fail %d, %d, %s\n", ret, action->gpio, action->subinfo);
 			gpio_free(action->gpio);
 			break;
 		case ACTION_REGULATOR_ENABLE:
 			ret = regulator_enable(action->supply->consumer);
 			if (ret < 0)
-				bd_warn("regulator_enable fail %d, %s\n", ret, action->supply->supply);
+				dbg_warn("regulator_enable fail %d, %s\n", ret, action->supply->supply);
 			break;
 		case ACTION_REGULATOR_DISABLE:
 			ret = regulator_disable(action->supply->consumer);
 			if (ret < 0)
-				bd_warn("regulator_disable fail %d, %s\n", ret, action->supply->supply);
+				dbg_warn("regulator_disable fail %d, %s\n", ret, action->supply->supply);
 			break;
 		case ACTION_DELAY_MDELAY:
 			mdelay(action->delay[0]);
@@ -620,7 +701,7 @@ static int do_list(struct list_head *lh)
 		case ACTION_DUMMY:
 			break;
 		default:
-			bd_warn("unknown idx(%d)\n", action->idx);
+			dbg_warn("unknown idx(%d)\n", action->idx);
 			ret = -EINVAL;
 			break;
 		}
@@ -637,17 +718,17 @@ static inline struct list_head *find_list(const char *name)
 	struct dt_node_info *dt_node = NULL;
 	int idx = 0;
 
-	bd_dbg("%s\n", name);
+	dbg_dbg("%s\n", name);
 	while (!IS_ERR_OR_NULL(dt_nodes[idx])) {
 		dt_node = dt_nodes[idx];
-		bd_dbg("%dth list name is %s\n", idx, dt_node->name);
+		dbg_dbg("%dth list name is %s\n", idx, dt_node->name);
 		if (STREQ(dt_node->name, name))
 			return &dt_node->node;
 		idx++;
 		BUG_ON(idx == ARRAY_SIZE(dt_nodes));
 	};
 
-	bd_info("%s is not exist, so create it\n", name);
+	dbg_info("%s is not exist, so create it\n", name);
 	dt_node = kzalloc(sizeof(struct dt_node_info), GFP_KERNEL);
 	dt_node->name = kstrdup(name, GFP_KERNEL);
 	INIT_LIST_HEAD(&dt_node->node);
@@ -662,7 +743,7 @@ void run_list(struct device *dev, const char *name)
 	struct list_head *lh = find_list(name);
 
 	if (unlikely(list_empty(lh))) {
-		bd_info("%s is empty, so make list\n", name);
+		dbg_info("%s is empty, so make list\n", name);
 		make_list(dev, lh, name);
 		dump_list(lh);
 	}
@@ -678,16 +759,16 @@ int of_gpio_get_active(const char *gpioname)
 
 	np = of_find_node_with_property(NULL, gpioname);
 	if (!np) {
-		bd_info("of_find_node_with_property fail for %s\n", gpioname);
+		dbg_info("of_find_node_with_property fail for %s\n", gpioname);
 		ret = -EINVAL;
 		goto exit;
 	}
 
-	bd_dbg("%s property find in node %s\n", gpioname, np->name);
+	dbg_dbg("%s property find in node %s\n", gpioname, np->name);
 
 	gpio = of_get_named_gpio_flags(np, gpioname, 0, &flags);
 	if (!gpio_is_valid(gpio)) {
-		bd_warn("of_get_named_gpio fail %d %s\n", gpio, gpioname);
+		dbg_warn("of_get_named_gpio fail %d %s\n", gpio, gpioname);
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -708,16 +789,16 @@ int of_gpio_get_value(const char *gpioname)
 
 	np = of_find_node_with_property(NULL, gpioname);
 	if (!np) {
-		bd_info("of_find_node_with_property fail for %s\n", gpioname);
+		dbg_info("of_find_node_with_property fail for %s\n", gpioname);
 		ret = -EINVAL;
 		goto exit;
 	}
 
-	bd_dbg("%s property find in node %s\n", gpioname, np->name);
+	dbg_dbg("%s property find in node %s\n", gpioname, np->name);
 
 	gpio = of_get_named_gpio_flags(np, gpioname, 0, &flags);
 	if (!gpio_is_valid(gpio)) {
-		bd_warn("of_get_named_gpio fail %d %s\n", gpio, gpioname);
+		dbg_warn("of_get_named_gpio fail %d %s\n", gpio, gpioname);
 		of_node_put(np);
 		ret = -EINVAL;
 		goto exit;
@@ -740,16 +821,16 @@ int of_gpio_set_value(const char *gpioname, int value)
 
 	np = of_find_node_with_property(NULL, gpioname);
 	if (!np) {
-		bd_info("of_find_node_with_property fail for %s\n", gpioname);
+		dbg_info("of_find_node_with_property fail for %s\n", gpioname);
 		ret = -EINVAL;
 		goto exit;
 	}
 
-	bd_dbg("%s property find in node %s\n", gpioname, np->name);
+	dbg_dbg("%s property find in node %s\n", gpioname, np->name);
 
 	gpio = of_get_named_gpio_flags(np, gpioname, 0, &flags);
 	if (!gpio_is_valid(gpio)) {
-		bd_warn("of_get_named_gpio fail %d %s\n", gpio, gpioname);
+		dbg_warn("of_get_named_gpio fail %d %s\n", gpio, gpioname);
 		of_node_put(np);
 		ret = -EINVAL;
 		goto exit;
@@ -758,7 +839,7 @@ int of_gpio_set_value(const char *gpioname, int value)
 
 	ret = gpio_request_one(gpio, value ? GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW, NULL);
 	if (ret < 0)
-		bd_warn("gpio_request_one fail %d, %d, %s\n", ret, gpio, gpioname);
+		dbg_warn("gpio_request_one fail %d, %d, %s\n", ret, gpio, gpioname);
 	gpio_free(gpio);
 exit:
 	return ret;
@@ -772,16 +853,16 @@ int of_get_gpio_with_name(const char *gpioname)
 
 	np = of_find_node_with_property(NULL, gpioname);
 	if (!np) {
-		bd_info("of_find_node_with_property fail for %s\n", gpioname);
+		dbg_info("of_find_node_with_property fail for %s\n", gpioname);
 		ret = -EINVAL;
 		goto exit;
 	}
 
-	bd_dbg("%s property find in node %s\n", gpioname, np->name);
+	dbg_dbg("%s property find in node %s\n", gpioname, np->name);
 
 	gpio = of_get_named_gpio_flags(np, gpioname, 0, &flags);
 	if (!gpio_is_valid(gpio)) {
-		bd_warn("of_get_named_gpio fail %d %s\n", gpio, gpioname);
+		dbg_warn("of_get_named_gpio fail %d %s\n", gpio, gpioname);
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -790,5 +871,270 @@ int of_get_gpio_with_name(const char *gpioname)
 	ret = gpio;
 exit:
 	return ret;
+}
+
+struct platform_device *of_find_device_by_path(const char *name)
+{
+	struct device_node *np = NULL;
+	struct platform_device *pdev = NULL;
+
+	if (!name) {
+		dbg_info("name is null\n");
+		return NULL;
+	}
+
+	np = of_find_node_by_path(name);
+	if (!np) {
+		dbg_info("of_find_node_by_path fail for %s\n", name);
+		return NULL;
+	}
+
+	pdev = of_find_device_by_node(np);
+	if (!pdev) {
+		dbg_info("of_find_device_by_node fail\n");
+		return NULL;
+	}
+
+	return pdev;
+}
+
+struct platform_device *of_find_dsim_platform_device(void)
+{
+	return of_find_device_by_path("dsim0");
+}
+
+struct platform_device *of_find_decon_platform_device(void)
+{
+	return of_find_device_by_path("decon0");
+}
+
+/**
+ * of_update_phandle_property_list - update a phandle property to a device_node pointer
+ * @phandle_name: to. Name of property holding a phandle value which will be updated
+ * @node_names: from. Name Array of node which has new phandle value
+ *
+ * Example:
+ *
+ * phandle1: node1 {
+ * }
+ *
+ * phandle2: node2 {
+ * }
+ *
+ * phandle3: node3 {
+ * }
+ *
+ * node4 {
+ *	phandle_name = <&phandle1>;
+ * }
+ *
+ * To change a device_node using phandle_name like below:
+ *	phandle_name = <&phandle2 &phandle3>;
+ *
+ * you may call this:
+ * char **name_list = { "node1", "node2", NULL }; <- last should be NULL
+ * of_update_phandle_property_list(NULL, "phandle_name", name_list);
+ */
+int of_update_phandle_property_list(struct device_node *from, const char *phandle_name, const char **node_names)
+{
+	struct device_node *parent = NULL, *node_new = NULL, *node = NULL;
+	struct property *prop_org, *prop_new;
+	int len = 0, ret = 0, count = 0, i = 0;
+	__be32 *pphandle_new = NULL;
+	const __be32 *pphandle_org;
+	phandle phandle_org = 0;
+	char print_buf[50] = {0, };
+
+	struct seq_file m = {
+		.buf = print_buf,
+		.size = sizeof(print_buf) - 1,
+	};
+
+	if (!phandle_name) {
+		dbg_info("phandle_name is invalid\n");
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	while (node_names[count])
+		count++;
+
+	if (count < 1 || count > 10) {
+		dbg_info("node_names count invalid(%d)\n", count);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	parent = from ? from : of_find_node_with_property(NULL, phandle_name);
+	if (!parent) {
+		dbg_info("of_find_node_with_property fail with %s\n", phandle_name);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	pphandle_org = of_get_property(parent, phandle_name, &len);
+	if (!pphandle_org) {
+		dbg_info("of_get_property fail with %s, len(%d)\n", phandle_name, len);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	phandle_org = be32_to_cpup(pphandle_org);
+	if (!phandle_org) {
+		dbg_info("%s property has invalid phandle(%d)\n", phandle_name, phandle_org);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	node = of_find_node_by_phandle(phandle_org);
+	if (!node) {
+		dbg_info("of_find_node_by_phandle fail with %s(%d)\n", phandle_name, phandle_org);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	prop_org = of_find_property(parent, phandle_name, &len);
+
+	prop_new = kzalloc(sizeof(struct property), GFP_KERNEL);
+	prop_new->name = kstrdup(prop_org->name, GFP_KERNEL);
+	prop_new->value = kcalloc(count, sizeof(phandle), GFP_KERNEL);
+	prop_new->length = sizeof(phandle) * count;
+
+	pphandle_new = prop_new->value;
+
+	for (i = 0; node_names[i]; i++, pphandle_new++) {
+		node_new = of_find_node_by_name(NULL, node_names[i]);
+		if (!node_new) {
+			dbg_info("of_find_node_by_name fail with %s\n", node_names[i]);
+			kfree(prop_new->value);
+			kfree(prop_new->name);
+			kfree(prop_new);
+			ret = -EINVAL;
+			goto exit;
+		}
+
+		if (!node_new->phandle) {
+			dbg_info("%s node has no label for phandle\n", node_new->full_name);
+			kfree(prop_new->value);
+			kfree(prop_new->name);
+			kfree(prop_new);
+			ret = -EINVAL;
+			goto exit;
+		}
+
+		*pphandle_new = be32_to_cpu(node_new->phandle);
+
+		seq_printf(&m, "%s ", node_names[i]);
+	}
+
+	ret = of_update_property(parent, prop_new);
+	if (ret) {
+		dbg_info("of_update_property fail: %d\n", ret);
+		kfree(prop_new->value);
+		kfree(prop_new->name);
+		kfree(prop_new);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	dbg_info("%s %s update done. %s\n", of_node_full_name(parent), phandle_name, m.buf);
+exit:
+	return ret;
+}
+
+/**
+ * of_update_phandle_property - update a phandle property to a device_node pointer
+ * @phandle_name: to. Name of property holding a phandle value which will be updated
+ * @node_name: from. Name of node which has new phandle value
+ *
+ * Example:
+ *
+ * phandle1: node1 {
+ * }
+ *
+ * phandle2: node2 {
+ * }
+ *
+ * node3 {
+ *	phandle_name = <&phandle1>;
+ * }
+ *
+ * To change a device_node using phandle_name like below:
+ *	phandle_name = <&phandle2>;
+ *
+ * you may call this:
+ * of_update_phandle_property(NULL, "phandle_name", "node2");
+ */
+int of_update_phandle_property(struct device_node *from, const char *phandle_name, const char *node_name)
+{
+	const char *node_names[2] = { NULL, NULL };
+
+	if (!phandle_name) {
+		dbg_info("phandle_name is invalid\n");
+		return -EINVAL;
+	}
+
+	if (!node_name) {
+		dbg_info("node_name is invalid\n");
+		return -EINVAL;
+	}
+
+	node_names[0] = node_name;
+
+	return of_update_phandle_property_list(from, phandle_name, node_names);
+}
+
+int of_update_phandle_by_index(struct device_node *from, const char *phandle_name, int index)
+{
+	struct device_node *np = NULL;
+
+	np = from ? from : of_find_node_with_property(NULL, phandle_name);
+	if (!np) {
+		dbg_warn("%s property does not exist\n", phandle_name);
+		return -EINVAL;
+	}
+
+	np = of_parse_phandle(np, phandle_name, index);
+	if (!np) {
+		dbg_warn("%s property does not have %dth phandle\n", phandle_name, index);
+		return -EINVAL;
+	}
+
+	return of_update_phandle_property(from, phandle_name, np->name);
+}
+
+static int __of_update_recommend(struct device_node *np, unsigned int recommend)
+{
+	struct property *prop_new = NULL;
+	int ret = 0;
+
+	if (recommend) {
+		prop_new = kzalloc(sizeof(struct property), GFP_KERNEL);
+		if (!prop_new)
+			return -ENOMEM;
+		prop_new->name = "recommend";
+		prop_new->value = "ok";
+		prop_new->length = sizeof("ok");
+
+		ret = of_update_property(np, prop_new);
+	} else {
+		struct property *prop = NULL;
+
+		prop = of_find_property(np, "recommend", NULL);
+		if (prop)
+			ret = of_remove_property(np, prop);
+	}
+
+	return ret;
+}
+
+int of_update_recommend(struct device_node *np)
+{
+	if (!np) {
+		dbg_warn("device node invalid\n");
+		return -EINVAL;
+	}
+
+	return __of_update_recommend(np, 1);
 }
 

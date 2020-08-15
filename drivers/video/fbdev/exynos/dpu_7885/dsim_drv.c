@@ -213,7 +213,7 @@ int dsim_check_ph_threshold(struct dsim_device *dsim)
 	int cnt = 5000;
 	u32 available = 0;
 
-	available = dsim_reg_is_writable_ph_fifo_state(dsim->id);
+	available = dsim_reg_is_writable_ph_fifo_state(dsim->id, &dsim->lcd_info);
 
 	/* Wait FIFO empty status during 50ms */
 	if (!available) {
@@ -573,9 +573,9 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 				decon->bts.max_disp_freq,
 				decon->bts.peak);
 		dsim_bts_print_info(&decon->bts.bts_info);
-	}
 
-	decon_abd_save_log_udr(&decon->abd, mif, iint, disp);
+		decon_abd_save_udr(&decon->abd, mif, iint, disp);
+	}
 #endif
 }
 
@@ -599,8 +599,10 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 #endif
 	int_src = readl(dsim->res.regs + DSIM_INTSRC);
 
-	if (int_src & DSIM_INTSRC_SFR_PL_FIFO_EMPTY)
+	if (int_src & DSIM_INTSRC_SFR_PL_FIFO_EMPTY) {
+		dsim->pl_cnt = 0;
 		DPU_EVENT_LOG(DPU_EVT_DSIM_PL_FIFO_EMPTY, &dsim->sd, ktime_set(0, 0));
+	}
 	if (int_src & DSIM_INTSRC_SFR_PH_FIFO_EMPTY) {
 		del_timer(&dsim->cmd_timer);
 		complete(&dsim->ph_wr_comp);
@@ -775,9 +777,9 @@ static int dsim_enable(struct dsim_device *dsim)
 	enum dsim_state state = dsim->state;
 
 	if (dsim->state == DSIM_STATE_ON) {
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 		if (IS_DOZE(dsim->doze_state))
-			call_panel_ops(dsim, exitalpm, dsim);
+			call_panel_ops(dsim, displayon, dsim);
 #endif
 		goto exit;
 	}
@@ -800,7 +802,7 @@ static int dsim_enable(struct dsim_device *dsim)
 		call_panel_ops(dsim, resume_early, dsim);
 
 	/* Panel power on */
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 	if (IS_DOZE(dsim->doze_state))
 		dsim_info("%s: exit_doze\n", __func__);
 	else
@@ -850,7 +852,7 @@ static int dsim_enable(struct dsim_device *dsim)
 
 		dsim_info("dsim_%d enabled", dsim->id);
 		/* Panel reset should be set after LP-11 */
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 		if (IS_DOZE(dsim->doze_state))
 			dsim_info("%s: exit_doze\n", __func__);
 		else
@@ -869,18 +871,11 @@ init_end:
 
 	if (state != DSIM_STATE_INIT) {
 		dsim_info("Panel init commands are transfered\n");
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
-		if (IS_DOZE(dsim->doze_state))
-			call_panel_ops(dsim, exitalpm, dsim);
-		else
-			call_panel_ops(dsim, displayon, dsim);
-#else
 		call_panel_ops(dsim, displayon, dsim);
-#endif
 	}
 
 exit:
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 	dsim->doze_state = DOZE_STATE_NORMAL;
 #endif
 	dsim_info("- %s\n", __func__);
@@ -898,7 +893,7 @@ static int dsim_disable(struct dsim_device *dsim)
 	if (dsim->lcd_info.mode != DECON_VIDEO_MODE)
 		call_panel_ops(dsim, suspend, dsim);
 
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 	dsim->doze_state = DOZE_STATE_SUSPEND;
 #endif
 
@@ -1067,7 +1062,7 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	case DSIM_IOC_GET_WCLK:
 		v4l2_set_subdev_hostdata(sd, &dsim->clks.word_clk);
 		break;
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 	case DSIM_IOC_DOZE:
 		ret = dsim_doze(dsim);
 		if (ret)

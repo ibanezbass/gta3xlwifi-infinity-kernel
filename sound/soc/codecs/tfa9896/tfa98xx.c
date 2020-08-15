@@ -3865,9 +3865,11 @@ static int _tfa98xx_mute(struct tfa98xx *tfa98xx, int mute, int stream)
 		pr_info("mute:%d [pstream %d, cstream %d, samstream %d]\n",
 			mute,
 			tfa98xx->pstream, tfa98xx->cstream, tfa98xx->samstream);
+		mutex_lock(&tfa98xx->dsp_lock);
 		tfa98xx_set_stream_state((tfa98xx->pstream & BIT_PSTREAM)
 			|((tfa98xx->cstream<<1) & BIT_CSTREAM)
 			|((tfa98xx->samstream<<2) & BIT_SAMSTREAM));
+		mutex_unlock(&tfa98xx->dsp_lock);
 
 		/* case: both p/cstream (either) and samstream are off
 		 * if (!(tfa98xx->pstream == 0 || tfa98xx->cstream == 0)
@@ -3958,9 +3960,11 @@ static int _tfa98xx_mute(struct tfa98xx *tfa98xx, int mute, int stream)
 		pr_info("mute:%d [pstream %d, cstream %d, samstream %d]\n",
 			mute,
 			tfa98xx->pstream, tfa98xx->cstream, tfa98xx->samstream);
+		mutex_lock(&tfa98xx->dsp_lock);
 		tfa98xx_set_stream_state((tfa98xx->pstream & BIT_PSTREAM)
 			|((tfa98xx->cstream<<1) & BIT_CSTREAM)
 			|((tfa98xx->samstream<<2) & BIT_SAMSTREAM));
+		mutex_unlock(&tfa98xx->dsp_lock);
 
 		/* case: either p/cstream (both) or samstream is on
 		 * if ((tfa98xx->pstream != 0 && tfa98xx->pstream != 0)

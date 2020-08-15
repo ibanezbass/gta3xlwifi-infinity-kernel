@@ -6,16 +6,12 @@
 
 #define EXTEND_BRIGHTNESS	306
 #define UI_MAX_BRIGHTNESS	255
-#define UI_DEFAULT_BRIGHTNESS	117
+#define UI_DEFAULT_BRIGHTNESS	128
 
 #define HX8279D_ID_REG				0xFC
 #define HX8279D_DUAL_REG				0xB1
 
 #define HX8279D_ID_LEN				3 /* 1 */
-
-#define PANEL_STATE_SUSPENED	0
-#define PANEL_STATE_RESUMED		1
-#define PANEL_STATE_SUSPENDING	2
 
 struct mipi_cmd {
 	u8 cmd[2];
@@ -319,7 +315,7 @@ static unsigned char SEQ_BL_00[] = {
 /* platform brightness <-> bl reg */
 static unsigned int brightness_table[EXTEND_BRIGHTNESS + 1] = {
 	0,
-	1, 1, 2, 2, 3, 3, 4, 5, 5, 6, /* 1: 1 */
+	1, 1, 2, 2, 3, 3, 4, 5, 5, 6, /* 3: 2 */
 	6, 7, 7, 8, 9, 9, 10, 10, 11, 12,
 	12, 13, 13, 14, 14, 15, 16, 16, 17, 17,
 	18, 19, 19, 20, 20, 21, 21, 22, 23, 23,

@@ -208,6 +208,7 @@ struct reg_ioctl {
 #define TOUCH_JITTER_MODE			15
 #define TOUCH_SELF_DND_MODE			17
 #define TOUCH_SENTIVITY_MEASUREMENT_MODE	21
+#define TOUCH_CHARGE_PUMP_MODE			25
 #define TOUCH_REF_ABNORMAL_TEST_MODE		33
 #define DEF_RAW_SELF_SSR_DATA_MODE		39	/* SELF SATURATION RX */
 #define DEF_RAW_SELF_SFR_UNIT_DATA_MODE		40
@@ -271,6 +272,8 @@ struct reg_ioctl {
 
 #define BT532_X_RESOLUTION					0x00C0
 #define BT532_Y_RESOLUTION					0x00C1
+
+#define ZT75XX_CALL_AOT_REG				0x00D3
 
 #define BT532_POINT_STATUS_REG				0x0080
 #define BT532_ICON_STATUS_REG				0x00AA
@@ -479,6 +482,7 @@ struct tsp_raw_data {
 	s16 jitter_data[TSP_CMD_NODE_NUM];
 	s16 reference_data[TSP_CMD_NODE_NUM];
 	s16 reference_data_abnormal[TSP_CMD_NODE_NUM];
+	s16 charge_pump_data[TSP_CMD_NODE_NUM];
 	u16 channel_test_data[5];
 };
 
@@ -685,6 +689,8 @@ struct bt532_ts_info {
 
 	struct delayed_work ghost_check;
 	u8 tsp_dump_lock;
+
+	struct completion resume_done;
 
 	struct ts_test_result	test_result;
 
@@ -1095,7 +1101,7 @@ static void set_cover_type(struct bt532_ts_info *info, bool enable)
 
 static void bt532_set_optional_mode(struct bt532_ts_info *info, bool force)
 {
-	u16	reg_val;
+	u16	reg_val, temp;
 
 	if (m_prev_optional_mode.optional_mode == m_optional_mode.optional_mode && !force)
 		return;
@@ -1103,6 +1109,11 @@ static void bt532_set_optional_mode(struct bt532_ts_info *info, bool force)
 	reg_val = m_optional_mode.optional_mode;
 	mutex_unlock(&info->set_reg_lock);
 	if (write_reg(info->client, BT532_OPTIONAL_SETTING, reg_val) == I2C_SUCCESS) {
+		if (read_data(info->client, BT532_OPTIONAL_SETTING, (u8 *)&temp, 2) < 0)
+			input_info(true, &info->client->dev, "%s: read fail\n", __func__);
+
+		input_info(true, &info->client->dev, "%s: set 0x%x read 0x%x\n", __func__, reg_val, temp);
+
 		m_prev_optional_mode.optional_mode = reg_val;
 	}
 }
@@ -1307,6 +1318,13 @@ static bool ts_read_coord(struct bt532_ts_info *info)
 				input_sync(info->input_dev);
 				input_report_key(info->input_dev, KEY_HOMEPAGE, 0);
 				input_sync(info->input_dev);
+				/* request from sensor team */
+				if (info->pdata->support_ear_detect) {
+					input_report_abs(info->input_dev_proximity, ABS_MT_CUSTOM2, 1);
+					input_sync(info->input_dev_proximity);
+					input_report_abs(info->input_dev_proximity, ABS_MT_CUSTOM2, 0);
+					input_sync(info->input_dev_proximity);
+				}
 
 				input_info(true, &client->dev, "AOT Doubletab\n");
 			} else {
@@ -1369,7 +1387,6 @@ static void esd_timeout_handler(unsigned long data)
 	if (STUI_MODE_TOUCH_SEC & stui_get_mode()) {
 		input_err(true, &client->dev,
 				"%s TSP not accessible during TUI\n", __func__);
-		esd_timer_stop(info);
 		return;
 	}
 #endif
@@ -2443,7 +2460,7 @@ void trustedui_mode_off(void){
 EXPORT_SYMBOL(trustedui_mode_off);
 #endif
 
-void location_detect(struct bt532_ts_info *info, char *loc, int x, int y)
+static void location_detect(struct bt532_ts_info *info, char *loc, int x, int y)
 {
 	memset(loc, 0x00, 7);
 	strncpy(loc, "xy:", 3);
@@ -2481,9 +2498,20 @@ static irqreturn_t bt532_touch_work(int irq, void *data)
 #endif
 	u16 ic_status;
 	char location[7] = "";
+	int ret;
 
 	if((pdata->support_lpm_mode) && (info->spay_enable || info->aod_enable || info->aot_enable)){
 		pm_wakeup_event(info->input_dev->dev.parent, 2000);
+
+		/* waiting for blsp block resuming, if not occurs i2c error */
+		ret = wait_for_completion_interruptible_timeout(&info->resume_done, msecs_to_jiffies(500));
+		if (ret == 0) {
+			input_err(true, &info->client->dev, "%s: LPM: pm resume is not handled\n", __func__);
+			return IRQ_HANDLED;
+		} else if (ret < 0) {
+			input_err(true, &info->client->dev, "%s: LPM: -ERESTARTSYS if interrupted, %d\n", __func__, ret);
+			return IRQ_HANDLED;
+		}
 	}
 
 	if (gpio_get_value(info->pdata->gpio_int)) {
@@ -2917,6 +2945,9 @@ static void bt532_ts_close(struct input_dev *dev)
 		if (write_reg(info->client, ZT75XX_LPM_MODE_REG, info->lpm_mode) != I2C_SUCCESS)
 			input_info(true, &misc_info->client->dev, "%s, fail lpm mode set\n", __func__);
 
+		if (write_reg(info->client, ZT75XX_CALL_AOT_REG, info->prox_power_off) != I2C_SUCCESS)
+			input_info(true, &misc_info->client->dev, "%s, fail call aot set\n", __func__);
+
 		write_cmd(info->client, BT532_SLEEP_CMD);
 		info->sleep_mode = 1;
 
@@ -2943,12 +2974,6 @@ static void bt532_ts_close(struct input_dev *dev)
 		}
 		info->work_state = EALRY_SUSPEND;
 	
-		if (info->prox_power_off) {
-			input_report_key(info->input_dev, KEY_INT_CANCEL, 1);
-			input_sync(info->input_dev);
-			input_report_key(info->input_dev, KEY_INT_CANCEL, 0);
-			input_sync(info->input_dev);
-		}
 		clear_report_data(info);
 
 #if ESD_TIMER_INTERVAL
@@ -2957,6 +2982,13 @@ static void bt532_ts_close(struct input_dev *dev)
 #endif
 
 		bt532_power_control(info, POWER_OFF);
+	}
+
+	if (info->prox_power_off) {
+		input_report_key(info->input_dev, KEY_INT_CANCEL, 1);
+		input_sync(info->input_dev);
+		input_report_key(info->input_dev, KEY_INT_CANCEL, 0);
+		input_sync(info->input_dev);
 	}
 
 	info->prox_power_off = 0;
@@ -3531,11 +3563,18 @@ static void get_fw_ver_bin(void *device_data)
 	offset = ((u16)(fw_data[0x62] << 8) | fw_data[0x63]) + 0x22;
 	ic_revision = fw_data[offset];
 	ic_revision = 0;
-	version = (u32)((u32)(ic_revision & 0xff) << 24) | ((fw_version & 0xf) << 20)
-				| ((fw_minor_version & 0xf) << 16)
-				| ((hw_id & 0xff) << 8) | (reg_version & 0xff);
 
-	snprintf(buff, sizeof(buff), "ZI%08X", version);
+	if ((info->pdata->item_version >= 1) && (info->pdata->item_version <= 4)) {
+		version = (u32)((u32)(hw_id & 0xff) << 16) | ((fw_version & 0xf ) << 12)
+					| ((fw_minor_version & 0xf) << 8) | (reg_version & 0xff);
+		snprintf(buff, sizeof(buff), "ZI%06X", version);
+	} else {
+		version = (u32)((u32)(ic_revision & 0xff) << 24) | ((fw_version & 0xf) << 20)
+					| ((fw_minor_version & 0xf) << 16)
+					| ((hw_id & 0xff) << 8) | (reg_version & 0xff);
+		snprintf(buff, sizeof(buff), "ZI%08X", version);
+	}
+
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "FW_VER_BIN");
@@ -3556,6 +3595,7 @@ static void get_fw_ver_ic(void *device_data)
 	struct bt532_ts_info *info = container_of(sec, struct bt532_ts_info, sec);
 	struct i2c_client *client = info->client;
 	char buff[16] = { 0 };
+	char model[16] = { 0 };
 	u16 fw_version, fw_minor_version, reg_version, hw_id, vendor_id, ic_revision;
 	u32 version, length;
 	int ret;
@@ -3595,16 +3635,33 @@ static void get_fw_ver_ic(void *device_data)
 	ic_revision=  info->cap_info.ic_revision;
 	ic_revision = 0;
 	vendor_id = ntohs(info->cap_info.vendor_id);
-	version = (u32)((u32)(ic_revision & 0xff) << 24) | ((fw_version & 0xf) << 20)
-				| ((fw_minor_version & 0xf) << 16)
-				| ((hw_id & 0xff) << 8) | (reg_version & 0xff);
+
+	if ((info->pdata->item_version >= 1) && (info->pdata->item_version <= 4)) {
+		version = (u32)((u32)(hw_id & 0xff) << 16) | ((fw_version & 0xf) << 12)
+					| ((fw_minor_version & 0xf) << 8) | (reg_version & 0xff);
+	} else {
+		version = (u32)((u32)(ic_revision & 0xff) << 24) | ((fw_version & 0xf) << 20)
+					| ((fw_minor_version & 0xf) << 16)
+					| ((hw_id & 0xff) << 8) | (reg_version & 0xff);
+	}
 
 	length = sizeof(vendor_id);
 	snprintf(buff, length + 1, "%s", (u8 *)&vendor_id);
-	snprintf(buff + length, sizeof(buff) - length, "%08X", version);
+
+	if ((info->pdata->item_version >= 1) && (info->pdata->item_version <= 4)) {
+		snprintf(buff + length, sizeof(buff) - length, "%06X", version);
+	} else {
+		snprintf(buff + length, sizeof(buff) - length, "%08X", version);
+	}
+
+	snprintf(model, length + 1, "%s", (u8 *)&vendor_id);
+	snprintf(model + length, sizeof(model) - length, "%04X", version >> 16);
+
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
-	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
+	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING) {
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "FW_VER_IC");
+		sec_cmd_set_cmd_result_all(sec, model, strnlen(model, sizeof(model)), "FW_MODEL");
+	}
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 
 	input_info(true, &client->dev, "%s: %s(%d)\n", __func__, sec->cmd_result,
@@ -5468,6 +5525,55 @@ out:
 				sec_cmd_set_cmd_result_all(sec, rx_buff, strnlen(rx_buff, sizeof(rx_buff)), "SELF_DND_TX");
 			sec_cmd_set_cmd_result_all(sec, rx_buff, strnlen(rx_buff, sizeof(rx_buff)), "SELF_DND_RX");
 		}
+		sec->cmd_state = SEC_CMD_STATUS_FAIL;
+	}
+	input_info(true, &client->dev, "%s: \"%s\"(%d)\n", __func__, sec->cmd_result,
+				(int)strlen(sec->cmd_result));
+
+#if ESD_TIMER_INTERVAL
+	esd_timer_start(CHECK_ESD_TIMER, misc_info);
+	write_reg(client, BT532_PERIODICAL_INTERRUPT_INTERVAL,
+		SCAN_RATE_HZ * ESD_TIMER_INTERVAL);
+#endif
+	return;
+}
+
+static void run_charge_pump_read(void *device_data)
+{
+	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
+	struct bt532_ts_info *info = container_of(sec, struct bt532_ts_info, sec);
+	struct i2c_client *client = info->client;
+	struct tsp_raw_data *raw_data = info->raw_data;
+	char buff[SEC_CMD_STR_LEN] = { 0 };
+	int ret;
+
+#if ESD_TIMER_INTERVAL
+	esd_timer_stop(misc_info);
+	write_reg(client, BT532_PERIODICAL_INTERRUPT_INTERVAL, 0);
+	write_cmd(client, BT532_CLEAR_INT_STATUS_CMD);
+#endif
+	sec_cmd_set_default_result(sec);
+
+	ret = ts_set_touchmode(TOUCH_CHARGE_PUMP_MODE);
+	if (ret < 0) {
+		ts_set_touchmode(TOUCH_POINT_MODE);
+		goto out;
+	}
+	get_raw_data(info, (u8 *)raw_data->charge_pump_data, 1);
+	ts_set_touchmode(TOUCH_POINT_MODE);
+
+	snprintf(buff, sizeof(buff), "%d,%d", raw_data->charge_pump_data[0], raw_data->charge_pump_data[0]);
+	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
+		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "CHARGE_PUMP");
+	sec->cmd_state = SEC_CMD_STATUS_OK;
+
+out:
+	if (ret < 0) {
+		snprintf(buff, sizeof(buff), "%s", "NG");
+		sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+		if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
+			sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "CHARGE_PUMP");
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	}
 	input_info(true, &client->dev, "%s: \"%s\"(%d)\n", __func__, sec->cmd_result,
@@ -8231,8 +8337,14 @@ static void factory_cmd_result_all(void *device_data)
 		run_hfdnd_h_gap_read(sec);
 		run_selfdnd_read(sec);
 		run_selfdnd_h_gap_read(sec);
-		run_self_saturation_read(sec);
-		run_trxshort_read(sec);
+		if (pdata->mis_cal_check) {
+#ifdef TCLM_CONCEPT
+			run_mis_cal_read(sec);
+#endif
+		} else {
+			run_self_saturation_read(sec);
+			run_trxshort_read(sec);
+		}
 		break;
 	case 6:
 		run_dnd_v_gap_read(sec);
@@ -8241,6 +8353,7 @@ static void factory_cmd_result_all(void *device_data)
 		run_selfdnd_v_gap_read(sec);
 		run_selfdnd_h_gap_read(sec);
 		run_self_saturation_read(sec);
+		run_charge_pump_read(sec);
 #ifdef TCLM_CONCEPT
 		run_mis_cal_read(sec);
 #endif
@@ -8335,8 +8448,7 @@ static void run_prox_intensity_read_all(void *device_data)
 			SCAN_RATE_HZ * ESD_TIMER_INTERVAL);
 #endif
 
-
-	snprintf(buff, sizeof(buff), "%d,%d,%d,%d", prox_data & 0xFF, prox_data >> 8, threshold_x, threshold_y);
+	snprintf(buff, sizeof(buff), "SUM_X:%d SUM_Y:%d THD_X:%d THD_Y:%d", prox_data & 0xFF, prox_data >> 8, threshold_x, threshold_y);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 	input_info(true, &info->client->dev, "%s: %s\n", __func__, buff);
@@ -8662,6 +8774,7 @@ static ssize_t ear_detect_enable_store(struct device *dev,
 	struct bt532_ts_info *info = container_of(sec, struct bt532_ts_info, sec);
 	int ret;
 	unsigned long value = 0;
+	u16 chk_val;
 
 	ret = kstrtoul(buf, 10, &value);
 	if (ret != 0)
@@ -8674,6 +8787,15 @@ static ssize_t ear_detect_enable_store(struct device *dev,
 		zinitix_bit_set(m_optional_mode.select_mode.flag, DEF_OPTIONAL_MODE_EAR_DETECT);
 	else
 		zinitix_bit_clr(m_optional_mode.select_mode.flag, DEF_OPTIONAL_MODE_EAR_DETECT);
+
+	write_cmd(info->client, 0x0A);
+	bt532_set_optional_mode(info, false);
+	read_data(info->client, BT532_OPTIONAL_SETTING, (u8 *)&chk_val, 2);  //0x116 Read
+
+	if( chk_val != m_optional_mode.optional_mode) // 0x116 reg compared with driver settings
+		bt532_set_optional_mode(info, true);
+
+	write_cmd(info->client, 0x0B);
 
 	return count;
 }
@@ -8978,6 +9100,7 @@ static struct sec_cmd sec_cmds[] = {
 	{SEC_CMD("factory_cmd_result_all", factory_cmd_result_all),},
 	{SEC_CMD("check_connection", check_connection),},
 	{SEC_CMD("run_prox_intensity_read_all", run_prox_intensity_read_all),},
+	{SEC_CMD("run_charge_pump_read", run_charge_pump_read),},
 	{SEC_CMD("not_support_cmd", not_support_cmd),},
 };
 
@@ -9914,6 +10037,7 @@ static void zt_set_input_prop_proximity(struct bt532_ts_info *info, struct input
 	set_bit(INPUT_PROP_DIRECT, dev->propbit);
 
 	input_set_abs_params(dev, ABS_MT_CUSTOM, 0, 0xFFFFFFFF, 0, 0);
+	input_set_abs_params(dev, ABS_MT_CUSTOM2, 0, 0xFFFFFFFF, 0, 0);
 	input_set_drvdata(dev, info);
 }
 
@@ -10174,6 +10298,9 @@ static int bt532_ts_probe(struct i2c_client *client,
 
 	info->work_state = NOTHING;
 
+	init_completion(&info->resume_done);
+	complete_all(&info->resume_done);
+
 	/* configure irq */
 	info->irq = gpio_to_irq(pdata->gpio_int);
 	if (info->irq < 0){
@@ -10376,6 +10503,7 @@ void bt532_ts_shutdown(struct i2c_client *client)
 }
 
 #ifdef CONFIG_SAMSUNG_TUI
+#ifndef CONFIG_TOUCHSCREEN_IST4050
 extern int stui_i2c_lock(struct i2c_adapter *adap);
 extern int stui_i2c_unlock(struct i2c_adapter *adap);
 
@@ -10426,6 +10554,32 @@ int stui_tsp_exit(void)
 	return ret;
 }
 #endif
+#endif
+
+#ifdef CONFIG_PM
+static int bt532_ts_pm_suspend(struct device *dev)
+{
+	struct bt532_ts_info *info = dev_get_drvdata(dev);
+
+	reinit_completion(&info->resume_done);
+
+	return 0;
+}
+
+static int bt532_ts_pm_resume(struct device *dev)
+{
+	struct bt532_ts_info *info = dev_get_drvdata(dev);
+
+	complete_all(&info->resume_done);
+
+	return 0;
+}
+
+static const struct dev_pm_ops bt532_ts_dev_pm_ops = {
+	.suspend = bt532_ts_pm_suspend,
+	.resume = bt532_ts_pm_resume,
+};
+#endif
 
 static struct i2c_device_id bt532_idtable[] = {
 	{BT532_TS_DEVICE, 0},
@@ -10449,6 +10603,9 @@ static struct i2c_driver bt532_ts_driver = {
 		.name	= BT532_TS_DEVICE,
 #ifdef CONFIG_OF
 		.of_match_table = zinitix_match_table,
+#endif
+#ifdef CONFIG_PM
+		.pm = &bt532_ts_dev_pm_ops,
 #endif
 	},
 };

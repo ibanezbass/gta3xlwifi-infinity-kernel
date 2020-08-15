@@ -295,7 +295,7 @@ struct lsm6dsl_data {
 	struct mutex bank_registers_lock;
 	const struct lsm6dsl_transfer_function *tf;
 	struct lsm6dsl_transfer_buffer tb;
-
+	struct notifier_block dump_nb;
 	int lsm6dsl_ldo_pin;
 };
 

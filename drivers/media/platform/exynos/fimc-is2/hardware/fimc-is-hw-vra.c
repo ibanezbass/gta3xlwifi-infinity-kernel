@@ -385,8 +385,6 @@ static int fimc_is_hw_vra_init(struct fimc_is_hw_ip *hw_ip, u32 instance,
 		return -EINVAL;
 	}
 
-	spin_lock_init(&lib_vra->slock);
-
 	ret = fimc_is_lib_vra_frame_desc_init(&hw_vra->lib_vra, instance);
 	if (ret) {
 		mserr_hw("failed to init frame desc. (%d)", instance, hw_ip, ret);

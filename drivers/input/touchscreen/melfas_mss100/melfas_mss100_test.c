@@ -826,6 +826,7 @@ int mms_run_test(struct mms_ts_info *info, u8 test_type)
 		int i_vector = 0;
 		int i_elem = 0;
 		int i_line, elem_len, temp;
+		info->open_short_result = 0;
 
 		memset(info->print_buf, 0, PAGE_SIZE);
 
@@ -846,6 +847,7 @@ int mms_run_test(struct mms_ts_info *info, u8 test_type)
 						snprintf(data, sizeof(data), "OK");
 						strlcat(info->print_buf, data, PAGE_SIZE);
 						memset(data, 0, 16);
+						info->open_short_result = 1;
 						break;
 					} else {
 						snprintf(data, sizeof(data), "NG,OPEN:");
@@ -863,7 +865,8 @@ int mms_run_test(struct mms_ts_info *info, u8 test_type)
 					if (info->image_buf[table_size + i_elem] == 1) {
 						snprintf(data, sizeof(data), "OK");
 						strlcat(info->print_buf, data, PAGE_SIZE);
-						memset(data, 0, 16);						
+						memset(data, 0, 16);
+						info->open_short_result = 1;
 						break;
 					} else {
 						snprintf(data, sizeof(data), "NG,SHORT:");

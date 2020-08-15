@@ -17,6 +17,7 @@
 #define AID_CMD_CNT				((u16)ARRAY_SIZE(SEQ_AID_SETTING))
 #define IRC_CMD_CNT				((u16)ARRAY_SIZE(SEQ_IRC_SETTING))
 #define VINT_CMD_CNT				((u16)ARRAY_SIZE(SEQ_VINT_SETTING))
+#define POC_COMPEN_CMD_CNT		((u16)ARRAY_SIZE(SEQ_POC_COMPEN_SETTING))
 
 #define LDI_REG_ELVSS				0xB5
 #define LDI_REG_COORDINATE			0xA1
@@ -40,8 +41,8 @@
 #define LDI_LEN_HBM				34
 #define LDI_LEN_MANUFACTURE_INFO		20
 #define LDI_LEN_IRC				(IRC_CMD_CNT - 1)
-#define LDI_LEN_POC_EB				7
-#define LDI_LEN_POC_EC				8
+#define LDI_LEN_POC_EB				18
+#define LDI_LEN_POC_EC				10
 
 /* offset is position including addr, not only para */
 #define LDI_OFFSET_AOR_1	1
@@ -64,35 +65,79 @@
 #define LDI_GPARA_HBM_ELVSS	23	/* B5h 24th Para: ELVSS_Cal_Offset for HBM */
 #define LDI_GPARA_MANUFACTURE_INFO	1	/* C9h 2nd Para */
 
-#define	LDI_REG_RDDPM		0x0A	/* Read Display Power Mode */
-#define	LDI_LEN_RDDPM		1
+struct bit_info {
+	unsigned int reg;
+	unsigned int len;
+	char **print;
+	unsigned int expect;
+	unsigned int offset;
+	unsigned int g_para;
+	unsigned int invert;
+	unsigned int mask;
+	unsigned int result;
+};
 
-#define	LDI_REG_RDDSM		0x0E	/* Read Display Signal Mode */
-#define	LDI_LEN_RDDSM		1
+enum {
+	LDI_BIT_ENUM_05,	LDI_BIT_ENUM_RDNUMPE = LDI_BIT_ENUM_05,
+	LDI_BIT_ENUM_0A,	LDI_BIT_ENUM_RDDPM = LDI_BIT_ENUM_0A,
+	LDI_BIT_ENUM_0E,	LDI_BIT_ENUM_RDDSM = LDI_BIT_ENUM_0E,
+	LDI_BIT_ENUM_0F,	LDI_BIT_ENUM_RDDSDR = LDI_BIT_ENUM_0F,
+	LDI_BIT_ENUM_EE,	LDI_BIT_ENUM_ESDERR = LDI_BIT_ENUM_EE,
+	LDI_BIT_ENUM_MAX
+};
 
-#ifdef CONFIG_DISPLAY_USE_INFO
-#define	LDI_REG_RDNUMPE		0x05		/* DPUI_KEY_PNDSIE: Read Number of the Errors on DSI */
-#define	LDI_LEN_RDNUMPE		1
-#define LDI_PNDSIE_MASK		(GENMASK(6, 0))
+static char *LDI_BIT_DESC_05[BITS_PER_BYTE] = {
+	[0 ... 6] = "number of corrupted packets",
+	[7] = "overflow on number of corrupted packets",
+};
+
+static char *LDI_BIT_DESC_0A[BITS_PER_BYTE] = {
+	[2] = "Display is Off",
+	[7] = "Booster has a fault",
+};
+
+static char *LDI_BIT_DESC_0E[BITS_PER_BYTE] = {
+	[0] = "Error on DSI",
+};
+
+static char *LDI_BIT_DESC_0F[BITS_PER_BYTE] = {
+	[7] = "Register Loading Detection",
+};
+
+static char *LDI_BIT_DESC_EE[BITS_PER_BYTE] = {
+	[2] = "VLIN3 error",
+	[3] = "ELVDD error",
+	[6] = "VLIN1 error",
+};
+
+static struct bit_info ldi_bit_info_list[LDI_BIT_ENUM_MAX] = {
+	[LDI_BIT_ENUM_05] = {0x05, 1, LDI_BIT_DESC_05, 0x00, },
+	[LDI_BIT_ENUM_0A] = {0x0A, 1, LDI_BIT_DESC_0A, 0x9E, .invert = (BIT(2) | BIT(7)), },
+	[LDI_BIT_ENUM_0E] = {0x0E, 1, LDI_BIT_DESC_0E, 0x80, },
+	[LDI_BIT_ENUM_0F] = {0x0F, 1, LDI_BIT_DESC_0F, 0xC0, .invert = (BIT(7)), },
+	[LDI_BIT_ENUM_EE] = {0xEE, 1, LDI_BIT_DESC_EE, 0x00, },
+};
+
+#if defined(CONFIG_DISPLAY_USE_INFO)
+#define LDI_LEN_RDNUMPE		1		/* DPUI_KEY_PNDSIE: Read Number of the Errors on DSI */
+#define LDI_PNDSIE_MASK		(GENMASK(7, 0))
 
 /*
- * ESD_ERROR[0] =  MIPI DSI error is occurred by ESD.
- * ESD_ERROR[1] =  HS CLK lane error is occurred by ESD.
- * ESD_ERROR[2] =  VLIN3 error is occurred by ESD.
- * ESD_ERROR[3] =  ELVDD error is occurred by ESD.
- * ESD_ERROR[4]  = CHECK_SUM error is occurred by ESD.
- * ESD_ERROR[5] =  Internal HSYNC error is occurred by ESD.
- * ESD_ERROR[6] =  VLIN1 error is occurred by ESD
+ * ESD_ERROR[0] = MIPI DSI error is occurred by ESD.
+ * ESD_ERROR[1] = HS CLK lane error is occurred by ESD.
+ * ESD_ERROR[2] = VLIN3 error is occurred by ESD.
+ * ESD_ERROR[3] = ELVDD error is occurred by ESD.
+ * ESD_ERROR[4] = CHECK_SUM error is occurred by ESD.
+ * ESD_ERROR[5] = Internal HSYNC error is occurred by ESD.
+ * ESD_ERROR[6] = VLIN1 error is occurred by ESD
  */
-#define LDI_REG_ESDERR		0xEE		/* DPUI_KEY_PNELVDE, DPUI_KEY_PNVLI1E, DPUI_KEY_PNVLO3E, DPUI_KEY_PNESDE */
-#define LDI_LEN_ESDERR		1
+#define LDI_LEN_ESDERR		1		/* DPUI_KEY_PNELVDE, DPUI_KEY_PNVLI1E, DPUI_KEY_PNVLO3E, DPUI_KEY_PNESDE */
 #define LDI_PNELVDE_MASK	(BIT(3))	/* ELVDD error */
 #define LDI_PNVLI1E_MASK	(BIT(6))	/* VLIN1 error */
 #define LDI_PNVLO3E_MASK	(BIT(2))	/* VLIN3 error */
 #define LDI_PNESDE_MASK		(BIT(2) | BIT(3) | BIT(6))
 
-#define LDI_REG_RDDSDR		0x0F		/* DPUI_KEY_PNSDRE: Read Display Self-Diagnostic Result */
-#define LDI_LEN_RDDSDR		1
+#define LDI_LEN_RDDSDR		1		/* DPUI_KEY_PNSDRE: Read Display Self-Diagnostic Result */
 #define LDI_PNSDRE_MASK		(BIT(7))	/* D7: REG_DET: Register Loading Detection */
 #endif
 
@@ -258,7 +303,13 @@ static unsigned char SEQ_VINT_SETTING[] = {
 	0xBB, 0x1E
 };
 
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+static unsigned char SEQ_POC_COMPEN_SETTING[] = {
+	0xEB,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x02, 0x1A, 0x33, 0x5E, 0x8C, 0xB3, 0xD9, 0xFF,
+};
+
+#if defined(CONFIG_EXYNOS_DOZE)
 enum {
 	ALPM_OFF,
 	ALPM_ON_LOW,	/* ALPM 2 NIT */
@@ -266,6 +317,26 @@ enum {
 	ALPM_ON_HIGH,	/* ALPM 60 NIT */
 	HLPM_ON_HIGH,	/* HLPM 60 NIT */
 	ALPM_MODE_MAX
+};
+
+enum {
+	AOD_MODE_OFF,
+	AOD_MODE_ALPM,
+	AOD_MODE_HLPM,
+	AOD_MODE_MAX
+};
+
+static unsigned int lpm_old_table[ALPM_MODE_MAX] = {
+	ALPM_OFF,
+	HLPM_ON_LOW,
+	HLPM_ON_LOW,
+	ALPM_ON_HIGH,
+	HLPM_ON_HIGH,
+};
+
+static unsigned int lpm_brightness_table[EXTEND_BRIGHTNESS + 1] = {
+	[0 ... 93]			= HLPM_ON_LOW,
+	[94 ... EXTEND_BRIGHTNESS]	= HLPM_ON_HIGH,
 };
 
 static unsigned char SEQ_AOR_CONTROL_HLPM_ON[] = {
@@ -428,10 +499,90 @@ static unsigned char VINT_TABLE[IBRIGHTNESS_HBM_MAX][VINT_CMD_CNT] = {
 };
 
 
-
-
-
-
+static unsigned char POC_COMPEN_RATIO[IBRIGHTNESS_HBM_MAX] = {
+	[IBRIGHTNESS_002NIT] = 0x1A,
+	[IBRIGHTNESS_003NIT] = 0x1A,
+	[IBRIGHTNESS_004NIT] = 0x1A,
+	[IBRIGHTNESS_005NIT] = 0x1A,
+	[IBRIGHTNESS_006NIT] = 0x1A,
+	[IBRIGHTNESS_007NIT] = 0x1A,
+	[IBRIGHTNESS_008NIT] = 0x1A,
+	[IBRIGHTNESS_009NIT] = 0x1A,
+	[IBRIGHTNESS_010NIT] = 0x1A,
+	[IBRIGHTNESS_011NIT] = 0x1A,
+	[IBRIGHTNESS_012NIT] = 0x1A,
+	[IBRIGHTNESS_013NIT] = 0x1A,
+	[IBRIGHTNESS_014NIT] = 0x1A,
+	[IBRIGHTNESS_015NIT] = 0x1A,
+	[IBRIGHTNESS_016NIT] = 0x1B,
+	[IBRIGHTNESS_017NIT] = 0x1B,
+	[IBRIGHTNESS_019NIT] = 0x1C,
+	[IBRIGHTNESS_020NIT] = 0x1D,
+	[IBRIGHTNESS_021NIT] = 0x1D,
+	[IBRIGHTNESS_022NIT] = 0x1E,
+	[IBRIGHTNESS_024NIT] = 0x1F,
+	[IBRIGHTNESS_025NIT] = 0x1F,
+	[IBRIGHTNESS_027NIT] = 0x20,
+	[IBRIGHTNESS_029NIT] = 0x21,
+	[IBRIGHTNESS_030NIT] = 0x22,
+	[IBRIGHTNESS_032NIT] = 0x23,
+	[IBRIGHTNESS_034NIT] = 0x24,
+	[IBRIGHTNESS_037NIT] = 0x25,
+	[IBRIGHTNESS_039NIT] = 0x26,
+	[IBRIGHTNESS_041NIT] = 0x27,
+	[IBRIGHTNESS_044NIT] = 0x29,
+	[IBRIGHTNESS_047NIT] = 0x2A,
+	[IBRIGHTNESS_050NIT] = 0x2C,
+	[IBRIGHTNESS_053NIT] = 0x2D,
+	[IBRIGHTNESS_056NIT] = 0x2F,
+	[IBRIGHTNESS_060NIT] = 0x31,
+	[IBRIGHTNESS_064NIT] = 0x33,
+	[IBRIGHTNESS_068NIT] = 0x37,
+	[IBRIGHTNESS_072NIT] = 0x3C,
+	[IBRIGHTNESS_077NIT] = 0x42,
+	[IBRIGHTNESS_082NIT] = 0x48,
+	[IBRIGHTNESS_087NIT] = 0x4F,
+	[IBRIGHTNESS_093NIT] = 0x56,
+	[IBRIGHTNESS_098NIT] = 0x5C,
+	[IBRIGHTNESS_105NIT] = 0x61,
+	[IBRIGHTNESS_111NIT] = 0x64,
+	[IBRIGHTNESS_119NIT] = 0x69,
+	[IBRIGHTNESS_126NIT] = 0x6D,
+	[IBRIGHTNESS_134NIT] = 0x71,
+	[IBRIGHTNESS_143NIT] = 0x76,
+	[IBRIGHTNESS_152NIT] = 0x7B,
+	[IBRIGHTNESS_162NIT] = 0x80,
+	[IBRIGHTNESS_172NIT] = 0x85,
+	[IBRIGHTNESS_183NIT] = 0x8B,
+	[IBRIGHTNESS_195NIT] = 0x91,
+	[IBRIGHTNESS_207NIT] = 0x97,
+	[IBRIGHTNESS_220NIT] = 0x9D,
+	[IBRIGHTNESS_234NIT] = 0xA3,
+	[IBRIGHTNESS_249NIT] = 0xAA,
+	[IBRIGHTNESS_265NIT] = 0xB2,
+	[IBRIGHTNESS_282NIT] = 0xBB,
+	[IBRIGHTNESS_300NIT] = 0xC6,
+	[IBRIGHTNESS_316NIT] = 0xCF,
+	[IBRIGHTNESS_333NIT] = 0xD9,
+	[IBRIGHTNESS_350NIT] = 0xE1,
+	[IBRIGHTNESS_357NIT] = 0xE4,
+	[IBRIGHTNESS_365NIT] = 0xE7,
+	[IBRIGHTNESS_372NIT] = 0xEB,
+	[IBRIGHTNESS_380NIT] = 0xEE,
+	[IBRIGHTNESS_387NIT] = 0xF1,
+	[IBRIGHTNESS_395NIT] = 0xF5,
+	[IBRIGHTNESS_403NIT] = 0xF8,
+	[IBRIGHTNESS_412NIT] = 0xFC,
+	[IBRIGHTNESS_420NIT] = 0xFF,
+	[IBRIGHTNESS_443NIT] = 0xFF,
+	[IBRIGHTNESS_465NIT] = 0xFF,
+	[IBRIGHTNESS_488NIT] = 0xFF,
+	[IBRIGHTNESS_510NIT] = 0xFF,
+	[IBRIGHTNESS_533NIT] = 0xFF,
+	[IBRIGHTNESS_555NIT] = 0xFF,
+	[IBRIGHTNESS_578NIT] = 0xFF,
+	[IBRIGHTNESS_600NIT] = 0xFF,
+};
 
 
 static unsigned char AOR_TABLE[EXTEND_BRIGHTNESS + 1][AID_CMD_CNT] = {

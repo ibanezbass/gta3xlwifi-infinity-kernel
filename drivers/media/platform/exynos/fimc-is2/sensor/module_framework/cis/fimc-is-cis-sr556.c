@@ -1095,14 +1095,14 @@ u32 sensor_sr556_cis_calc_dgain_code(u32 permile)
 {
 	u16 buf[2] = {0, 0};
 	buf[0] = (u16)((int)permile / 1000);
-	buf[1] = (u16)((int)(((permile - (u32)(buf[0] * 1000)) * 512) / 1000));
+	buf[1] = (u16)((int)(((permile - (u32)(buf[0] * 1000)) * 256) / 1000));
 
-	return (buf[0] << 9 | buf[1]);
+	return (buf[0] << 8 | buf[1]);
 }
 
 u32 sensor_sr556_cis_calc_dgain_permile(u32 code)
 {
-	return (((code & 0x1E00) >> 9) * 1000 + ((int)((code & 0x01FF) * 1000 / 512)));
+	return (((code & 0x0F00) >> 8) * 1000 + ((int)((code & 0x00FF) * 1000 / 256)));
 }
 
 int sensor_sr556_cis_adjust_analog_gain(struct v4l2_subdev *subdev, u32 input_again, u32 *target_permile)

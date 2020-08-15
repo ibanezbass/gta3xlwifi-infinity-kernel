@@ -237,7 +237,11 @@ enum s2mu106_muic_registers {
  * Use Attach, Detach, VBUS On, ADC Change, VBUS Off.
  */
 
+#if IS_ENABLED(CONFIG_MUIC_S2MU106_FAST_DETECTION)
+#define INT_MUIC_MASK1			(0xDC)
+#else
 #define INT_MUIC_MASK1			(0xFC)
+#endif
 #define INT_MUIC_MASK2			(0x7A)
 
 #if IS_ENABLED(CONFIG_S2MU106_TYPEC_WATER)
@@ -461,6 +465,7 @@ enum s2mu106_muic_registers {
 #define TIMER_SET3_DCDTMRSET_2_SHIFT 		2
 #define TIMER_SET3_DCDTMRSET_1_SHIFT 		1
 #define TIMER_SET3_DCDTMRSET_0_SHIFT 		0
+#define TIMER_SET3_DCDTMRSET_SHIFT 		0
 
 #define TIMER_SET3_JIG_WAIT_TIME_2_MASK 	(0x1 << TIMER_SET3_JIG_WAIT_TIME_2_SHIFT)
 #define TIMER_SET3_JIG_WAIT_TIME_1_MASK 	(0x1 << TIMER_SET3_JIG_WAIT_TIME_1_SHIFT)
@@ -470,6 +475,8 @@ enum s2mu106_muic_registers {
 #define TIMER_SET3_DCDTMRSET_2_MASK 		(0x1 << TIMER_SET3_DCDTMRSET_2_SHIFT)
 #define TIMER_SET3_DCDTMRSET_1_MASK 		(0x1 << TIMER_SET3_DCDTMRSET_1_SHIFT)
 #define TIMER_SET3_DCDTMRSET_0_MASK 		(0x1 << TIMER_SET3_DCDTMRSET_0_SHIFT)
+#define TIMER_SET3_DCDTMRSET_MASK 		(0x7 << TIMER_SET3_DCDTMRSET_0_SHIFT)
+#define TIMER_SET3_DCDTMRSET_600MS_MASK 	(0x4 << TIMER_SET3_DCDTMRSET_SHIFT)
 
 /* S2MU106 MUIC MUIC_CTRL2 Register (0x72) */
 #define MUIC_CTRL2_WAKEUP_LOOP_SEL_SHIFT	7
@@ -797,10 +804,10 @@ enum s2mu106_muic_registers {
 /* s2mu106-muic macros */
 #define ENUM_STR(x, r) { case x: r = #x; break; }
 
-#define REQUEST_IRQ(_irq, _dev_id, _name, _func)				\
+#define REQUEST_IRQ(_irq, _dev_id, _name, _func)			\
 do {									\
-	ret = request_threaded_irq(_irq, NULL, _func,	\
-				0, _name, _dev_id);	\
+	ret = request_threaded_irq(_irq, NULL, _func,			\
+				0, _name, _dev_id);			\
 	if (ret < 0) {							\
 		pr_err("%s:%s Failed to request IRQ #%d: %d\n",		\
 				MUIC_DEV_NAME, __func__, _irq, ret);	\
@@ -876,6 +883,7 @@ typedef enum {
 
 typedef enum {
 	S2MU106_WATER_MUIC_IDLE,
+	S2MU106_WATER_MUIC_VERIFY,
 	S2MU106_WATER_MUIC_DET,
 	S2MU106_WATER_MUIC_CCIC_DET,
 	S2MU106_WATER_MUIC_CCIC_STABLE,
@@ -900,12 +908,6 @@ typedef enum {
 	S2MU106_IRQ_SKIP,
 } t_irq_status;
 
-typedef enum {
-	S2MU106_KILLER_NONE = 0,
-	S2MU106_KILLER_WAIT_STATUS,
-	S2MU106_KILLER_DETECTED,
-} t_killer_status;
-
 /* muic chip specific internal data structure
  * that setted at muic-xxxx.c file
  */
@@ -916,9 +918,14 @@ struct s2mu106_muic_data {
 
 	struct mutex muic_mutex;
 	struct mutex switch_mutex;
-	#if defined(CONFIG_HV_MUIC_S2MU106_AFC)
+#if defined(CONFIG_HV_MUIC_S2MU106_AFC)
 	struct mutex afc_mutex;
 #endif
+	struct delayed_work discharging_handler;
+	struct delayed_work discharging_start_handler;
+	struct workqueue_struct *discharging_wq;
+	struct workqueue_struct *discharging_start_wq;
+	int discharging;
 
 	struct mutex bcd_rescan_mutex;
 
@@ -984,11 +991,10 @@ struct s2mu106_muic_data {
 	struct delayed_work qc_retry_work;
 #endif
 
-#if IS_ENABLED(CONFIG_S2MU106_TYPEC_WATER)
+#if defined(CONFIG_S2MU106_TYPEC_WATER)
 	struct delayed_work water_detect_handler;
 	struct delayed_work water_dry_handler;
 	struct delayed_work sleep_dry_checker;
-	struct delayed_work rescan_validity_checker;
 
 	bool invalid_rescanned;
 	struct wake_lock water_wake_lock;
@@ -998,18 +1004,27 @@ struct s2mu106_muic_data {
 	long dry_chk_time;
 	int dry_cnt;
 	long dry_duration_sec;
+
 #if IS_ENABLED(CONFIG_HICCUP_CHARGER)
 	bool is_hiccup_mode;
 #endif
-	t_killer_status killer_status;
 
 	struct mutex water_det_mutex;
 	struct mutex water_dry_mutex;
 
 	wait_queue_head_t wait;
+	wait_queue_head_t cable_wait;
 	struct notifier_block fb_notifier;
 	bool lcd_on;
 	bool is_cable_inserted;
+#endif
+	struct delayed_work rescan_validity_checker;
+	bool is_timeout_attached;
+
+	int discharging_en;
+	int vbus_discharging;
+#if IS_ENABLED(CONFIG_S2MU106_IFCONN_HOUSE_NOT_GND)
+	bool is_rescanning;
 #endif
 };
 
@@ -1041,3 +1056,4 @@ int s2mu106_muic_set_otg_reg(struct s2mu106_muic_data *muic_data, bool on);
 int s2mu106_muic_get_otg_state(void);
 #endif
 #endif /* __S2MU106_MUIC_H__ */
+

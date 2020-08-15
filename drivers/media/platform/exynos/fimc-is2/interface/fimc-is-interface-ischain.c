@@ -893,7 +893,6 @@ static void wq_func_subdev(struct fimc_is_subdev *leader,
 	struct fimc_is_video_ctx *ldr_vctx, *sub_vctx;
 	struct fimc_is_framemgr *ldr_framemgr, *sub_framemgr;
 	struct fimc_is_frame *ldr_frame;
-	struct camera2_node *capture;
 	int i = 0;
 
 	BUG_ON(!sub_frame);
@@ -938,29 +937,13 @@ static void wq_func_subdev(struct fimc_is_subdev *leader,
 		sub_frame->stream->fvalid = 1;
 	}
 
-	capture = &ldr_frame->shot_ext->node_group.capture[subdev->cid];
-	if (likely(capture->vid == subdev->vid)) {
-		sub_frame->stream->input_crop_region[0] = capture->input.cropRegion[0];
-		sub_frame->stream->input_crop_region[1] = capture->input.cropRegion[1];
-		sub_frame->stream->input_crop_region[2] = capture->input.cropRegion[2];
-		sub_frame->stream->input_crop_region[3] = capture->input.cropRegion[3];
-		sub_frame->stream->output_crop_region[0] = capture->output.cropRegion[0];
-		sub_frame->stream->output_crop_region[1] = capture->output.cropRegion[1];
-		sub_frame->stream->output_crop_region[2] = capture->output.cropRegion[2];
-		sub_frame->stream->output_crop_region[3] = capture->output.cropRegion[3];
-	} else {
-		mserr("capture vid is changed(%d != %d)", subdev, subdev, subdev->vid, capture->vid);
-		sub_frame->stream->input_crop_region[0] = 0;
-		sub_frame->stream->input_crop_region[1] = 0;
-		sub_frame->stream->input_crop_region[2] = 0;
-		sub_frame->stream->input_crop_region[3] = 0;
-		sub_frame->stream->output_crop_region[0] = 0;
-		sub_frame->stream->output_crop_region[1] = 0;
-		sub_frame->stream->output_crop_region[2] = 0;
-		sub_frame->stream->output_crop_region[3] = 0;
-	}
-
 	clear_bit(subdev->id, &ldr_frame->out_flag);
+
+	/* For supporting multi input to single output */
+	if (subdev->vctx->video->try_smp) {
+		subdev->vctx->video->try_smp = false;
+		up(&subdev->vctx->video->smp_multi_input);
+	}
 
 complete:
 	sub_frame->stream->fcount = fcount;
@@ -1014,6 +997,7 @@ static void wq_func_frame(struct fimc_is_subdev *leader,
 					wq_func_subdev(leader, subdev, frame, fcount, rcount, status);
 					break;
 				} else if (fcount > frame->stream->fcount) {
+					warn("%s : fcnt(%d), f_stream_fcnt(%d)", __func__, fcount, frame->stream->fcount);
 					wq_func_subdev(leader, subdev, frame, frame->stream->fcount, rcount, 0xF);
 
 					/* get next subdev frame */
@@ -1675,12 +1659,6 @@ static void wq_func_m0p(struct work_struct *data)
 			goto p_err;
 		}
 
-		/* For supporting multi input to single output */
-		if (subdev->vctx->video->try_smp) {
-			subdev->vctx->video->try_smp = false;
-			up(&subdev->vctx->video->smp_multi_input);
-		}
-
 		wq_func_frame(leader, subdev, fcount, rcount, status);
 
 p_err:
@@ -1729,12 +1707,6 @@ static void wq_func_m1p(struct work_struct *data)
 		if (!leader) {
 			merr("leader is NULL", device);
 			goto p_err;
-		}
-
-		/* For supporting multi input to single output */
-		if (subdev->vctx->video->try_smp) {
-			subdev->vctx->video->try_smp = false;
-			up(&subdev->vctx->video->smp_multi_input);
 		}
 
 		wq_func_frame(leader, subdev, fcount, rcount, status);
@@ -1787,12 +1759,6 @@ static void wq_func_m2p(struct work_struct *data)
 			goto p_err;
 		}
 
-		/* For supporting multi input to single output */
-		if (subdev->vctx->video->try_smp) {
-			subdev->vctx->video->try_smp = false;
-			up(&subdev->vctx->video->smp_multi_input);
-		}
-
 		wq_func_frame(leader, subdev, fcount, rcount, status);
 
 p_err:
@@ -1841,12 +1807,6 @@ static void wq_func_m3p(struct work_struct *data)
 		if (!leader) {
 			merr("leader is NULL", device);
 			goto p_err;
-		}
-
-		/* For supporting multi input to single output */
-		if (subdev->vctx->video->try_smp) {
-			subdev->vctx->video->try_smp = false;
-			up(&subdev->vctx->video->smp_multi_input);
 		}
 
 		wq_func_frame(leader, subdev, fcount, rcount, status);
@@ -1899,12 +1859,6 @@ static void wq_func_m4p(struct work_struct *data)
 			goto p_err;
 		}
 
-		/* For supporting multi input to single output */
-		if (subdev->vctx->video->try_smp) {
-			subdev->vctx->video->try_smp = false;
-			up(&subdev->vctx->video->smp_multi_input);
-		}
-
 		wq_func_frame(leader, subdev, fcount, rcount, status);
 
 p_err:
@@ -1953,12 +1907,6 @@ static void wq_func_m5p(struct work_struct *data)
 		if (!leader) {
 			merr("leader is NULL", device);
 			goto p_err;
-		}
-
-		/* For supporting multi input to single output */
-		if (subdev->vctx->video->try_smp) {
-			subdev->vctx->video->try_smp = false;
-			up(&subdev->vctx->video->smp_multi_input);
 		}
 
 		wq_func_frame(leader, subdev, fcount, rcount, status);

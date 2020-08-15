@@ -26,7 +26,6 @@
 #define MC_VERSION_MAJOR(x) ((x) >> 16)
 #define MC_VERSION_MINOR(x) ((x) & 0xffff)
 
-#define DEBUG
 #define mc_dev_err(fmt, ...) \
 	dev_err(g_ctx.mcd, "%s: " fmt "\n", __func__, ##__VA_ARGS__)
 

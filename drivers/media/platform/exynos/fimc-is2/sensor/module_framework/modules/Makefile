@@ -35,10 +35,12 @@ obj-$(CONFIG_CAMERA_CIS_IMX320_OBJ) += fimc-is-device-module-imx320.o
 obj-$(CONFIG_CAMERA_CIS_IMX320_C3_OBJ) += fimc-is-device-module-imx320-c3.o
 obj-$(CONFIG_CAMERA_CIS_IMX333_OBJ) += fimc-is-device-module-imx333.o
 obj-$(CONFIG_CAMERA_CIS_IMX576_OBJ) += fimc-is-device-module-imx576.o
+obj-$(CONFIG_CAMERA_CIS_IMX471_OBJ) += fimc-is-device-module-imx471.o
 obj-$(CONFIG_CAMERA_CIS_SR259_OBJ) += fimc-is-device-module-sr259.o
 obj-$(CONFIG_CAMERA_CIS_SR556_OBJ) += fimc-is-device-module-sr556.o
 obj-$(CONFIG_CAMERA_CIS_SR556B_OBJ) += fimc-is-device-module-sr556b.o
 obj-$(CONFIG_CAMERA_CIS_SR846_OBJ) += fimc-is-device-module-sr846.o
+obj-$(CONFIG_CAMERA_CIS_HI1631_OBJ) += fimc-is-device-module-hi1631.o
 obj-$(CONFIG_CAMERA_CIS_GC5035_OBJ) += fimc-is-device-module-gc5035.o
 obj-$(CONFIG_CAMERA_CIS_VIRTUAL_OBJ) += fimc-is-device-module-virtual.o
 

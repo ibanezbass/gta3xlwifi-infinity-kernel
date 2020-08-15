@@ -41,6 +41,7 @@ extern unsigned long	CFG_VER_MAJ_FLASH_ADDR;
 extern unsigned long	CFG_VER_MIN_FLASH_ADDR;
 extern unsigned long	CID_VER_MAJ_FLASH_ADDR;
 extern unsigned long	CID_VER_MIN_FLASH_ADDR;
+extern unsigned long	PANEL_VERSION_ADDR;
 
 extern unsigned long	FW_VER_MAJ_FLASH_LENG;
 extern unsigned long	FW_VER_MIN_FLASH_LENG;
@@ -48,6 +49,7 @@ extern unsigned long	CFG_VER_MAJ_FLASH_LENG;
 extern unsigned long	CFG_VER_MIN_FLASH_LENG;
 extern unsigned long	CID_VER_MAJ_FLASH_LENG;
 extern unsigned long	CID_VER_MIN_FLASH_LENG;
+extern unsigned long	PANEL_VERSION_LENG;
 
 #ifdef HX_AUTO_UPDATE_FW
 extern int g_i_FW_VER;
@@ -87,8 +89,8 @@ static void hx83102_chip_init(void)
 	CID_VER_MAJ_FLASH_LENG	= 1;
 	CID_VER_MIN_FLASH_ADDR	= 49155;	/*0x00C003*/
 	CID_VER_MIN_FLASH_LENG	= 1;
-	/*PANEL_VERSION_ADDR		= 49156;*/	/*0x00C004*/
-	/*PANEL_VERSION_LENG		= 1;*/
+	PANEL_VERSION_ADDR		= 49156;	/*0x00C004*/
+	PANEL_VERSION_LENG		= 1;
 
 }
 
@@ -187,6 +189,105 @@ static void hx83102_pin_reset(void)
 		gpio_free(private_ts->rst_gpio);
 }
 #endif
+
+static bool hx83102_sense_off(bool check_en)
+{
+	uint8_t cnt = 0;
+	uint8_t tmp_addr[DATA_LEN_4];
+	uint8_t tmp_writ[DATA_LEN_4];
+	uint8_t tmp_data[DATA_LEN_4];
+
+	do {
+		if (cnt == 0 || (tmp_data[0] != 0xA5 && tmp_data[0] != 0x00 && tmp_data[0] != 0x87)) {
+			tmp_addr[3] = 0x90;tmp_addr[2] = 0x00;tmp_addr[1] = 0x00;tmp_addr[0] = 0x5C;
+			tmp_writ[3] = 0x00;tmp_writ[2] = 0x00;tmp_writ[1] = 0x00;tmp_writ[0] = 0xA5;
+			hx83102_flash_write_burst(tmp_addr, tmp_writ);
+		}
+		msleep(20);
+
+		/* check fw status */
+		tmp_addr[3] = 0x90;tmp_addr[2] = 0x00;tmp_addr[1] = 0x00;tmp_addr[0] = 0xA8;
+		hx83102_register_read(tmp_addr, DATA_LEN_4, tmp_data);
+
+		if (tmp_data[0] != 0x05) {
+			I("%s: Do not need wait FW, Status = 0x%02X!\n", __func__, tmp_data[0]);
+			break;
+		}
+
+		tmp_addr[3] = 0x90;tmp_addr[2] = 0x00;tmp_addr[1] = 0x00;tmp_addr[0] = 0x5C;
+		hx83102_register_read(tmp_addr, DATA_LEN_4, tmp_data);
+		I("%s: cnt = %d, data[0] = 0x%02X!\n", __func__, cnt, tmp_data[0]);
+	} while (tmp_data[0] != 0x87 && (++cnt < 50) && check_en == true);
+
+	cnt = 0;
+
+
+	do {
+		/*===========================================
+		 I2C_password[7:0] set Enter safe mode : 0x31 ==> 0x27
+		===========================================*/
+		tmp_data[0] = 0x27;
+		if (himax_bus_write(0x31, tmp_data, 1, HIMAX_I2C_RETRY_TIMES) < 0) {
+			E("%s: i2c access fail!\n", __func__);
+			return false;
+		}
+
+		/*===========================================
+		 I2C_password[15:8] set Enter safe mode :0x32 ==> 0x95
+		===========================================*/
+		tmp_data[0] = 0x95;
+		if (himax_bus_write(0x32, tmp_data, 1, HIMAX_I2C_RETRY_TIMES) < 0) {
+			E("%s: i2c access fail!\n", __func__);
+			return false;
+		}
+
+		/* ======================
+		 Check enter_save_mode
+		 ======================*/
+		tmp_addr[3] = 0x90; tmp_addr[2] = 0x00; tmp_addr[1] = 0x00; tmp_addr[0] = 0xA8;
+		hx83102_register_read(tmp_addr, ADDR_LEN_4, tmp_data);
+		I("%s: Check enter_save_mode data[0]=%X \n", __func__, tmp_data[0]);
+
+		if (tmp_data[0] == 0x0C) {
+			/*=====================================
+			 Reset TCON
+			=====================================*/
+			tmp_addr[3] = 0x80; tmp_addr[2] = 0x02; tmp_addr[1] = 0x00; tmp_addr[0] = 0x20;
+			tmp_data[3] = 0x00; tmp_data[2] = 0x00; tmp_data[1] = 0x00; tmp_data[0] = 0x00;
+			hx83102_flash_write_burst(tmp_addr, tmp_data);
+			msleep(1);
+			tmp_data[3] = 0x00; tmp_data[2] = 0x00; tmp_data[1] = 0x00; tmp_data[0] = 0x01;
+			hx83102_flash_write_burst(tmp_addr, tmp_data);
+			/*=====================================
+			 Reset ADC
+			=====================================*/
+			tmp_addr[3] = 0x80;
+			tmp_addr[2] = 0x02;
+			tmp_addr[1] = 0x00;
+			tmp_addr[0] = 0x94;
+			tmp_data[3] = 0x00;
+			tmp_data[2] = 0x00;
+			tmp_data[1] = 0x00;
+			tmp_data[0] = 0x00;
+			hx83102_flash_write_burst(tmp_addr, tmp_data);
+			msleep(1);
+			tmp_data[3] = 0x00;
+			tmp_data[2] = 0x00;
+			tmp_data[1] = 0x00;
+			tmp_data[0] = 0x01;
+			hx83102_flash_write_burst(tmp_addr, tmp_data);
+
+			return true;
+		} else {
+			msleep(10);
+#ifdef HX_RST_PIN_FUNC
+			g_core_fp.fp_ic_reset(false, false);
+#endif
+		}
+	} while (cnt++ < 15);
+
+	return false;
+}
 
 static bool hx83102ab_sense_off(bool check_en)
 {
@@ -1107,7 +1208,7 @@ static bool hx83102_chip_detect(void)
 	hx83102_pin_reset();
 #endif
 
-	hx83102ab_sense_off(false);
+	hx83102_sense_off(true);
 
 	for (i = 0; i < 5; i++) {
 		tmp_addr[3] = 0x90;

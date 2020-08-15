@@ -101,6 +101,8 @@ typedef u32 (*start_up_func_t)(void **func);
 typedef u32 (*rta_start_up_func_t)(void *bootargs, void **func);
 typedef void(*os_system_func_t)(void);
 
+#define DDK_SHUT_DOWN_FUNC_ADDR	(DDK_LIB_ADDR + 0x100)
+typedef int (*ddk_shut_down_func_t)(void *data);
 #define RTA_SHUT_DOWN_FUNC_ADDR	(RTA_LIB_ADDR + 0x100)
 typedef int (*rta_shut_down_func_t)(void *data);
 
@@ -289,8 +291,7 @@ int fimc_is_dva_vra(ulong kva, u32 *dva);
 void fimc_is_inv_vra(ulong kva, u32 size);
 void fimc_is_clean_vra(ulong kva, u32 size);
 
-bool fimc_is_lib_in_interrupt(void);
-
+bool fimc_is_lib_in_irq(void);
 int fimc_is_load_bin_on_boot(void);
 void fimc_is_load_ctrl_unlock(void);
 void fimc_is_load_ctrl_lock(void);

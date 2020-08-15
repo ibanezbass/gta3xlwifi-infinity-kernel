@@ -62,8 +62,29 @@ enum sensor_module_2x5_position {
 6: 5760x3240@30fps
 7: 5760x2664@30fps
 8: 4312x4312@30fps
+9: 2880x2156@30fps_3dhdr
 */
-
+enum {
+	MODE_2880x2156_30 = 0,		/* 0, 4:3 */
+	MODE_2880x1620_30, 		/* 1, 16:9 */
+	MODE_2880x1332_30,		/* 2, 19.5 : 9 */
+	MODE_2156x2156_30,		/* 3, 1:1*/
+	MODE_2352x1764_30,		/* 4, crop */
+	MODE_2352x1324_30,		/* 5, crop */
+	MODE_2352x1088_30,		/* 6, crop */
+	MODE_1760x1760_30,		/* 7, crop */
+	MODE_2880x2156_100,		/* 8 */
+	MODE_5760x4312_30, 		/* 9, Remosaic */
+	MODE_5760x3240_30,		/* 10, 16:9 */
+	MODE_5760x2664_30,		/* 11, 19.5 : 9 */
+	MODE_4312x4312_30,		/* 12, 1:1 */
+	MODE_4688x3516_30,		/* 13, crop */
+	MODE_2880x2156_30_3DHDR,	/* 14 */
+	MODE_2880x1620_30_3DHDR,	/* 15 */
+	MODE_2880x1332_30_3DHDR,	/* 16 */
+	MODE_2156x2156_30_3DHDR,	/* 17 */
+	MODE_END
+};
 
 static struct fimc_is_sensor_cfg config_module_2x5[] = {
 	/* width, height, fps, settle, mode, lane, speed, interleave, pd_mode */
@@ -75,16 +96,26 @@ static struct fimc_is_sensor_cfg config_module_2x5[] = {
 	FIMC_IS_SENSOR_CFG_EXT(2880, 1332,  30, 46,  2, CSI_DATA_LANES_4, 2093, 0, 0, 0),
 	/* 3: 2156x2156@30fps */
 	FIMC_IS_SENSOR_CFG_EXT(2156, 2156,  30, 46,  3, CSI_DATA_LANES_4, 2093, 0, 0, 0),
-	/* 4: 2880x2156@100fps FAST AE*/
-	FIMC_IS_SENSOR_CFG_EXT(2880, 2156, 100, 46,  4, CSI_DATA_LANES_4, 2093, 0, 0, 0),
-	/* 5: 5760x4312@30fps */
-	FIMC_IS_SENSOR_CFG_EXT(5760, 4312,  30, 46,  5, CSI_DATA_LANES_4, 2093, 0, 0, 0),
-	/* 6: 5760x3240@30fps */
-	FIMC_IS_SENSOR_CFG_EXT(5760, 3240,  30, 46,  6, CSI_DATA_LANES_4, 2093, 0, 0, 0),
-	/* 7: 5760x2664@30fps */
-	FIMC_IS_SENSOR_CFG_EXT(5760, 2664,  30, 46,  7, CSI_DATA_LANES_4, 2093, 0, 0, 0),
-	/* 8: 4312x4312@30fps */
-	FIMC_IS_SENSOR_CFG_EXT(4312, 4312,  30, 46,  8, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 4: 2352x1764@30fps_crop */
+	FIMC_IS_SENSOR_CFG_EXT(2352, 1764,  30, 46,  4, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 5: 2352x1324@30fps_crop */
+	FIMC_IS_SENSOR_CFG_EXT(2352, 1324,  30, 46,  5, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 6: 2352x1088@30fps_crop */
+	FIMC_IS_SENSOR_CFG_EXT(2352, 1088,  30, 46,  6, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 7: 1760x1760@30fps_crop */
+	FIMC_IS_SENSOR_CFG_EXT(1760, 1760,  30, 46,  7, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 8: 2880x2156@100fps FAST AE*/
+	FIMC_IS_SENSOR_CFG_EXT(2880, 2156, 100, 46,  8, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 9: 5760x4312@30fps */
+	FIMC_IS_SENSOR_CFG_EXT(5760, 4312,  30, 46,  9, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 10: 5760x3240@30fps */
+	FIMC_IS_SENSOR_CFG_EXT(5760, 3240,  30, 46,  10, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 11: 5760x2664@30fps */
+	FIMC_IS_SENSOR_CFG_EXT(5760, 2664,  30, 46,  11, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 12: 4312x4312@30fps */
+	FIMC_IS_SENSOR_CFG_EXT(4312, 4312,  30, 46,  12, CSI_DATA_LANES_4, 2093, 0, 0, 0),
+	/* 13: 4688x3516@30fps */
+	FIMC_IS_SENSOR_CFG_EXT(4688, 3516,  30, 46,  13, CSI_DATA_LANES_4, 2093, 0, 0, 0),
 };
 
 static struct fimc_is_vci vci_module_2x5[] = {
@@ -566,7 +597,7 @@ static int sensor_module_2x5_power_setpin(struct device *dev,
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 0, 0); /* CAM_VDDIO_1P8 */
 
 	/* READ_ROM - POWER ON */
-	SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 0); /* CAM_VDDIO_1P8 */
+	SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 3000); /* CAM_VDDIO_1P8 */
 	/* READ_ROM - POWER OFF */
 	SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 0, 0); /* CAM_VDDIO_1P8 */
 

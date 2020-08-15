@@ -90,7 +90,11 @@ static inline struct sk_buff *h4_recv_buf(struct hci_dev *hdev,
 		}
 
 		len = min_t(uint, hci_skb_expect(skb) - skb->len, count);
+#if KERNEL_VERSION(4, 13, 0) > LINUX_VERSION_CODE
+		memcpy(skb_put(skb, len), buffer, len);
+#else
 		skb_put_data(skb, buffer, len);
+#endif
 
 		count -= len;
 		buffer += len;

@@ -51,3 +51,11 @@ config CAMERA_FLASH_KTD2692_OBJ
         default n
         help
           Use to build KTD2692 driver.
+
+config CAMERA_FLASH_RT8547_OBJ
+        bool "Use RT8547"
+	depends on USE_DIRECT_IS_CONTROL
+	depends on CAMERA_FLASH_SELECT
+        default n
+        help
+          Use to build RT8547 driver.

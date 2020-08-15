@@ -14,16 +14,38 @@
  * GNU General Public License for more details.
  */
 
+#include "proca_log.h"
 #include "proca_certificate.h"
-#include "proca_certificate-asn1.h"
 
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/err.h>
 #include <crypto/hash.h>
 #include <crypto/sha.h>
+#include <linux/version.h>
+#include <linux/file.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 42)
+#include "proca_certificate.asn1.h"
+#else
+#include "proca_certificate-asn1.h"
+#endif
 
 static struct crypto_shash *g_validation_shash;
+
+int proca_certificate_get_flags(void *context, size_t hdrlen,
+				unsigned char tag,
+				const void *value, size_t vlen)
+{
+	struct proca_certificate *parsed_cert = context;
+
+	if (!value || !vlen)
+		return -EINVAL;
+
+	parsed_cert->flags = *(const uint8_t *)value;
+
+	return 0;
+}
 
 int proca_certificate_get_app_name(void *context, size_t hdrlen,
 				   unsigned char tag,
@@ -76,7 +98,7 @@ int parse_proca_certificate(const char *certificate_buff,
 			      certificate_buff,
 			      buff_size);
 	if (!parsed_cert->app_name || !parsed_cert->five_signature_hash) {
-		pr_info("Failed to parse proca certificate.\n");
+		PROCA_INFO_LOG("Failed to parse proca certificate.\n");
 		deinit_proca_certificate(parsed_cert);
 		return -EINVAL;
 	}
@@ -94,7 +116,7 @@ int init_certificate_validation_hash(void)
 {
 	g_validation_shash = crypto_alloc_shash("sha256", 0, 0);
 	if (IS_ERR(g_validation_shash)) {
-		pr_warn("can't alloc sha256 alg, rc - %ld.\n",
+		PROCA_WARN_LOG("can't alloc sha256 alg, rc - %ld.\n",
 			PTR_ERR(g_validation_shash));
 		return PTR_ERR(g_validation_shash);
 	}
@@ -110,7 +132,8 @@ int compare_with_five_signature(const struct proca_certificate *certificate,
 	int rc = 0;
 
 	if (sizeof(five_sign_hash) != certificate->five_signature_hash_size) {
-		pr_debug("Size of five sign hash is invalid %zu, expected %zu",
+		PROCA_DEBUG_LOG(
+			"Size of five sign hash is invalid %zu, expected %zu",
 			 certificate->five_signature_hash_size,
 			 sizeof(five_sign_hash));
 		return rc;
@@ -121,14 +144,14 @@ int compare_with_five_signature(const struct proca_certificate *certificate,
 
 	rc = crypto_shash_init(sdesc);
 	if (rc != 0) {
-		pr_warn("crypto_shash_init failed, rc - %d.\n", rc);
+		PROCA_WARN_LOG("crypto_shash_init failed, rc - %d.\n", rc);
 		return 0;
 	}
 
 	rc = crypto_shash_digest(sdesc, five_signature,
 				 five_signature_size, five_sign_hash);
 	if (rc != 0) {
-		pr_warn("crypto_shash_digest failed, rc - %d.\n", rc);
+		PROCA_WARN_LOG("crypto_shash_digest failed, rc - %d.\n", rc);
 		return 0;
 	}
 
@@ -171,4 +194,80 @@ int proca_certificate_copy(struct proca_certificate *dst,
 	}
 
 	return 0;
+}
+
+/* Copied from TA sources */
+enum PaFlagBits {
+	PaFlagBits_bitAndroid = 0,
+	PaFlagBits_bitThirdParty = 1,
+	PaFlagBits_bitHmac = 2
+};
+
+static bool check_native_pa_id(const struct proca_certificate *parsed_cert,
+			       struct task_struct *task)
+{
+	struct file *exe;
+	char *path_buff;
+	char *path;
+	bool res = false;
+
+	path_buff = kmalloc(parsed_cert->app_name_size + 1, GFP_KERNEL);
+	if (!path_buff)
+		return false;
+
+	exe = get_task_exe_file(task);
+	if (!exe)
+		goto path_buff_cleanup;
+
+	path = d_path(&exe->f_path, path_buff, parsed_cert->app_name_size + 1);
+	if (IS_ERR(path))
+		goto exe_file_cleanup;
+
+	res = !strcmp(path, parsed_cert->app_name);
+	if (!res)
+		PROCA_WARN_LOG(
+			"file path %s and cert app name %s doesn't match\n",
+			path, parsed_cert->app_name);
+
+exe_file_cleanup:
+	fput(exe);
+
+path_buff_cleanup:
+	kfree(path_buff);
+
+	return res;
+}
+
+bool is_certificate_relevant_to_task(
+			const struct proca_certificate *parsed_cert,
+			struct task_struct *task)
+{
+	const char system_server_app_name[] = "/system/framework/services.jar";
+	const char system_server[] = "system_server";
+	const size_t max_app_name = 1024;
+	char cmdline[max_app_name + 1];
+	int cmdline_size;
+
+	if (!(parsed_cert->flags & (1 << PaFlagBits_bitAndroid)))
+		if (!check_native_pa_id(parsed_cert, task))
+			return false;
+
+	cmdline_size = get_cmdline(task, cmdline, max_app_name);
+	cmdline[cmdline_size] = 0;
+
+	// Special case for system_server
+	if (!strncmp(parsed_cert->app_name, system_server_app_name,
+			parsed_cert->app_name_size)) {
+		if (strncmp(cmdline, system_server, sizeof(system_server)))
+			return false;
+	} else if (parsed_cert->app_name[0] != '/') {
+		// Case for Android applications
+		PROCA_DEBUG_LOG("Task %d has cmdline : %s\n",
+			task->pid, cmdline);
+		if (strncmp(cmdline, parsed_cert->app_name,
+				parsed_cert->app_name_size))
+			return false;
+	}
+
+	return true;
 }

@@ -1318,6 +1318,7 @@ static const struct file_operations proc_diskstats_operations = {
 	.release	= seq_release,
 };
 
+/* IOPP-iod-v1.0.4.4 */
 #define PG2KB(x) ((unsigned long)((x) << (PAGE_SHIFT - 10)))
 static int iostats_show(struct seq_file *seqf, void *v)
 {

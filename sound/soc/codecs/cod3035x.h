@@ -32,6 +32,8 @@ extern int cod3035x_jack_mic_register(struct snd_soc_codec *codec);
 #define MODEL_FLAG_5PIN_JACK			0x04
 #define MODEL_FLAG_5PIN_AUX_DET			0x08
 #define MODEL_FLAG_5PIN_BTN_DELAY		0x10
+#define MODEL_FLAG_JACKOUT_TDMA_NOISE	0x20
+#define MODEL_FLAG_5PIN_ANT 			0x40
 
 #define COD3035X_OTP_MAX_REG		0x0f
 #define COD3035X_MAX_REGISTER		0xf6
@@ -69,6 +71,7 @@ struct cod3035x_jack_det {
 	int prev_jack_det_status;
 	bool ant_det;
 	bool ant_irq;
+	int ignore_ext_ant;
 #endif
 	bool surge_det;
 	unsigned int button_code;
@@ -97,6 +100,8 @@ struct cod3035x_priv {
 	int num_inputs;
 	int int_gpio;
 
+	int dtv_check_gpio;
+	bool dtv_detect;
 #ifdef CONFIG_SND_SOC_COD30XX_EXT_ANT
 	int ant_det_gpio;
 	int ant_adc_range;

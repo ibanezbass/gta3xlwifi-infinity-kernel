@@ -108,11 +108,11 @@ static LIST_HEAD(drvdata_list);
 #define HSI2C_RXFIFO_EN				(1u << 0)
 #define HSI2C_TXFIFO_EN				(1u << 1)
 #define HSI2C_FIFO_MAX				(0x40)
-#define HSI2C_RXFIFO_TRIGGER_LEVEL		(0x8 << 4)
-#define HSI2C_TXFIFO_TRIGGER_LEVEL		(0x8 << 16)
+#define HSI2C_RXFIFO_TRIGGER_LEVEL(x)		(x << 4)
+#define HSI2C_TXFIFO_TRIGGER_LEVEL(x)		(x << 16)
 /* I2C_TRAILING_CTL Register bits */
-#define HSI2C_TRAILING_COUNT			(0xf)
 #define BATCHER_TRAILING_COUNT			(0x2ff)
+#define HSI2C_TRAILING_COUNT			(0xffffff)
 
 /* I2C_INT_EN Register bits */
 #define HSI2C_INT_TX_ALMOSTEMPTY_EN		(1u << 0)
@@ -226,6 +226,8 @@ static LIST_HEAD(drvdata_list);
 #define HSI2C_BATCHER_INIT_CMD	0xFFFFFFFF
 
 #define HSI2C_USI_SYSREG		0x10032004
+
+#define FIFO_TRIG_CRITERIA	(8)
 
 static const struct of_device_id exynos5_i2c_match[] = {
 	{ .compatible = "samsung,exynos5-hsi2c" },
@@ -405,6 +407,7 @@ static inline void dump_i2c_register(struct exynos5_i2c *i2c)
 		"TIMING_FS2   0x%08x   "
 		"TIMING_FS3   0x%08x   "
 		"TIMING_SLA   0x%08x   "
+		"TRAILING_CTL 0x%08x   "
 		"ADDR         0x%08x \n"
 		, i2c->suspended
 		, readl(i2c->regs + HSI2C_CTL)
@@ -422,6 +425,7 @@ static inline void dump_i2c_register(struct exynos5_i2c *i2c)
 		, readl(i2c->regs + HSI2C_TIMING_FS2)
 		, readl(i2c->regs + HSI2C_TIMING_FS3)
 		, readl(i2c->regs + HSI2C_TIMING_SLA)
+		, readl(i2c->regs + HSI2C_TRAILIG_CTL)
 		, readl(i2c->regs + HSI2C_ADDR)
 	);
 
@@ -596,23 +600,17 @@ static int exynos5_i2c_set_timing(struct exynos5_i2c *i2c, int mode)
 	i2c_timing_s2 = (0xF << 16) | t_data_su << 24 | t_scl_l << 8 | t_scl_h;
 	i2c_timing_s3 = (div << 16) | t_sr_release;
 	i2c_timing_sla = t_data_hd;
-/*
-	dev_dbg(i2c->dev, "tSTART_SU: %X, tSTART_HD: %X, tSTOP_SU: %X\n",
-		t_start_su, t_start_hd, t_stop_su);
-	dev_dbg(i2c->dev, "tDATA_SU: %X, tSCL_L: %X, tSCL_H: %X\n",
-		t_data_su, t_scl_l, t_scl_h);
-	dev_dbg(i2c->dev, "nClkDiv: %X, tSR_RELEASE: %X\n",
-		div, t_sr_release);
-	dev_dbg(i2c->dev, "tDATA_HD: %X\n", t_data_hd);
-*/
-	printk("tSTART_SU: %X, tSTART_HD: %X, tSTOP_SU: %X\n",
-		t_start_su, t_start_hd, t_stop_su);
-	printk("tDATA_SU: %X, tSCL_L: %X, tSCL_H: %X\n",
-		t_data_su, t_scl_l, t_scl_h);
-	printk("nClkDiv: %X, tSR_RELEASE: %X\n",
-		div, t_sr_release);
-	printk("tDATA_HD: %X\n", t_data_hd);
-	printk("i2c_timing_s1:%X\n",i2c_timing_s1);
+
+	if (!i2c->need_hw_init) {
+		dev_dbg(i2c->dev, "tSTART_SU: %X, tSTART_HD: %X, tSTOP_SU: %X\n",
+			t_start_su, t_start_hd, t_stop_su);
+		dev_dbg(i2c->dev, "tDATA_SU: %X, tSCL_L: %X, tSCL_H: %X\n",
+			t_data_su, t_scl_l, t_scl_h);
+		dev_dbg(i2c->dev, "nClkDiv: %X, tSR_RELEASE: %X\n",
+			div, t_sr_release);
+		dev_dbg(i2c->dev, "tDATA_HD: %X\n", t_data_hd);
+	}
+
 
 	if (mode == HSI2C_HIGH_SPD) {
 		writel(i2c_timing_s1, i2c->regs + HSI2C_TIMING_HS1);
@@ -853,6 +851,7 @@ static irqreturn_t exynos5_i2c_irq(int irqno, void *dev_id)
 	unsigned long reg_val;
 	unsigned long trans_status;
 	unsigned char byte;
+	unsigned int stop = 0;
 
 	if (i2c->msg->flags & I2C_M_RD) {
 		while ((readl(i2c->regs + HSI2C_FIFO_STATUS) &
@@ -861,12 +860,8 @@ static irqreturn_t exynos5_i2c_irq(int irqno, void *dev_id)
 			i2c->msg->buf[i2c->msg_ptr++] = byte;
 		}
 
-		if (i2c->msg_ptr >= i2c->msg->len) {
-			reg_val = readl(i2c->regs + HSI2C_INT_ENABLE);
-			reg_val &= ~(HSI2C_INT_RX_ALMOSTFULL_EN);
-			writel(reg_val, i2c->regs + HSI2C_INT_ENABLE);
-			exynos5_i2c_stop(i2c);
-		}
+		if (i2c->msg_ptr >= i2c->msg->len)
+			stop = 1;
 	} else {
 		while ((readl(i2c->regs + HSI2C_FIFO_STATUS) &
 			0x80) == 0) {
@@ -882,6 +877,19 @@ static irqreturn_t exynos5_i2c_irq(int irqno, void *dev_id)
 	}
 
 	reg_val = readl(i2c->regs + HSI2C_INT_STATUS);
+	if ((reg_val & HSI2C_INT_TRANSFER_DONE) &&
+			!(i2c->msg_ptr >= i2c->msg->len) &&
+			(i2c->msg->flags & I2C_M_RD)) {
+		udelay(100);
+		while ((readl(i2c->regs + HSI2C_FIFO_STATUS) &
+					0x1000000) == 0) {
+			byte = (unsigned char)readl(i2c->regs + HSI2C_RX_DATA);
+			i2c->msg->buf[i2c->msg_ptr++] = byte;
+		}
+
+		if (i2c->msg_ptr >= i2c->msg->len)
+			stop = 1;
+	}
 
 	/*
 	 * Checking Error State in INT_STATUS register
@@ -892,17 +900,20 @@ static irqreturn_t exynos5_i2c_irq(int irqno, void *dev_id)
 				"occurred(IS:0x%08x, TR:0x%08x)\n",
 				(unsigned int)reg_val, (unsigned int)trans_status);
 		i2c->trans_done = -ENXIO;
-		exynos5_i2c_stop(i2c);
+		stop = 1;
 		goto out;
 	}
 	/* Checking INT_TRANSFER_DONE */
 	if ((reg_val & HSI2C_INT_TRANSFER_DONE) &&
 		(i2c->msg_ptr >= i2c->msg->len) &&
 		!(i2c->msg->flags & I2C_M_RD))
-		exynos5_i2c_stop(i2c);
+		stop = 1;
 
 out:
 	writel(reg_val, i2c->regs +  HSI2C_INT_STATUS);
+
+	if (stop)
+		exynos5_i2c_stop(i2c);
 
 	return IRQ_HANDLED;
 }
@@ -933,8 +944,20 @@ static int exynos5_i2c_xfer_msg(struct exynos5_i2c *i2c, struct i2c_msg *msgs, i
 	i2c_timeout &= ~HSI2C_TIMEOUT_EN;
 	writel(i2c_timeout, i2c->regs + HSI2C_TIMEOUT);
 
-	i2c_fifo_ctl = HSI2C_RXFIFO_EN | HSI2C_TXFIFO_EN |
-		HSI2C_TXFIFO_TRIGGER_LEVEL | HSI2C_RXFIFO_TRIGGER_LEVEL;
+	/*
+	 * In case of short length request it'd be better to set
+	 * trigger level as msg length
+	 */
+	if (i2c->msg->len >= FIFO_TRIG_CRITERIA) {
+		i2c_fifo_ctl = HSI2C_RXFIFO_EN | HSI2C_TXFIFO_EN |
+			HSI2C_RXFIFO_TRIGGER_LEVEL(FIFO_TRIG_CRITERIA) |
+			HSI2C_TXFIFO_TRIGGER_LEVEL(FIFO_TRIG_CRITERIA);
+	} else {
+		i2c_fifo_ctl = HSI2C_RXFIFO_EN | HSI2C_TXFIFO_EN |
+			HSI2C_RXFIFO_TRIGGER_LEVEL(i2c->msg->len) |
+			HSI2C_TXFIFO_TRIGGER_LEVEL(i2c->msg->len);
+	}
+
 	writel(i2c_fifo_ctl, i2c->regs + HSI2C_FIFO_CTL);
 
 	i2c_int_en = 0;
@@ -1111,6 +1134,14 @@ static int exynos5_i2c_xfer_msg(struct exynos5_i2c *i2c, struct i2c_msg *msgs, i
 						   ((stop == 0) && (trans_status & HSI2C_MASTER_BUSY))){
 							timeout = 0;
 							break;
+						} else if (i2c->reset_before_trans &&
+								((trans_status & HSI2C_MAST_ST_MASK) == 0xc)) {
+							/*
+							 * When every trasnfer has arbitration lost after ACK,
+							 * avoid timeout log with all transfer.
+							 */
+							timeout = 0;
+							break;
 						}
 					} while(time_before(jiffies, timeout));
 
@@ -1215,7 +1246,7 @@ static int exynos5_i2c_xfer_batcher(struct exynos5_i2c *i2c,
 
 	/* Set HSI2C FIFO Control Register */
 	i2c_fifo_ctl = HSI2C_RXFIFO_EN | HSI2C_TXFIFO_EN |
-			HSI2C_TXFIFO_TRIGGER_LEVEL;
+			HSI2C_TXFIFO_TRIGGER_LEVEL(FIFO_TRIG_CRITERIA);
 
 	i2c_fifo_ctl |= i2c->msg->len << 4;
 	write_batcher(i2c, i2c_fifo_ctl, HSI2C_FIFO_CTL);

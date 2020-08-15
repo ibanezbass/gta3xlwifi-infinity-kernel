@@ -129,6 +129,10 @@ static void cmd_get_fw_ver_bin(void *device_data)
 		goto EXIT;
 
 	fw_hdr = (struct mms_bin_hdr *)fw->data;
+	if (fw_hdr->section_num > MMS_FW_MAX_SECT_NUM) {
+		release_firmware(fw);
+		goto EXIT;
+	}
 	img = kzalloc(sizeof(*img) * fw_hdr->section_num, GFP_KERNEL);
 
 	for (i = 0; i < fw_hdr->section_num; i++, offset += sizeof(struct mms_fw_img)) {

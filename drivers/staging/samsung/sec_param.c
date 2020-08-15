@@ -25,6 +25,8 @@
 #define SEC_PARAM_NAME "/dev/block/param"
 #define STR_LENGTH 1024
 
+static char* salescode;
+
 struct sec_param_data_s {
 	struct work_struct sec_param_work;
 	unsigned long offset;
@@ -124,8 +126,14 @@ int sec_set_param(unsigned long offset, char val)
 
 	mutex_lock(&sec_param_mutex);
 
-	if ((offset < CM_OFFSET) || (offset > CM_OFFSET + CM_OFFSET_LIMIT))
-		goto unlock_out;
+	switch (offset) {
+	case CM_OFFSET ... CM_OFFSET_LIMIT:
+		break;
+	default:
+		if (offset != FMM_LOCK_OFFSET)
+			goto unlock_out;
+		break;
+	}
 
 	switch (val) {
 	case PARAM_OFF:
@@ -185,6 +193,28 @@ int sec_get_param_str(unsigned long offset, char *str)
 	mutex_unlock(&sec_param_mutex_str);
 	return 0;
 }
+
+bool sales_code_is(char* str)
+{
+	bool status = 0;
+
+	if(!salescode)
+		goto out;
+
+	if (!strncmp((char *)salescode, str, 3))
+		status = 1;
+
+out:
+	return status;
+}
+EXPORT_SYMBOL(sales_code_is);
+
+static int __init sales_code_setup(char *str)
+{
+	salescode = str;
+	return 1;
+}
+early_param("sales_code", sales_code_setup);
 
 static int __init sec_param_work_init(void)
 {

@@ -41,8 +41,9 @@
 #include <linux/muic/s2mu004-muic-sysfs.h>
 #include <linux/muic/muic_interface.h>
 
+#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC)
 #include <linux/muic/s2mu004-muic-hv.h>
-
+#endif
 #if IS_ENABLED(CONFIG_VBUS_NOTIFIER)
 #include <linux/vbus_notifier.h>
 #endif
@@ -1328,6 +1329,30 @@ int s2mu004_set_gpio_uart_sel(struct s2mu004_muic_data *muic_data, int uart_sel)
 }
 
 #if IS_ENABLED(CONFIG_SEC_FACTORY)
+static int s2mu004_i2c_guaranteed_wbyte(struct i2c_client *client,
+			u8 command, u8 value)
+{
+	int ret;
+	int retry = 0;
+	int written;
+
+	ret = s2mu004_i2c_write_byte(client, command, value);
+	written = s2mu004_i2c_read_byte(client, command);
+	while (written != value) {
+		pr_info("reg(0x%x): written(0x%x) != value(0x%x)\n",
+			command, written, value);
+		if (retry > 10) {
+			pr_err("%s  retry failed!!\n", __func__);
+			break;
+		}
+		msleep(100);
+		retry++;
+		ret = s2mu004_i2c_write_byte(client, command, value);
+		written = s2mu004_i2c_read_byte(client, command);
+	}
+	return ret;
+}
+
 int s2mu004_muic_set_otg_reg(struct s2mu004_muic_data *muic_data, bool on)
 {
 	struct i2c_client *i2c = muic_data->i2c;
@@ -1374,6 +1399,7 @@ int s2mu004_muic_set_otg_reg(struct s2mu004_muic_data *muic_data, bool on)
 	return ret;
 }
 
+#if 0
 static int s2mu004_muic_init_otg_reg(struct s2mu004_muic_data *muic_data)
 {
 	struct i2c_client *i2c = muic_data->i2c;
@@ -1440,6 +1466,7 @@ static int s2mu004_muic_init_otg_reg(struct s2mu004_muic_data *muic_data)
 
 	return ret;
 }
+#endif
 #endif /* CONFIG_SEC_FACTORY */
 
 static int s2mu004_muic_reg_init(struct s2mu004_muic_data *muic_data)
@@ -2987,15 +3014,7 @@ static int s2mu004_muic_probe(struct platform_device *pdev)
 
 #if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC)
 	s2mu004_hv_muic_initialize(muic_data);
-#else
-	s2mu004_i2c_write_byte(muic_data->i2c, 0xd8, 0x84); /* OTP */
-	s2mu004_i2c_write_byte(muic_data->i2c, 0x2c, 0x55); /* OTP */
-	s2mu004_i2c_write_byte(muic_data->i2c, 0xc3, 0x88); /* OTP */
-	s2mu004_i2c_write_byte(muic_data->i2c, 0x4b, 0x00);
-	s2mu004_i2c_write_byte(muic_data->i2c, 0x49, 0x00);
-	s2mu004_i2c_write_byte(muic_data->i2c, 0x4a, 0x00);
-	s2mu004_i2c_write_byte(muic_data->i2c, 0x5f, 0x01);
-#endif
+#endif /* CONFIG_HV_MUIC_S2MU004_AFC */
 
 	ret = s2mu004_muic_reg_init(muic_data);
 	if (ret) {
@@ -3160,15 +3179,9 @@ static void s2mu004_muic_shutdown(struct platform_device *pdev)
 		pr_err("%s no muic i2c client\n", __func__);
 		return;
 	}
-
 #if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC)
 	s2mu004_hv_muic_remove(muic_data);
-#else
-	s2mu004_i2c_write_byte(muic_data->i2c, 0x4b, 0x00);
-	s2mu004_i2c_write_byte(muic_data->i2c, 0x49, 0x00);
-	s2mu004_i2c_write_byte(muic_data->i2c, 0x4a, 0x00);
-	s2mu004_i2c_write_byte(muic_data->i2c, 0x5f, 0x01);
-#endif
+#endif /* CONFIG_HV_MUIC_S2MU004_AFC */
 
 	ret = _s2mu004_muic_sel_path(muic_data, S2MU004_PATH_OPEN);
 	if (ret < 0)

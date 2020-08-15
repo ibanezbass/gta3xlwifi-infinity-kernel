@@ -251,6 +251,8 @@ struct etspi_data {
 	bool finger_on;
 	const char *chipid;
 	bool ldo_enabled;
+	int reset_count;
+	int interrupt_count;
 };
 
 int etspi_io_burst_read_register(struct etspi_data *etspi,

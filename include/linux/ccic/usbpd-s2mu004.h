@@ -274,7 +274,9 @@
 #define S2MU004_REG_INT_STATUS4_MSG_ERROR     (1<<1)
 
 /* reg 0xE5 */
-#define S2MU004_REG_INT_STATUS5_HARD_RESET     (1<<2)
+#define S2MU004_REG_INT_STATUS5_HARD_RESET    (1<<2)
+#define S2MU004_REG_INT_STATUS5_SOP_PRIME     (1<<6)
+#define S2MU004_REG_INT_STATUS5_SOP			  (1<<7)
 
 /* interrupt for checking message */
 #define ENABLED_INT_0	(S2MU004_REG_INT_STATUS0_MSG_ACCEPT)
@@ -292,8 +294,11 @@
 #define ENABLED_INT_3	0
 #define ENABLED_INT_4	(S2MU004_REG_INT_STATUS4_USB_DETACH |\
 				S2MU004_REG_INT_STATUS4_PLUG_IRQ |\
-				S2MU004_REG_INT_STATUS4_MSG_PASS)
-#define ENABLED_INT_5	(S2MU004_REG_INT_STATUS5_HARD_RESET)
+				S2MU004_REG_INT_STATUS4_MSG_PASS |\
+				S2MU004_REG_INT_STATUS4_MSG_ERROR)
+#define ENABLED_INT_5	(S2MU004_REG_INT_STATUS5_HARD_RESET |\
+				S2MU004_REG_INT_STATUS5_SOP_PRIME |\
+				S2MU004_REG_INT_STATUS5_SOP)
 
 /* S2MU004 I2C registers */
 enum s2mu004_usbpd_reg {
@@ -472,20 +477,6 @@ typedef enum {
 } CCIC_DETACH_TYPE;
 
 typedef enum {
-	PLUG_CTRL_RP0 = 0,
-	PLUG_CTRL_RP80 = 1,
-	PLUG_CTRL_RP180 = 2,
-	PLUG_CTRL_RP330 = 3
-} CCIC_RP_SCR_SEL;
-
-typedef enum {
-	TYPE_C_DETACH = 0,
-	TYPE_C_ATTACH_DFP = 1, /* Host */
-	TYPE_C_ATTACH_UFP = 2, /* Device */
-	TYPE_C_ATTACH_DRP = 3, /* Dual role */
-} CCIC_OTP_MODE;
-
-typedef enum {
 	PLUG_CTRL_RD = 0,
 	PLUG_CTRL_RP = 1,
 } CCIC_RP_RD_SEL;
@@ -543,6 +534,7 @@ struct s2mu004_usbpd_data {
 	int is_attached;
 #if defined(CONFIG_DUAL_ROLE_USB_INTF)
 	struct dual_role_phy_instance *dual_role;
+	struct typec_port *port;
 	struct dual_role_phy_desc *desc;
 	struct completion reverse_completion;
 	int try_state_change;
@@ -567,7 +559,9 @@ struct s2mu004_usbpd_data {
 	struct delayed_work water_detect_handler;
 	struct delayed_work ta_water_detect_handler;
 	struct delayed_work water_dry_handler;
-
+	int cc1_val;
+	int cc2_val;
+	int check_first_detach;
 	struct regulator *regulator;
 };
 

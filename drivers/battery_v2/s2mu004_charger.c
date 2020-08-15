@@ -117,6 +117,7 @@ static int s2mu004_charger_otg_control(
 			S2MU004_CHG_CTRL0, CHG_MODE, REG_MODE_MASK);
 		s2mu004_update_reg(charger->i2c, 0xAE, 0x80, 0xF0);
 	} else {
+#if 0
 		if (charger->is_charging) {
 			pr_info("%s: Charger is enabled and OTG Enabled received. Skip OTG Enable\n", __func__);
 			pr_info("%s: is_charging: %d, otg_on: %d",
@@ -128,6 +129,8 @@ static int s2mu004_charger_otg_control(
 			mutex_unlock(&charger->charger_mutex);
 			return 0;
 		}
+#endif
+
 #ifndef CONFIG_SEC_FACTORY
 		s2mu004_update_reg(charger->i2c, S2MU004_CHG_CTRL7, 0x0 << SET_VF_VBYP_SHIFT, SET_VF_VBYP_MASK);
 #endif
@@ -319,7 +322,7 @@ static void s2mu004_enable_charger_switch(
 		/* forced ASYNC */
 		s2mu004_update_reg(charger->i2c, 0x30, 0x03, 0x03);
 
-		mdelay(30);
+		msleep(30);
 
 		s2mu004_update_reg(charger->i2c, S2MU004_CHG_CTRL0, CHG_MODE, REG_MODE_MASK);
 
@@ -328,7 +331,7 @@ static void s2mu004_enable_charger_switch(
 				S2MU004_FC_CHG_TIMER_16hr << SET_TIME_CHG_SHIFT,
 				SET_TIME_CHG_MASK);
 
-		mdelay(100);
+		msleep(100);
 
 		/* Auto SYNC to ASYNC - default */
 		s2mu004_update_reg(charger->i2c, 0x30, 0x01, 0x03);
@@ -344,12 +347,12 @@ static void s2mu004_enable_charger_switch(
 			s2mu004_analog_ivr_switch(charger, DISABLE);
 		}
 #endif
-		mdelay(30);
+		msleep(30);
 		s2mu004_update_reg(charger->i2c, S2MU004_CHG_CTRL0, BUCK_MODE, REG_MODE_MASK);
 
 		/* async on */
 		s2mu004_update_reg(charger->i2c, 0x96, 0x01 << 3, 0x01 << 3);
-		mdelay(100);
+		msleep(100);
 	}
 }
 
@@ -372,7 +375,7 @@ static void s2mu004_set_buck(struct s2mu004_charger_data *charger, int enable)
 
 		/* async on */
 		s2mu004_update_reg(charger->i2c, 0x96, 0x01 << 3, 0x01 << 3);
-		mdelay(100);
+		msleep(100);
 	}
 }
 
@@ -666,9 +669,9 @@ static bool s2mu004_chg_init(struct s2mu004_charger_data *charger)
 	s2mu004_update_reg(charger->i2c, S2MU004_REG_SELFDIS_CFG3,
 			SELF_DISCHG_MODE_MASK, SELF_DISCHG_MODE_MASK);
 
-	/* Set Top-Off timer to 30 minutes */
+	/* Set Top-Off timer to 90 minutes */
 	s2mu004_update_reg(charger->i2c, S2MU004_CHG_CTRL17,
-			S2MU004_TOPOFF_TIMER_30m << TOP_OFF_TIME_SHIFT,
+			S2MU004_TOPOFF_TIMER_90m << TOP_OFF_TIME_SHIFT,
 			TOP_OFF_TIME_MASK);
 
 	s2mu004_read_reg(charger->i2c, S2MU004_CHG_CTRL17, &temp);
@@ -1535,7 +1538,7 @@ static void s2mu004_ivr_irq_work(struct work_struct *work)
 			reduce_input_current(charger);
 			ivr_cnt = 0;
 		}
-		mdelay(50);
+		msleep(50);
 
 		if (!(ivr_state & IVR_STATUS)) {
 			pr_info("%s: EXIT IVR WORK: check value (0x0D:0x%02x, input current:%d)\n", __func__,

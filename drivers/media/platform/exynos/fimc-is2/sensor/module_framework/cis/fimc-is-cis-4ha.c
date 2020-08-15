@@ -1688,6 +1688,73 @@ p_err:
 	return ret;
 }
 
+int sensor_4ha_cis_wait_streamoff(struct v4l2_subdev *subdev)
+{
+	int ret = 0;
+	struct fimc_is_cis *cis;
+	struct i2c_client *client;
+	cis_shared_data *cis_data;
+	u32 wait_cnt = 0, time_out_cnt = 250;
+	u8 sensor_fcount = 0;
+
+	BUG_ON(!subdev);
+
+	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
+	if (unlikely(!cis)) {
+		err("cis is NULL");
+		ret = -EINVAL;
+		goto p_err;
+	}
+
+	cis_data = cis->cis_data;
+	if (unlikely(!cis_data)) {
+		err("cis_data is NULL");
+		ret = -EINVAL;
+		goto p_err;
+	}
+
+	client = cis->client;
+	if (unlikely(!client)) {
+		err("client is NULL");
+		ret = -EINVAL;
+		goto p_err;
+	}
+
+	I2C_MUTEX_LOCK(cis->i2c_lock);
+	ret = fimc_is_sensor_read8(client, 0x0005, &sensor_fcount);
+	if (ret < 0)
+		err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x0005, sensor_fcount, ret);
+
+	/*
+	 * Read sensor frame counter (sensor_fcount address = 0x0005)
+	 * stream on (0x00 ~ 0xFE), stream off (0xFF)
+	 */
+	while (sensor_fcount != 0xFF) {
+		ret = fimc_is_sensor_read8(client, 0x0005, &sensor_fcount);
+		if (ret < 0)
+			err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x0005, sensor_fcount, ret);
+
+		usleep_range(CIS_STREAM_OFF_WAIT_TIME, CIS_STREAM_OFF_WAIT_TIME);
+		wait_cnt++;
+
+		if (wait_cnt >= time_out_cnt) {
+			err("[MOD:D:%d] %s, time out, wait_limit(%d) > time_out(%d), sensor_fcount(%d)",
+					cis->id, __func__, wait_cnt, time_out_cnt, sensor_fcount);
+			ret = -EINVAL;
+			goto p_err;
+		}
+
+		dbg_sensor(1, "[MOD:D:%d] %s, sensor_fcount(%d), (wait_limit(%d) < time_out(%d))\n",
+				cis->id, __func__, sensor_fcount, wait_cnt, time_out_cnt);
+	}
+
+	usleep_range(30000, 30000);
+
+p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
+	return ret;
+}
+
 static struct fimc_is_cis_ops cis_ops = {
 	.cis_init = sensor_4ha_cis_init,
 	.cis_log_status = sensor_4ha_cis_log_status,
@@ -1713,7 +1780,7 @@ static struct fimc_is_cis_ops cis_ops = {
 	.cis_get_min_digital_gain = sensor_4ha_cis_get_min_digital_gain,
 	.cis_get_max_digital_gain = sensor_4ha_cis_get_max_digital_gain,
 	.cis_compensate_gain_for_extremely_br = sensor_cis_compensate_gain_for_extremely_br,
-	.cis_wait_streamoff = sensor_cis_wait_streamoff,
+	.cis_wait_streamoff = sensor_4ha_cis_wait_streamoff,
 	.cis_wait_streamon = sensor_cis_wait_streamon,
 	.cis_set_initial_exposure = sensor_cis_set_initial_exposure,
 };
@@ -1893,33 +1960,39 @@ p_err:
 	return ret;
 }
 
-static int cis_4ha_remove(struct i2c_client *client)
-{
-	int ret = 0;
-	return ret;
-}
-
-static const struct of_device_id exynos_fimc_is_cis_4ha_match[] = {
+static const struct of_device_id sensor_cis_4ha_match[] = {
 	{
 		.compatible = "samsung,exynos5-fimc-is-cis-4ha",
 	},
 	{},
 };
-MODULE_DEVICE_TABLE(of, exynos_fimc_is_cis_4ha_match);
+MODULE_DEVICE_TABLE(of, sensor_cis_4ha_match);
 
-static const struct i2c_device_id cis_4ha_idt[] = {
+static const struct i2c_device_id sensor_cis_4ha_idt[] = {
 	{ SENSOR_NAME, 0 },
 	{},
 };
 
-static struct i2c_driver cis_4ha_driver = {
+static struct i2c_driver sensor_cis_4ha_driver = {
+	.probe	= cis_4ha_probe,
 	.driver = {
 		.name	= SENSOR_NAME,
 		.owner	= THIS_MODULE,
-		.of_match_table = exynos_fimc_is_cis_4ha_match
+		.of_match_table = sensor_cis_4ha_match,
+		.suppress_bind_attrs = true,
 	},
-	.probe	= cis_4ha_probe,
-	.remove	= cis_4ha_remove,
-	.id_table = cis_4ha_idt
+	.id_table = sensor_cis_4ha_idt
 };
-module_i2c_driver(cis_4ha_driver);
+
+static int __init sensor_cis_4ha_init(void)
+{
+	int ret;
+
+	ret = i2c_add_driver(&sensor_cis_4ha_driver);
+	if (ret)
+		err("failed to add %s driver: %d\n",
+			sensor_cis_4ha_driver.driver.name, ret);
+
+	return ret;
+}
+late_initcall_sync(sensor_cis_4ha_init);

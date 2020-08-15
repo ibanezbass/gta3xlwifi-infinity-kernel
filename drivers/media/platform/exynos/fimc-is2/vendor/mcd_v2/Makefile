@@ -13,3 +13,4 @@ obj-$(CONFIG_OIS_USE_RUMBA_SA) += fimc-is-device-ois_sa.o
 EXTRA_CFLAGS += -Idrivers/media/platform/exynos/fimc-is2
 EXTRA_CFLAGS += -Idrivers/media/platform/exynos/fimc-is2/include
 EXTRA_CFLAGS += -Idrivers/media/platform/exynos/fimc-is2/sensor/module_framework
+EXTRA_CFLAGS += -Idrivers/media/platform/exynos/fimc-is2/sensor/module_framework/cis

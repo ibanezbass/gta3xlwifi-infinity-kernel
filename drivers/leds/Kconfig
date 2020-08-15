@@ -639,6 +639,19 @@ config LEDS_S2MU106_FLASH
 	  If you say yes here you will get support for
 	  for the LEDS_S2MU106_FLASH led chip.
 
+config LEDS_S2MU205_FLASH
+	bool "FLASH LED support for the S2MU205"
+	depends on I2C
+	help
+	  If you say yes here you will get support for
+	  for the LEDS_S2MU205_FLASH led chip.
+
+config S2MU205_LEDS_I2C
+	bool "LED support for the S2MU205"
+	help
+	  If you say yes here you will get support for
+	  for the S2MU205_LEDS_I2C led chip.
+
 config LEDS_SUPPORT_FRONT_FLASH
 	bool "LED support for Front Flash"
 	help
@@ -648,6 +661,13 @@ config LEDS_SUPPORT_FRONT_FLASH_AUTO
 	bool "LED support for Front Flash Auto Mode"
 	help
 	  This option enables support for the LEDs.
+
+config LEDS_S2MU106_RGB
+	bool "RGB LED support for the S2MU106"
+	depends on (MFD_S2MU106) && I2C
+	help
+	  If you say yes here you will get support for
+	  for the LEDS_S2MU106_RGB led chip.
 
 comment "LED Triggers"
 source "drivers/leds/trigger/Kconfig"

@@ -37,8 +37,21 @@ struct uvdm_data {
 	void __user *pData; /* data pointer */
 };
 
+#ifdef CONFIG_COMPAT
+struct uvdm_data_32 {
+	unsigned short pid; /* Product ID */
+	char type; /* uvdm_data_type */
+	char dir; /* uvdm_direction_type */
+	unsigned int size; /* data size */
+	compat_uptr_t pData; /* data pointer */
+};
+#endif
+
 struct ccic_misc_dev {
 	struct uvdm_data u_data;
+#ifdef CONFIG_COMPAT
+	struct uvdm_data_32 u_data_32;
+#endif
 	atomic_t open_excl;
 	atomic_t ioctl_excl;
 	int (*uvdm_write)(void *data, int size);

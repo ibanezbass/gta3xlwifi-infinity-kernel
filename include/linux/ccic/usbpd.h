@@ -4,6 +4,11 @@
 #include <linux/ccic/usbpd_msg.h>
 #include <linux/muic/muic.h>
 
+#include <linux/time.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/ktime.h>
+
 #define MAX_CHARGING_VOLT		12000 /* 12V */
 #define USBPD_VOLT_UNIT			50 /* 50mV */
 #define USBPD_CURRENT_UNIT		10 /* 10mA */
@@ -18,22 +23,33 @@
 #define USBPD_nDiscoverIdentityCount	(20)
 
 /* Timer */
-#define tSrcTransition		(35)	/* 25~35 ms */
-#define tPSSourceOn		(480)	/* 390~480 ms */
+#define tSrcTransition		(25)	/* 25~35 ms */
+#define tPSSourceOn		(420)	/* 390~480 ms */
 #define tPSSourceOff		(750)	/* 750~960 ms */
-#define tSenderResponse		(1000)	/* 1000 ms */
+#if defined(CONFIG_SEC_FACTORY)
+#define tSenderResponse		(1100)	/* for UCT300 */
+#else
+#define tSenderResponse		(24)	/* 24~30ms */
+#endif
 #define tSenderResponseSRC	(300)	/* 1000 ms */
 #define tSendSourceCap		(10)	/* 1~2 s */
-#define tPSHardReset		(25)	/* 25~35 ms */
+#define tPSHardReset		(22)	/* 25~35 ms */
 #define tSinkWaitCap		(2500)	/* 2.1~2.5 s  */
-#define tPSTransition		(5500)	/* 450~550 ms */
+#define tPSTransition		(450)	/* 450~550 ms */
 #define tVCONNSourceOn		(100)	/* 24~30 ms */
-#define tVDMSenderResponse	(50)	/* 24~30 ms */
+#define tVDMSenderResponse	(35)	/* 24~30 ms */
 #define tVDMWaitModeEntry	(50)	/* 40~50  ms */
 #define tVDMWaitModeExit	(50)    /* 40~50  ms */
 #define tDiscoverIdentity	(50)	/* 40~50  ms */
 #define tSwapSourceStart        (20)	/* 20  ms */
-#define tTypeCSinkWaitCap       (310)	/* 310~620 ms */
+#if defined(CONFIG_SEC_FACTORY)
+#define tTypeCSinkWaitCap       (6100)	/* for UCT100 */
+#else
+#define tTypeCSinkWaitCap       (460)	/* 310~620 ms */
+#endif
+#define tTypeCSendSourceCap (100) /* 100~200ms Q*/
+#define tSrcRecover (880) /* 660~1000ms */
+#define tNoResponse (5500) /* 660~1000ms */
 
 /* Protocol States */
 typedef enum {
@@ -188,8 +204,79 @@ typedef enum {
 	PE_DFP_UVDM_Send_Message	= 0xD0,
 	PE_DFP_UVDM_Receive_Message	= 0xD1,
 
+	/* Dual Role */
+	PE_DR_SRC_Get_Source_Cap = 0xE0,
+	PE_DR_SRC_Give_Sink_Cap = 0xE1,
+	PE_DR_SNK_Get_Sink_Cap  = 0xE2,
+	PE_DR_SNK_Give_Source_Cap = 0xE3,
+	PE_DR_SRC_Get_Source_Cap_Ext	= 0xE4,
+	PE_DR_SNK_Give_Source_Cap_Ext	= 0xE5,
+
+	/* Bist Mode */
+	PE_BIST_Carrier_Mode = 0xE6,
+
+	/* for PD 3.0 */
+	PE_SRC_Send_Not_Supported	= 0xE7,
+	PE_SRC_Not_Supported_Received	= 0xE8,
+	PE_SRC_Chunk_Received	= 0xE9,
+
+	PE_SNK_Send_Not_Supported	= 0xEA,
+	PE_SNK_Not_Supported_Received	= 0xEB,
+	PE_SNK_Chunk_Received	= 0xEC,
+
+	PE_SRC_Send_Source_Alert	= 0xED,
+	PE_SNK_Source_Alert_Received	= 0xEE,
+	PE_SNK_Send_Sink_Alert	= 0xEF,
+	PE_SRC_Sink_Alert_Received	= 0xF0,
+
+	PE_SNK_Get_Source_Cap_Ext	= 0xF1,
+	PE_SRC_Give_Source_Cap_Ext	= 0xF2,
+	PE_SNK_Get_Source_Status	= 0xF3,
+	PE_SRC_Give_Source_Status	= 0xF4,
+	PE_SRC_Get_Sink_Status		= 0xF5,
+	PE_SNK_Give_Sink_Status		= 0xF6,
+	PE_SNK_Get_PPS_Status		= 0xF7,
+	PE_SRC_Give_PPS_Status		= 0xF8,
+
+	PE_Get_Battery_Cap	= 0xF9,
+	PE_Give_Battery_Cap	= 0xFA,
+	PE_Get_Battery_Status	= 0xFB,
+	PE_Give_Battery_Status	= 0xFC,
+	PE_Get_Manufacturer_Info	= 0xFD,
+	PE_Give_Manufacturer_Info	= 0xFE,
+
+	PE_Get_Country_Codes	= 0x10,
+	PE_Give_Country_Codes	= 0x11,
+	PE_Get_Country_Info		= 0x12,
+	PE_Give_Country_Info	= 0x13,
+	PE_Send_Security_Request	= 0x14,
+	PE_Send_Security_Response	= 0x15,
+	PE_Security_Response_Received	= 0x16,
+	PE_Send_Firmware_Update_Request	= 0x17,
+	PE_Send_Firmware_Update_Response	= 0x18,
+	PE_Firmware_Update_Response_Received	= 0x19,
+
+	/* for fast role swap */
+	PE_FRS_SRC_SNK_Evaluate_Swap	= 0x1A,
+	PE_FRS_SRC_SNK_Accept_Swap		= 0x1B,
+	PE_FRS_SRC_SNK_Transition_to_off = 0x1C,
+	PE_FRS_SRC_SNK_Assert_Rd		= 0x1D,
+	PE_FRS_SRC_SNK_Wait_Source_on	= 0x1E,
+
+	PE_FRS_SNK_SRC_Start_AMS		= 0x1F,
+	PE_FRS_SNK_SRC_Send_Swap		= 0x20,
+	PE_FRS_SNK_SRC_Transition_to_off = 0x21,
+	PE_FRS_SNK_SRC_Vbus_Applied		= 0x22,
+	PE_FRS_SNK_SRC_Assert_Rp		= 0x23,
+	PE_FRS_SNK_SRC_Source_on		= 0x24,
+
 	Error_Recovery			= 0xFF
 } policy_state;
+
+enum usbpd_manager_support {
+	MANAGER_SUPPORT,
+	MANAGER_NOT_SUPPORT,
+};
 
 typedef enum usbpd_manager_command {
 	MANAGER_REQ_GET_SNKCAP			= 1,
@@ -232,42 +319,80 @@ typedef enum usbpd_manager_event {
 	MANAGER_UVDM_SEND_MESSAGE		= 16,
 	MANAGER_UVDM_RECEIVE_MESSAGE		= 17,
 	MANAGER_START_DISCOVER_IDENTITY	= 18,
-	MANAGER_GET_SRC_CAP			= 19,
+	MANAGER_SEND_PR_SWAP	= 19,
+	MANAGER_SEND_DR_SWAP	= 20,
+	MANAGER_GET_SRC_CAP			= 21,
+
 } usbpd_manager_event_type;
 
 enum usbpd_msg_status {
-	MSG_GOODCRC	= 1<<0,
-	MSG_ACCEPT	= 1<<1,
-	MSG_PSRDY	= 1<<2,
-	MSG_REQUEST	= 1<<3,
-	MSG_REJECT	= 1<<4,
-	MSG_WAIT	= 1<<5,
-	MSG_ERROR	= 1<<6,
-	MSG_PING	= 1<<7,
-	MSG_GET_SNK_CAP = 1<<8,
-	MSG_GET_SRC_CAP = 1<<9,
-	MSG_SNK_CAP     = 1<<10,
-	MSG_SRC_CAP     = 1<<11,
-	MSG_PR_SWAP	= 1<<12,
-	MSG_DR_SWAP	= 1<<13,
-	MSG_VCONN_SWAP	= 1<<14,
-	VDM_DISCOVER_IDENTITY	= 1<<15,
-	VDM_DISCOVER_SVID	= 1<<16,
-	VDM_DISCOVER_MODE	= 1<<17,
-	VDM_ENTER_MODE		= 1<<18,
-	VDM_EXIT_MODE		= 1<<19,
-	VDM_ATTENTION		= 1<<20,
-	VDM_DP_STATUS_UPDATE	= 1<<21,
-	VDM_DP_CONFIGURE	= 1<<22,
-	MSG_SOFTRESET		= 1<<23,
-	PLUG_DETACH		= 1<<24,
-	PLUG_ATTACH		= 1<<25,
-	MSG_HARDRESET		= 1<<26,
-	CC_DETECT		= 1<<27,
-	UVDM_MSG		= 1<<28,
-	MSG_PASS		= 1<<29,
-	MSG_RID			= 1<<30,
-	MSG_NONE		= 1<<31,
+	MSG_GOODCRC	= 0,
+	MSG_ACCEPT	= 1,
+	MSG_PSRDY	= 2,
+	MSG_REQUEST	= 3,
+	MSG_REJECT	= 4,
+	MSG_WAIT	= 5,
+	MSG_ERROR	= 6,
+	MSG_PING	= 7,
+	MSG_GET_SNK_CAP = 8,
+	MSG_GET_SRC_CAP = 9,
+	MSG_SNK_CAP     = 10,
+	MSG_SRC_CAP     = 11,
+	MSG_PR_SWAP	= 12,
+	MSG_DR_SWAP	= 13,
+	MSG_VCONN_SWAP	= 14,
+	VDM_DISCOVER_IDENTITY	= 15,
+	VDM_DISCOVER_SVID	= 16,
+	VDM_DISCOVER_MODE	= 17,
+	VDM_ENTER_MODE		= 18,
+	VDM_EXIT_MODE		= 19,
+	VDM_ATTENTION		= 20,
+	VDM_DP_STATUS_UPDATE	= 21,
+	VDM_DP_CONFIGURE	= 22,
+	MSG_SOFTRESET		= 23,
+	PLUG_DETACH		= 24,
+	PLUG_ATTACH		= 25,
+	MSG_HARDRESET		= 26,
+	CC_DETECT		= 27,
+	UVDM_MSG		= 28,
+	MSG_PASS		= 29,
+	MSG_RID			= 30,
+	MSG_BIST		= 31,
+
+	/* PD 3.0 : Control Message */
+	MSG_NOT_SUPPORTED = 32,
+	MSG_GET_SOURCE_CAP_EXTENDED = 33,
+	MSG_GET_STATUS = 34,
+	MSG_FR_SWAP = 35,
+	MSG_GET_PPS_STATUS = 36,
+	MSG_GET_COUNTRY_CODES = 37,
+	MSG_GET_SINK_CAP_EXTENDED = 38,
+
+	/* PD 3.0 : Data Message */
+	MSG_BATTERY_STATUS = 39,
+	MSG_ALERT = 40,
+	MSG_GET_COUNTRY_INFO = 41,
+
+	/* PD 3.0 : Extended Message */
+	MSG_SOURCE_CAPABILITIES_EXTENDED = 42,
+	MSG_STATUS = 43,
+	MSG_GET_BATTERY_CAP = 44,
+	MSG_GET_BATTERY_STATUS = 45,
+	MSG_BATTERY_CAPABILITIES = 46,
+	MSG_GET_MANUFACTURER_INFO = 47,
+	MSG_MANUFACTURER_INFO = 48,
+	MSG_SECURITY_REQUEST = 49,
+	MSG_SECURITY_RESPONSE = 50,
+	MSG_FIRMWARE_UPDATE_REQUEST = 51,
+	MSG_FIRMWARE_UPDATE_RESPONSE = 52,
+	MSG_PPS_STATUS = 53,
+	MSG_COUNTRY_INFO = 54,
+	MSG_COUNTRY_CODES = 55,
+	MSG_SINK_CAPABILITIES_EXTENDED = 56,
+
+	MSG_NONE = 57,
+	/* Reserved */
+	MSG_RESERVED = 62,
 };
 
 /* Timer */
@@ -309,11 +434,19 @@ enum usbpd_policy_informed {
 	PLUG_DETACHED		= 5,
 };
 
+typedef enum {
+	PLUG_CTRL_RP0 = 0,
+	PLUG_CTRL_RP80 = 1,
+	PLUG_CTRL_RP180 = 2,
+	PLUG_CTRL_RP330 = 3
+} CCIC_RP_SCR_SEL;
+
 typedef struct usbpd_phy_ops {
 	/*    1st param should be 'usbpd_data *'    */
 	int    (*tx_msg)(void *, msg_header_type *, data_obj_type *);
 	int    (*rx_msg)(void *, msg_header_type *, data_obj_type *);
 	int    (*hard_reset)(void *);
+	void   (*soft_reset)(void *);
 	int    (*set_power_role)(void *, int);
 	int    (*get_power_role)(void *, int *);
 	int    (*set_data_role)(void *, int);
@@ -321,12 +454,20 @@ typedef struct usbpd_phy_ops {
 	int    (*set_vconn_source)(void *, int);
 	int    (*get_vconn_source)(void *, int *);
 	int    (*set_check_msg_pass)(void *, int);
-	unsigned   (*get_status)(void *, unsigned);
+	unsigned   (*get_status)(void *, u64);
 	bool   (*poll_status)(void *);
 	void   (*driver_reset)(void *);
 	int    (*set_otg_control)(void *, int);
 	void    (*get_vbus_short_check)(void *, bool *);
+	void    (*pd_vbus_short_check)(void *);
 	int    (*set_cc_control)(void *, int);
+	void    (*pr_swap)(void *, int);
+	int    (*vbus_on_check)(void *);
+	int		(*get_side_check)(void *_data);
+	int    (*set_rp_control)(void *, int);
+	void	(*set_pwr_opmode)(void *, int);
+	int    (*cc_instead_of_vbus)(void *, int);
+	int    (*op_mode_clear)(void *);
 } usbpd_phy_ops_type;
 
 struct policy_data {
@@ -343,6 +484,9 @@ struct policy_data {
 	bool			abnormal_state;
 	bool			sink_cap_received;
 	bool			send_sink_cap;
+	bool			txhardresetflag;
+	bool			pd_support;
+	bool			otgnotify_sent;
 };
 
 struct protocol_data {
@@ -400,9 +544,11 @@ struct usbpd_manager_data {
 	bool data_role_swap;
 	bool vconn_source_swap;
 	bool vbus_short;
+	int vb_cc_short_max_input_current;
 
 	bool flash_mode;
 	int prev_available_pdo;
+	int prev_current_pdo;
 	bool ps_rdy;
 
 	bool is_samsung_accessory_enter_mode;
@@ -427,6 +573,8 @@ struct usbpd_manager_data {
 	struct delayed_work select_pdo_handler;
 	struct delayed_work start_discover_msg_handler;
 	muic_attached_dev_t	attached_dev;
+
+	int pd_attached;
 };
 
 struct usbpd_data {
@@ -445,12 +593,19 @@ struct usbpd_data {
 	data_obj_type           sink_data_obj[2];
 	data_obj_type		source_request_obj;
 	struct usbpd_manager_data	manager;
+	struct workqueue_struct *policy_wqueue;
 	struct work_struct	worker;
 	struct completion	msg_arrived;
 	unsigned                wait_for_msg_arrived;
-	
+	int					id_matched;
+
+	int					msg_id;
+	int					specification_revision;
 	struct mutex		accept_mutex;
-	int					pd_support;
+	int 			is_prswap;
+
+	struct timeval		time1;
+	struct timeval		time2;
 };
 
 static inline struct usbpd_data *protocol_rx_to_usbpd(struct protocol_data *rx)
@@ -501,10 +656,13 @@ extern data_obj_type usbpd_manager_select_capability(struct usbpd_data *);
 extern bool usbpd_manager_vdm_request_enabled(struct usbpd_data *);
 extern void usbpd_manager_acc_handler_cancel(struct device *);
 extern void usbpd_manager_acc_detach_handler(struct work_struct *);
+extern void usbpd_manager_send_pr_swap(struct device *);
+extern void usbpd_manager_send_dr_swap(struct device *);
 extern void usbpd_policy_work(struct work_struct *);
 extern void usbpd_protocol_tx(struct usbpd_data *);
 extern void usbpd_protocol_rx(struct usbpd_data *);
 extern void usbpd_kick_policy_work(struct device *);
+extern void usbpd_cancel_policy_work(struct device *);
 extern void usbpd_rx_hard_reset(struct device *);
 extern void usbpd_rx_soft_reset(struct usbpd_data *);
 extern void usbpd_policy_reset(struct usbpd_data *, unsigned flag);
@@ -519,4 +677,14 @@ extern unsigned usbpd_wait_msg(struct usbpd_data *pd_data, unsigned msg_status,
 		unsigned ms);
 extern void usbpd_reinit(struct device *);
 extern void usbpd_init_protocol(struct usbpd_data *);
+extern void usbpd_init_counters(struct usbpd_data *);
+
+
+/* for usbpd certification polling */
+/* for usbpd certification polling */
+void usbpd_timer1_start(struct usbpd_data *pd_data);
+int usbpd_check_time1(struct usbpd_data *pd_data);
+void usbpd_timer2_start(struct usbpd_data *pd_data);
+int usbpd_check_time2(struct usbpd_data *pd_data);
+
 #endif

@@ -2415,6 +2415,29 @@ p_err:
 	return ret;
 }
 
+int fimc_is_sensor_s_ext_ctrls(struct fimc_is_device_sensor *device,
+	struct v4l2_ext_controls *ctrls)
+{
+	int ret = 0;
+	struct v4l2_subdev *subdev_module;
+
+	BUG_ON(!device);
+	BUG_ON(!device->subdev_module);
+	BUG_ON(!device->subdev_csi);
+	BUG_ON(!ctrls);
+
+	subdev_module = device->subdev_module;
+
+	ret = v4l2_subdev_call(subdev_module, core, s_ext_ctrls, ctrls);
+	if (ret) {
+		err("s_ext_ctrls is fail(%d)", ret);
+		goto p_err;
+	}
+
+p_err:
+	return ret;
+}
+
 int fimc_is_sensor_s_bns(struct fimc_is_device_sensor *device,
 	u32 ratio)
 {

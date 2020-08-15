@@ -35,6 +35,9 @@ static struct ccic_misc_dev *c_dev;
 #define DEXDOCK_PRODUCT_ID  0xA020
 #define NODE_OF_MISC "ccic_misc"
 #define CCIC_IOCTL_UVDM _IOWR('C', 0, struct uvdm_data)
+#ifdef CONFIG_COMPAT
+#define CCIC_IOCTL_UVDM_32 _IOWR('C', 0, struct uvdm_data_32)
+#endif
 
 static inline int _lock(atomic_t *excl)
 {
@@ -172,7 +175,58 @@ ccic_misc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			}
 		}
 		break;
+#ifdef CONFIG_COMPAT
+	case CCIC_IOCTL_UVDM_32:
+		pr_info("%s - CCIC_IOCTL_UVDM_32 cmd\n", __func__);
+		if (copy_from_user(&c_dev->u_data_32,  compat_ptr(arg),
+				sizeof(struct uvdm_data_32))) {
+			ret = -EIO;
+			pr_err("%s - copy_from_user error\n", __func__);
+			goto err1;
+		}
 
+		buf = kzalloc(MAX_BUF, GFP_KERNEL);
+		if (!buf) {
+			ret = -EINVAL;
+			pr_err("%s - kzalloc error\n", __func__);
+			goto err1;
+		}
+
+		if (c_dev->u_data_32.size > MAX_BUF) {
+			ret = -ENOMEM;
+			pr_err("%s - user data size is %d error\n", __func__, c_dev->u_data_32.size);
+			goto err;
+		}
+
+		if (c_dev->u_data_32.dir == DIR_OUT) {
+			if (copy_from_user(buf, compat_ptr(c_dev->u_data_32.pData),\
+					   c_dev->u_data_32.size)) {
+				ret = -EIO;
+				pr_err("%s - copy_from_user error\n", __func__);
+				goto err;
+			}
+			ret = send_uvdm_message(buf, c_dev->u_data_32.size);
+			if (ret < 0) {
+				pr_err("%s - send_uvdm_message error\n", __func__);
+				ret = -EINVAL;
+				goto err;
+			}
+		} else {
+			ret = receive_uvdm_message(buf, c_dev->u_data_32.size);
+			if (ret < 0) {
+				pr_err("%s - receive_uvdm_message error\n", __func__);
+				ret = -EINVAL;
+				goto err;
+			}
+			if (copy_to_user(compat_ptr(c_dev->u_data_32.pData),
+					 buf, ret)) {
+				ret = -EIO;
+				pr_err("%s - copy_to_user error\n", __func__);
+				goto err;
+			}
+		}
+		break;
+#endif
 	default:
 		pr_err("%s - unknown ioctl cmd : %d\n", __func__, cmd);
 		ret = -ENOIOCTLCMD;

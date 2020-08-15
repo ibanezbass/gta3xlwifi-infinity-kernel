@@ -48,6 +48,11 @@ int sec_ts_i2c_write(struct sec_ts_data *ts, u8 reg, u8 *data, int len)
 		goto err;
 	}
 
+#ifdef CONFIG_SAMSUNG_TUI
+	if (STUI_MODE_TOUCH_SEC & stui_get_mode())
+		return -EBUSY;
+#endif
+
 	buf[0] = reg;
 	memcpy(buf + 1, data, len);
 
@@ -105,6 +110,11 @@ int sec_ts_i2c_read(struct sec_ts_data *ts, u8 reg, u8 *data, int len)
 	struct i2c_msg msg[2];
 	int remain = len;
 	int i;
+
+#ifdef CONFIG_SAMSUNG_TUI
+	if (STUI_MODE_TOUCH_SEC & stui_get_mode())
+		return -EBUSY;
+#endif
 
 	if (ts->power_status == SEC_TS_STATE_POWER_OFF) {
 		input_err(true, &ts->client->dev, "%s: POWER_STATUS : OFF\n", __func__);
@@ -227,6 +237,11 @@ static int sec_ts_i2c_write_burst(struct sec_ts_data *ts, u8 *data, int len)
 	int retry;
 	int i;
 
+#ifdef CONFIG_SAMSUNG_TUI
+	if (STUI_MODE_TOUCH_SEC & stui_get_mode())
+		return -EBUSY;
+#endif
+
 	mutex_lock(&ts->i2c_mutex);
 	for (retry = 0; retry < SEC_TS_I2C_RETRY_CNT; retry++) {
 		ret = i2c_master_send(ts->client, data, len);
@@ -269,6 +284,11 @@ static int sec_ts_i2c_read_bulk(struct sec_ts_data *ts, u8 *data, int len)
 	msg.flags = I2C_M_RD;
 	msg.len = len;
 	msg.buf = data;
+
+#ifdef CONFIG_SAMSUNG_TUI
+	if (STUI_MODE_TOUCH_SEC & stui_get_mode())
+		return -EBUSY;
+#endif
 
 	mutex_lock(&ts->i2c_mutex);
 
@@ -876,6 +896,11 @@ static irqreturn_t sec_ts_irq_thread(int irq, void *ptr)
 {
 	struct sec_ts_data *ts = (struct sec_ts_data *)ptr;
 
+#ifdef CONFIG_SAMSUNG_TUI
+	if (STUI_MODE_TOUCH_SEC & stui_get_mode())
+		return IRQ_HANDLED;
+#endif
+
 	mutex_lock(&ts->eventlock);
 
 	sec_ts_read_event(ts);
@@ -1072,7 +1097,6 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 	int ret = 0;
 	int count = 0;
 	u32 ic_match_value;
-	int lcdtype = 0;
 #if 0 /*defined(CONFIG_EXYNOS_DECON_FB)*/
 	int connected;
 #endif
@@ -1158,7 +1182,7 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 	}
 #endif
 
-	if (strncmp(pdata->model_name, "G950", 4) == 0)
+	if ((strncmp(pdata->model_name, "G950", 4) == 0) || (strncmp(pdata->model_name, "J737", 4) == 0))
 		pdata->panel_revision = 0;
 	else
 		pdata->panel_revision = ((lcdtype >> 8) & 0xFF) >> 4;
@@ -1168,6 +1192,12 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 
 	if (of_property_read_u32(np, "sec,mis_cal_check", &pdata->mis_cal_check) < 0)
 		pdata->mis_cal_check = 0;
+
+	if (lcdtype == 0x116A01) {
+		input_info(true, &client->dev, "%s : A10 BOE Panel \n", __func__);
+		pdata->firmware_name = "tsp_sec/s6d7at0b01_a10_boe.fw";
+		pdata->bringup = 3;
+	}
 
 	pdata->support_sidegesture = of_property_read_bool(np, "sec,support_sidegesture");
 	pdata->support_dex = of_property_read_bool(np, "support_dex_mode");
@@ -1204,6 +1234,12 @@ static void sec_tclm_parse_dt(struct i2c_client *client, struct sec_tclm_data *t
 	if (of_property_read_u32(np, "sec,afe_base", &tdata->afe_base) < 0) {
 		tdata->afe_base = 0;
 		input_err(true, dev, "%s: Failed to get afe_base property\n", __func__);
+	}
+
+	if (lcdtype == 0x116A01) {
+		input_info(true, &client->dev, "%s : A10 BOE Panel \n", __func__);
+		tdata->tclm_level = 1;
+		tdata->afe_base = 0;
 	}
 
 	input_err(true, &client->dev, "%s: tclm_level %d, sec_afe_base %d\n", __func__, tdata->tclm_level, tdata->afe_base);
@@ -1632,6 +1668,9 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_info(true, &client->dev, "%s[%d] called!\n",
 			__func__, client->irq);
 #endif
+#ifdef CONFIG_SAMSUNG_TUI
+	tsp_info = ts;
+#endif
 
 	/* need remove below resource @ remove driver */
 #if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
@@ -1700,6 +1739,9 @@ error_allocate_pdata:
 #endif
 	ts_dup = NULL;
 #ifdef CONFIG_TRUSTONIC_TRUSTED_UI
+	tsp_info = NULL;
+#endif
+#ifdef CONFIG_SAMSUNG_TUI
 	tsp_info = NULL;
 #endif
 	input_err(true, &client->dev, "%s: failed(%d)\n", __func__, ret);
@@ -1902,6 +1944,11 @@ static void sec_ts_input_close(struct input_dev *dev)
 #ifdef MINORITY_REPORT
 	minority_report_sync_latest_value(ts);
 #endif
+
+#ifdef CONFIG_SAMSUNG_TUI
+	stui_cancel_session();
+#endif
+
 	sec_ts_stop_device(ts);
 
 	ts->abc_err_flag = true;
@@ -1980,6 +2027,9 @@ static int sec_ts_remove(struct i2c_client *client)
 	ts_dup = NULL;
 
 #ifdef CONFIG_TRUSTONIC_TRUSTED_UI
+	tsp_info = NULL;
+#endif
+#ifdef CONFIG_SAMSUNG_TUI
 	tsp_info = NULL;
 #endif
 
@@ -2171,6 +2221,47 @@ void trustedui_mode_off(void)
 		return;
 }
 EXPORT_SYMBOL(trustedui_mode_off);
+#endif
+
+#ifdef CONFIG_SAMSUNG_TUI
+extern int stui_i2c_lock(struct i2c_adapter *adap);
+extern int stui_i2c_unlock(struct i2c_adapter *adap);
+
+int stui_tsp_enter(void)
+{
+	int ret = 0;
+
+	if (!tsp_info)
+		return -EINVAL;
+
+	disable_irq(tsp_info->client->irq);
+	sec_ts_unlocked_release_all_finger(tsp_info);
+
+	ret = stui_i2c_lock(tsp_info->client->adapter);
+	if (ret) {
+		pr_err("[STUI] stui_i2c_lock failed : %d\n", ret);
+		enable_irq(tsp_info->client->irq);
+		return -1;
+	}
+
+	return 0;
+}
+
+int stui_tsp_exit(void)
+{
+	int ret = 0;
+
+	if (!tsp_info)
+		return -EINVAL;
+
+	ret = stui_i2c_unlock(tsp_info->client->adapter);
+	if (ret)
+		pr_err("[STUI] stui_i2c_unlock failed : %d\n", ret);
+
+	enable_irq(tsp_info->client->irq);
+
+	return ret;
+}
 #endif
 
 static const struct i2c_device_id sec_ts_id[] = {

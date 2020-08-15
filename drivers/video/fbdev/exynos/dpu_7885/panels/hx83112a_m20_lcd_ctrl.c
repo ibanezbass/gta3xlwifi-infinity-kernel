@@ -13,33 +13,28 @@
 #include <linux/i2c.h>
 #include <linux/module.h>
 
-#include "../dsim.h"
 #include "../decon.h"
-#include "dsim_panel.h"
 #include "../decon_notify.h"
+#include "../dsim.h"
+#include "dsim_panel.h"
 
 #include "hx83112a_m20_param.h"
 #include "dd.h"
-#include "../decon_board.h"
 
 #define PANEL_STATE_SUSPENED	0
 #define PANEL_STATE_RESUMED	1
 #define PANEL_STATE_SUSPENDING	2
 
-#define hx83112a_ID_REG			0xDA	/* LCD ID1,ID2,ID3 */
-#define hx83112a_ID_LEN			3
+#define HX83112A_ID_REG			0xDA	/* LCD ID1,ID2,ID3 */
+#define HX83112A_ID_LEN			3
 #define BRIGHTNESS_REG			0x51
 
 #define get_bit(value, shift, width)	((value >> shift) & (GENMASK(width - 1, 0)))
 
-#if defined(CONFIG_SEC_INCELL)
-#include <linux/sec_incell.h>
-#endif
-
 #define DSI_WRITE(cmd, size)		do {				\
 	ret = dsim_write_hl_data(lcd, cmd, size);			\
 	if (ret < 0)							\
-		dev_err(&lcd->ld->dev, "%s: failed to write %s\n", __func__, #cmd);	\
+		dev_info(&lcd->ld->dev, "%s: failed to write %s\n", __func__, #cmd);	\
 } while (0)
 
 struct lcd_info {
@@ -53,18 +48,18 @@ struct lcd_info {
 	union {
 		struct {
 			u8		reserved;
-			u8		id[hx83112a_ID_LEN];
+			u8		id[HX83112A_ID_LEN];
 		};
 		u32			value;
 	} id_info;
 
-	int						lux;
+	int				lux;
 
 	struct dsim_device		*dsim;
 	struct mutex			lock;
 
 	struct notifier_block		fb_notif_panel;
-	struct i2c_client		*backlight_client;
+	struct i2c_client		*blic_client;
 };
 
 
@@ -88,7 +83,7 @@ try_write:
 		if (--retry)
 			goto try_write;
 		else
-			dev_err(&lcd->ld->dev, "%s: fail. %02x, ret: %d\n", __func__, cmd[0], ret);
+			dev_info(&lcd->ld->dev, "%s: fail. %02x, ret: %d\n", __func__, cmd[0], ret);
 	}
 
 	return ret;
@@ -105,12 +100,13 @@ static int dsim_read_hl_data(struct lcd_info *lcd, u8 addr, u32 size, u8 *buf)
 
 try_read:
 	rx_size = dsim_read_data(lcd->dsim, MIPI_DSI_DCS_READ, (u32)addr, size, buf);
-	dev_info(&lcd->ld->dev, "%s: %02x, %d, %d\n", __func__, addr, size, rx_size);
+	dev_info(&lcd->ld->dev, "%s: %2d(%2d), %02x, %*ph%s\n", __func__, size, rx_size, addr,
+		min_t(u32, min_t(u32, size, rx_size), 5), buf, (rx_size > 5) ? "..." : "");
 	if (rx_size != size) {
 		if (--retry)
 			goto try_read;
 		else {
-			dev_err(&lcd->ld->dev, "%s: fail. %02x, %d\n", __func__, addr, rx_size);
+			dev_info(&lcd->ld->dev, "%s: fail. %02x, %d(%d)\n", __func__, addr, size, rx_size);
 			ret = -EPERM;
 		}
 	}
@@ -119,20 +115,37 @@ try_read:
 }
 #endif
 
-static int lm3632_array_write(struct lcd_info *lcd, const struct i2c_rom_data *eprom_ptr, int eprom_size)
+static int lm3632_array_write(struct i2c_client *client, u8 *ptr, u8 len)
 {
-	int i = 0;
+	unsigned int i = 0;
 	int ret = 0;
+	u8 command = 0, value = 0;
+	struct lcd_info *lcd = NULL;
 
-	if (!lcd->backlight_client || !lcdtype) {
+	if (!client)
+		return ret;
+
+	lcd = i2c_get_clientdata(client);
+	if (!lcd)
+		return ret;
+
+	if (!lcdtype) {
 		dev_info(&lcd->ld->dev, "%s: lcdtype: %d\n", __func__, lcdtype);
 		return ret;
 	}
 
-	for (i = 0; i < eprom_size; i++) {
-		ret = i2c_smbus_write_byte_data(lcd->backlight_client, eprom_ptr[i].addr, eprom_ptr[i].val);
+	if (len % 2) {
+		dev_info(&lcd->ld->dev, "%s: length(%d) invalid\n", __func__, len);
+		return ret;
+	}
+
+	for (i = 0; i < len; i += 2) {
+		command = ptr[i + 0];
+		value = ptr[i + 1];
+
+		ret = i2c_smbus_write_byte_data(client, command, value);
 		if (ret < 0)
-			dev_err(&lcd->ld->dev, "%s: fail. %d, %2x, %2x\n", __func__, ret, eprom_ptr[i].addr, eprom_ptr[i].val);
+			dev_info(&lcd->ld->dev, "%s: fail. %2x, %2x, %d\n", __func__, command, value, ret);
 	}
 
 	return ret;
@@ -141,7 +154,7 @@ static int lm3632_array_write(struct lcd_info *lcd, const struct i2c_rom_data *e
 static int dsim_panel_set_brightness(struct lcd_info *lcd, int force)
 {
 	int ret = 0;
-	unsigned char bl_reg[3]; // 0x51 0x0F 0xFF
+	unsigned char bl_reg[3] = {0, };
 
 	mutex_lock(&lcd->lock);
 
@@ -157,7 +170,9 @@ static int dsim_panel_set_brightness(struct lcd_info *lcd, int force)
 	bl_reg[2] = get_bit(brightness_table[lcd->brightness], 0, 8);
 
 	DSI_WRITE(bl_reg, ARRAY_SIZE(bl_reg));
-	dev_info(&lcd->ld->dev, "%s: platform BL : %d panel, BL reg 1:%x, BL reg 2:%x\n", __func__, lcd->bd->props.brightness, bl_reg[1], bl_reg[2]);
+
+	dev_info(&lcd->ld->dev, "%s: brightness: %3d, %4d(%2x %2x), lx: %d\n", __func__,
+		lcd->brightness, brightness_table[lcd->brightness], bl_reg[1], bl_reg[2], lcd->lux);
 
 exit:
 	mutex_unlock(&lcd->lock);
@@ -167,7 +182,9 @@ exit:
 
 static int panel_get_brightness(struct backlight_device *bd)
 {
-	return bd->props.brightness;
+	struct lcd_info *lcd = bl_get_data(bd);
+
+	return brightness_table[lcd->brightness];
 }
 
 static int panel_set_brightness(struct backlight_device *bd)
@@ -178,7 +195,7 @@ static int panel_set_brightness(struct backlight_device *bd)
 	if (lcd->state == PANEL_STATE_RESUMED) {
 		ret = dsim_panel_set_brightness(lcd, 0);
 		if (ret < 0)
-			dev_err(&lcd->ld->dev, "%s: failed to set brightness\n", __func__);
+			dev_info(&lcd->ld->dev, "%s: failed to set brightness\n", __func__);
 	}
 
 	return ret;
@@ -209,19 +226,26 @@ static int hx83112a_read_id(struct lcd_info *lcd)
 {
 	struct panel_private *priv = &lcd->dsim->priv;
 	int i, ret = 0;
+	struct decon_device *decon = get_decon_drvdata(0);
+	static char *LDI_BIT_DESC_ID[BITS_PER_BYTE * HX83112A_ID_LEN] = {
+		[0 ... 23] = "ID Read Fail",
+	};
 
 	lcd->id_info.value = 0;
 	priv->lcdconnected = lcd->connected = lcdtype ? 1 : 0;
 
-	for (i = 0; i < hx83112a_ID_LEN; i++) {
-		ret = dsim_read_hl_data(lcd, hx83112a_ID_REG + i, 1, &lcd->id_info.id[i]);
+	for (i = 0; i < HX83112A_ID_LEN; i++) {
+		ret = dsim_read_hl_data(lcd, HX83112A_ID_REG + i, 1, &lcd->id_info.id[i]);
 		if (ret < 0)
 			break;
 	}
 
 	if (ret < 0 || !lcd->id_info.value) {
 		priv->lcdconnected = lcd->connected = 0;
-		dev_err(&lcd->ld->dev, "%s: connected lcd is invalid\n", __func__);
+		dev_info(&lcd->ld->dev, "%s: connected lcd is invalid\n", __func__);
+
+		if (lcdtype && decon)
+			decon_abd_save_bit(&decon->abd, BITS_PER_BYTE * HX83112A_ID_LEN, cpu_to_be32(lcd->id_info.value), LDI_BIT_DESC_ID);
 	}
 
 	dev_info(&lcd->ld->dev, "%s: %x\n", __func__, cpu_to_be32(lcd->id_info.value));
@@ -237,7 +261,6 @@ static int hx83112a_displayon_late(struct lcd_info *lcd)
 	dev_info(&lcd->ld->dev, "%s\n", __func__);
 
 	DSI_WRITE(SEQ_DISPLAY_ON, ARRAY_SIZE(SEQ_DISPLAY_ON));
-	dsim_panel_set_brightness(lcd, 1);
 
 	return ret;
 }
@@ -372,45 +395,16 @@ static int fb_notifier_callback(struct notifier_block *self,
 	if (evdata->info->node)
 		return NOTIFY_DONE;
 
-	if (fb_blank == FB_BLANK_UNBLANK)
+	if (fb_blank == FB_BLANK_UNBLANK) {
+		mutex_lock(&lcd->lock);
 		hx83112a_displayon_late(lcd);
+		mutex_unlock(&lcd->lock);
+
+		dsim_panel_set_brightness(lcd, 1);
+	}
 
 	return NOTIFY_DONE;
 }
-
-#if defined(CONFIG_SEC_INCELL)
-static void incell_blank_unblank(void *drv_data)
-{
-	struct fb_info *info = registered_fb[0];
-	struct decon_device *decon = get_decon_drvdata(0);
-	struct decon_mode_info psr;
-
-	decon_to_psr_info(decon, &psr);
-
-	dsim_info("+ %s\n", __func__);
-
-	if (!lock_fb_info(info))
-		return;
-
-	if (decon->state == DECON_STATE_OFF) {
-		dsim_info("decon status is inactive\n");
-		goto exit;
-	}
-
-	info->flags |= FBINFO_MISC_USEREVENT;
-	decon->esd_recovery = 1;
-	decon->ignore_vsync = 1;
-	fb_blank(info, FB_BLANK_POWERDOWN);
-	fb_blank(info, FB_BLANK_UNBLANK);
-	decon->esd_recovery = 0;
-	decon->ignore_vsync = 0;
-	info->flags &= ~FBINFO_MISC_USEREVENT;
-exit:
-	unlock_fb_info(info);
-
-	dsim_info("- %s\n", __func__);
-}
-#endif
 
 static int lm3632_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
@@ -428,14 +422,14 @@ static int lm3632_probe(struct i2c_client *client,
 	}
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
-		dev_err(&lcd->ld->dev, "%s: need I2C_FUNC_I2C\n", __func__);
+		dev_info(&lcd->ld->dev, "%s: need I2C_FUNC_I2C\n", __func__);
 		ret = -ENODEV;
 		goto exit;
 	}
 
 	i2c_set_clientdata(client, lcd);
 
-	lcd->backlight_client = client;
+	lcd->blic_client = client;
 
 	dev_info(&lcd->ld->dev, "%s: %s %s\n", __func__, dev_name(&client->adapter->dev), of_node_full_name(client->dev.of_node));
 
@@ -443,27 +437,27 @@ exit:
 	return ret;
 }
 
-static struct i2c_device_id lm3632_id[] = {
+static struct i2c_device_id blic_i2c_id[] = {
 	{"lm3632", 0},
 	{},
 };
 
-MODULE_DEVICE_TABLE(i2c, lm3632_id);
+MODULE_DEVICE_TABLE(i2c, blic_i2c_id);
 
-static const struct of_device_id lm3632_i2c_dt_ids[] = {
+static const struct of_device_id blic_i2c_dt_ids[] = {
 	{ .compatible = "i2c,lm3632" },
 	{ }
 };
 
-MODULE_DEVICE_TABLE(of, lm3632_i2c_dt_ids);
+MODULE_DEVICE_TABLE(of, blic_i2c_dt_ids);
 
-static struct i2c_driver lm3632_i2c_driver = {
+static struct i2c_driver blic_i2c_driver = {
 	.driver = {
 		.owner	= THIS_MODULE,
 		.name	= "lm3632",
-		.of_match_table	= of_match_ptr(lm3632_i2c_dt_ids),
+		.of_match_table	= of_match_ptr(blic_i2c_dt_ids),
 	},
-	.id_table = lm3632_id,
+	.id_table = blic_i2c_id,
 	.probe = lm3632_probe,
 };
 
@@ -481,17 +475,13 @@ static int hx83112a_probe(struct lcd_info *lcd)
 
 	ret = hx83112a_read_init_info(lcd);
 	if (ret < 0)
-		dev_err(&lcd->ld->dev, "%s: failed to init information\n", __func__);
+		dev_info(&lcd->ld->dev, "%s: failed to init information\n", __func__);
 
 	lcd->fb_notif_panel.notifier_call = fb_notifier_callback;
 	decon_register_notifier(&lcd->fb_notif_panel);
 
-#if defined(CONFIG_SEC_INCELL)
-	incell_data.blank_unblank = incell_blank_unblank;
-#endif
-
-	lm3632_id->driver_data = (kernel_ulong_t)lcd;
-	i2c_add_driver(&lm3632_i2c_driver);
+	blic_i2c_id->driver_data = (kernel_ulong_t)lcd;
+	i2c_add_driver(&blic_i2c_driver);
 
 	dev_info(&lcd->ld->dev, "- %s\n", __func__);
 
@@ -516,18 +506,6 @@ static ssize_t window_type_show(struct device *dev,
 	sprintf(buf, "%02x %02x %02x\n", lcd->id_info.id[0], lcd->id_info.id[1], lcd->id_info.id[2]);
 
 	return strlen(buf);
-}
-
-static ssize_t brightness_table_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	int i;
-	char *pos = buf;
-
-	for (i = 0; i <= EXTEND_BRIGHTNESS; i++)
-		pos += sprintf(pos, "%3d %3d\n", i, brightness_table[i]);
-
-	return pos - buf;
 }
 
 static ssize_t lux_show(struct device *dev,
@@ -562,13 +540,11 @@ static ssize_t lux_store(struct device *dev,
 
 static DEVICE_ATTR(lcd_type, 0444, lcd_type_show, NULL);
 static DEVICE_ATTR(window_type, 0444, window_type_show, NULL);
-static DEVICE_ATTR(brightness_table, 0444, brightness_table_show, NULL);
 static DEVICE_ATTR(lux, 0644, lux_show, lux_store);
 
 static struct attribute *lcd_sysfs_attributes[] = {
 	&dev_attr_lcd_type.attr,
 	&dev_attr_window_type.attr,
-	&dev_attr_brightness_table.attr,
 	&dev_attr_lux.attr,
 	NULL,
 };
@@ -580,13 +556,15 @@ static const struct attribute_group lcd_sysfs_attr_group = {
 static void lcd_init_sysfs(struct lcd_info *lcd)
 {
 	int ret = 0;
-	struct i2c_client *clients[] = {lcd->backlight_client, NULL};
+	struct i2c_client *clients[] = {lcd->blic_client, NULL};
 
 	ret = sysfs_create_group(&lcd->ld->dev.kobj, &lcd_sysfs_attr_group);
 	if (ret < 0)
-		dev_err(&lcd->ld->dev, "failed to add lcd sysfs\n");
+		dev_info(&lcd->ld->dev, "failed to add lcd sysfs\n");
 
 	init_debugfs_backlight(lcd->bd, brightness_table, clients);
+
+	init_debugfs_param("blic_init", &LM3632_INIT, U8_MAX, ARRAY_SIZE(LM3632_INIT), 2);
 }
 
 static int dsim_panel_probe(struct dsim_device *dsim)
@@ -620,7 +598,7 @@ static int dsim_panel_probe(struct dsim_device *dsim)
 	lcd->dsim = dsim;
 	ret = hx83112a_probe(lcd);
 	if (ret < 0)
-		dev_err(&lcd->ld->dev, "%s: failed to probe panel\n", __func__);
+		dev_info(&lcd->ld->dev, "%s: failed to probe panel\n", __func__);
 
 	lcd_init_sysfs(lcd);
 	dev_info(&lcd->ld->dev, "%s: %s: done\n", kbasename(__FILE__), __func__);
@@ -634,9 +612,7 @@ static int dsim_panel_resume_early(struct dsim_device *dsim)
 
 	dev_info(&lcd->ld->dev, "+ %s\n", __func__);
 
-	/* VSP VSN setting, So, It should be called before power enabling */
-
-	lm3632_array_write(lcd, LM3632_INIT, ARRAY_SIZE(LM3632_INIT));
+	lm3632_array_write(lcd->blic_client, LM3632_INIT, ARRAY_SIZE(LM3632_INIT));
 
 	dev_info(&lcd->ld->dev, "- %s: %d, %d\n", __func__, lcd->state, lcd->connected);
 
@@ -693,3 +669,5 @@ struct dsim_lcd_driver hx83112a_mipi_lcd_driver = {
 	.displayon	= dsim_panel_displayon,
 	.suspend	= dsim_panel_suspend,
 };
+__XX_ADD_LCD_DRIVER(hx83112a_mipi_lcd_driver);
+

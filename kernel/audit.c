@@ -64,7 +64,6 @@
 #include <linux/security.h>
 #endif
 #include <linux/freezer.h>
-#include <linux/tty.h>
 #include <linux/pid_namespace.h>
 #include <net/netns/generic.h>
 
@@ -523,18 +522,20 @@ static void flush_hold_queue(void)
 {
 	struct sk_buff *skb;
 
-	if (!audit_default || !audit_pid)
+// [ SEC_SELINUX_PORTING_COMMON
+	if (!audit_default || !audit_pid || !audit_sock)
 		return;
-
+// ] SEC_SELINUX_PORTING_COMMON
 	skb = skb_dequeue(&audit_skb_hold_queue);
 	if (likely(!skb))
 		return;
 
-	while (skb && audit_pid) {
+// [ SEC_SELINUX_PORTING_COMMON
+	while (skb && audit_pid && audit_sock) {
 		kauditd_send_skb(skb);
 		skb = skb_dequeue(&audit_skb_hold_queue);
 	}
-
+// ] SEC_SELINUX_PORTING_COMMON
 	/*
 	 * if auditd just disappeared but we
 	 * dequeued an skb we need to drop ref
@@ -556,8 +557,10 @@ static int kauditd_thread(void *dummy)
 		if (skb) {
 			if (skb_queue_len(&audit_skb_queue) <= audit_backlog_limit)
 				wake_up(&audit_backlog_wait);
-			if (audit_pid)
+// [ SEC_SELINUX_PORTING_COMMON
+			if (audit_pid && audit_sock)
 				kauditd_send_skb(skb);
+// ] SEC_SELINUX_PORTING_COMMON
 			else
 				audit_printk_skb(skb);
 			continue;
@@ -775,6 +778,8 @@ static void audit_log_feature_change(int which, u32 old_feature, u32 new_feature
 		return;
 
 	ab = audit_log_start(NULL, GFP_KERNEL, AUDIT_FEATURE_CHANGE);
+	if (!ab)
+		return;
 	audit_log_task_info(ab, current);
 	audit_log_format(ab, " feature=%s old=%u new=%u old_lock=%u new_lock=%u res=%d",
 			 audit_feature_names[which], !!old_feature, !!new_feature,
@@ -1912,21 +1917,14 @@ void audit_log_task_info(struct audit_buffer *ab, struct task_struct *tsk)
 {
 	const struct cred *cred;
 	char comm[sizeof(tsk->comm)];
-	char *tty;
+	struct tty_struct *tty;
 
 	if (!ab)
 		return;
 
 	/* tsk == current */
 	cred = current_cred();
-
-	spin_lock_irq(&tsk->sighand->siglock);
-	if (tsk->signal && tsk->signal->tty && tsk->signal->tty->name)
-		tty = tsk->signal->tty->name;
-	else
-		tty = "(none)";
-	spin_unlock_irq(&tsk->sighand->siglock);
-
+	tty = audit_get_tty(tsk);
 	audit_log_format(ab,
 			 " ppid=%d pid=%d auid=%u uid=%u gid=%u"
 			 " euid=%u suid=%u fsuid=%u"
@@ -1942,11 +1940,11 @@ void audit_log_task_info(struct audit_buffer *ab, struct task_struct *tsk)
 			 from_kgid(&init_user_ns, cred->egid),
 			 from_kgid(&init_user_ns, cred->sgid),
 			 from_kgid(&init_user_ns, cred->fsgid),
-			 tty, audit_get_sessionid(tsk));
-
+			 tty ? tty_name(tty) : "(none)",
+			 audit_get_sessionid(tsk));
+	audit_put_tty(tty);
 	audit_log_format(ab, " comm=");
 	audit_log_untrustedstring(ab, get_task_comm(comm, tsk));
-
 	audit_log_d_path_exe(ab, tsk->mm);
 	audit_log_task_context(ab);
 }

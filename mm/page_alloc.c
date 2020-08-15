@@ -2487,9 +2487,6 @@ static bool __zone_watermark_ok(struct zone *z, unsigned int order,
 		if (!area->nr_free)
 			continue;
 
-		if (alloc_harder)
-			return true;
-
 		for (mt = 0; mt < MIGRATE_PCPTYPES; mt++) {
 			if (!list_empty(&area->free_list[mt]))
 				return true;
@@ -2501,6 +2498,9 @@ static bool __zone_watermark_ok(struct zone *z, unsigned int order,
 			return true;
 		}
 #endif
+		if (alloc_harder &&
+			!list_empty(&area->free_list[MIGRATE_HIGHATOMIC]))
+			return true;
 	}
 	return false;
 }
@@ -2762,10 +2762,8 @@ void warn_alloc_failed(gfp_t gfp_mask, unsigned int order, const char *fmt, ...)
 		current->comm, order, gfp_mask);
 
 	dump_stack();
-	if (!should_suppress_show_mem()) {
-		show_mem_extra_call_notifiers();
+	if (!should_suppress_show_mem())
 		show_mem(filter);
-	}
 }
 
 static inline struct page *
@@ -3135,8 +3133,6 @@ retry:
 		 * the allocation is high priority and these type of
 		 * allocations are system rather than user orientated
 		 */
-		ac->zonelist = node_zonelist(numa_node_id(), gfp_mask);
-
 		page = __alloc_pages_high_priority(gfp_mask, order, ac);
 
 		if (page) {
@@ -3282,8 +3278,13 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 		.nodemask = nodemask,
 		.migratetype = gfpflags_to_migratetype(gfp_mask),
 	};
-
+	gfp_t gfp_highuser_movable = GFP_HIGHUSER | __GFP_MOVABLE;
+	
 	gfp_mask &= gfp_allowed_mask;
+	
+	// The request GFP_HIGHUSER | __GFP_MOVABLE also allocates from CMA.
+	if ((gfp_highuser_movable & gfp_mask) == gfp_highuser_movable)
+		gfp_mask |= __GFP_CMA;
 
 	lockdep_trace_alloc(gfp_mask);
 

@@ -44,24 +44,20 @@
 // Reference Version : GC5035 Setting Beta V0.40.xlsx
 
 static struct fimc_is_sensor_cfg config_gc5035[] = {
-	/*2576x1932@30fps */
-	FIMC_IS_SENSOR_CFG_EXT(2576, 1932, 30, 19, 0, CSI_DATA_LANES_2, 884, 0, 0, 0),
-	/* 2560x1440@30fps */
-	FIMC_IS_SENSOR_CFG_EXT(2560, 1440, 30, 19, 1, CSI_DATA_LANES_2, 884, 0, 0, 0),
-	/* 2224x1080@30fps */
-	FIMC_IS_SENSOR_CFG_EXT(2224, 1080, 30, 19, 2, CSI_DATA_LANES_2, 884, 0, 0, 0),
-	/* 1920x1920@30fps */
-	FIMC_IS_SENSOR_CFG_EXT(1920, 1920, 30, 19, 3, CSI_DATA_LANES_2, 884, 0, 0, 0),
-	/* 2576x1932@24fps */
-	FIMC_IS_SENSOR_CFG_EXT(2576, 1932, 24, 19, 4, CSI_DATA_LANES_2, 884, 0, 0, 0),
-	/* 2560x1440@24fps */
-	FIMC_IS_SENSOR_CFG_EXT(2560, 1440, 24, 19, 5, CSI_DATA_LANES_2, 884, 0, 0, 0),
-	/* 2224x1080@24fps */
-	FIMC_IS_SENSOR_CFG_EXT(2224, 1080, 24, 19, 6, CSI_DATA_LANES_2, 884, 0, 0, 0),
-	/*1920x1920@24fps */
-	FIMC_IS_SENSOR_CFG_EXT(1920, 1920, 24, 19, 7, CSI_DATA_LANES_2, 884, 0, 0, 0),
-	/*640x480@120fps */
-	FIMC_IS_SENSOR_CFG_EXT(640, 480, 120, 9, 8, CSI_DATA_LANES_2, 442, 0, 0, 0),
+	/* 2576x1932@30fps 4:3 */
+	FIMC_IS_SENSOR_CFG_EXT(2576, 1932, 30, 19, 0, CSI_DATA_LANES_2, 897, 0, 0, 0),
+	/* 2560x1440@30fps 16:9 */
+	FIMC_IS_SENSOR_CFG_EXT(2560, 1440, 30, 19, 1, CSI_DATA_LANES_2, 897, 0, 0, 0),
+	/* 2224x1080@30fps 18.5:9 */
+	FIMC_IS_SENSOR_CFG_EXT(2224, 1080, 30, 19, 2, CSI_DATA_LANES_2, 897, 0, 0, 0),
+	/* 2576x1188@30fps 19.5:9 */
+	FIMC_IS_SENSOR_CFG_EXT(2576, 1188, 30, 19, 3, CSI_DATA_LANES_2, 897, 0, 0, 0),
+	/* 2576x1160@30fps 20:9 */
+	FIMC_IS_SENSOR_CFG_EXT(2576, 1160, 30, 19, 4, CSI_DATA_LANES_2, 897, 0, 0, 0),
+	/* 1920x1920@30fps 1:1 */
+	FIMC_IS_SENSOR_CFG_EXT(1920, 1920, 30, 19, 5, CSI_DATA_LANES_2, 897, 0, 0, 0),
+	/*800x600@60fps */
+	FIMC_IS_SENSOR_CFG_EXT(800, 600, 60, 9, 6, CSI_DATA_LANES_2, 897, 0, 0, 0),
 };
 
 static struct fimc_is_vci vci_module_gc5035[] = {
@@ -112,6 +108,9 @@ static int module_gc5035_power_setpin(struct device *dev,
 	int gpio_none = 0;
 	int gpio_1p2_a2p8_en = 0;
 	int gpio_cam_core_en = 0;
+	int gpio_cam_dvdd_en = 0;
+	char *cam_dvdd_1p2 = NULL;
+	char *cam_avdd_2p8 = NULL;
 	struct fimc_is_core *core;
 	bool shared_mclk = false;
 	bool shared_camio_1p2_2p8 = false;
@@ -143,11 +142,10 @@ static int module_gc5035_power_setpin(struct device *dev,
 		gpio_request_one(gpio_mclk, GPIOF_OUT_INIT_LOW, "CAM_MCLK_OUTPUT_LOW");
 		gpio_free(gpio_mclk);
 	}
-	
+
 	gpio_1p2_a2p8_en = of_get_named_gpio(dnode, "gpio_1p2_a2p8_en", 0);
 	if (!gpio_is_valid(gpio_1p2_a2p8_en)) {
-		dev_err(dev, "failed to get gpio_1p2_a2p8_en\n");
-		return -EINVAL;
+		dev_warn(dev, "Failed to get regulator_avdd name property\n");
 	} else {
 		gpio_request_one(gpio_1p2_a2p8_en, GPIOF_OUT_INIT_LOW, "CAM_VDDIO_EN");
 		gpio_free(gpio_1p2_a2p8_en);
@@ -155,10 +153,26 @@ static int module_gc5035_power_setpin(struct device *dev,
 
 	gpio_cam_core_en = of_get_named_gpio(dnode, "gpio_cam_core_en", 0);
 	if (!gpio_is_valid(gpio_cam_core_en)) {
-		dev_err(dev, "failed to get gpio_cam_core_en\n");
+		dev_warn(dev, "failed to get gpio_cam_core_en\n");
 	} else {
 		gpio_request_one(gpio_cam_core_en, GPIOF_OUT_INIT_LOW, "CAM_GPIO_OUTPUT_LOW");
 		gpio_free(gpio_cam_core_en);
+	}
+
+	gpio_cam_dvdd_en = of_get_named_gpio(dnode, "gpio_cam_dvdd_en", 0);
+	if (!gpio_is_valid(gpio_cam_dvdd_en)) {
+		dev_warn(dev, "failed to get gpio_cam_dvdd_en\n");
+	} else {
+		gpio_request_one(gpio_cam_dvdd_en, GPIOF_OUT_INIT_LOW, "CAM_GPIO_OUTPUT_LOW");
+		gpio_free(gpio_cam_dvdd_en);
+	}
+
+	if (of_property_read_string(dnode, "cam_dvdd_1p2", (const char **) &cam_dvdd_1p2)) {
+		dev_info(dev, "Failed to get regulator_dvdd name property\n");
+	}
+
+	if (of_property_read_string(dnode, "cam_avdd_2p8", (const char **) &cam_avdd_2p8)) {
+		dev_info(dev, "Failed to get regulator_avdd name property\n");
 	}
 
 	shared_mclk = of_property_read_bool(dnode, "shared_mclk");
@@ -175,16 +189,23 @@ static int module_gc5035_power_setpin(struct device *dev,
 	} else {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 200); //ldo3
 	}
-	
+
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_reset, "sen_rst low", PIN_OUTPUT, 0, 0);
-	if (gpio_1p2_a2p8_en)
+	if (gpio_is_valid(gpio_1p2_a2p8_en))
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_1p2_a2p8_en, "camio_1p2_2p8_en", PIN_OUTPUT, 1, 50);
+	else {
+		if(gpio_is_valid(gpio_cam_dvdd_en))
+			SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_dvdd_en, "gpio_cam_dvdd_en", PIN_OUTPUT, 1, 50);
+		else
+			SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, cam_dvdd_1p2, PIN_REGULATOR, 1, 50);
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, cam_avdd_2p8, PIN_REGULATOR, 1, 50);
+	}
 
 	if(shared_camio_1p2_2p8) {
 		SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, SRT_ACQUIRE,
 				&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
 	}
-	
+
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_reset, "sen_rst high", PIN_OUTPUT, 1, 100);
 
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "pin", PIN_FUNCTION, 2, 50);
@@ -192,26 +213,33 @@ static int module_gc5035_power_setpin(struct device *dev,
 		SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, SRT_ACQUIRE,
 				&core->shared_rsc_slock[SHARED_PIN0], &core->shared_rsc_count[SHARED_PIN0], 1);
 	}
-	
+
 	/* Normal off */
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 0, 0);
-	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 1, 0);
 	if(shared_mclk) {
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 1, 0);
 		SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, SRT_RELEASE,
 				&core->shared_rsc_slock[SHARED_PIN0], &core->shared_rsc_count[SHARED_PIN0], 0);
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 0, 2000);
 	}
-	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 0, 0);
-	
+
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_reset, "sen_rst low", PIN_OUTPUT, 0, 20);
-	
-	if (gpio_1p2_a2p8_en)
+
+	if (gpio_is_valid(gpio_1p2_a2p8_en))
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_1p2_a2p8_en, "camio_1p2_2p8_en", PIN_OUTPUT, 0, 50);
+	else {
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, cam_avdd_2p8, PIN_REGULATOR, 0, 50);
+		if(gpio_is_valid(gpio_cam_dvdd_en))
+			SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_dvdd_en, "gpio_cam_dvdd_en", PIN_OUTPUT, 0, 50);
+		else
+			SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, cam_dvdd_1p2, PIN_REGULATOR, 0, 50);
+	}
 
 	if(shared_camio_1p2_2p8) {
 		SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, SRT_RELEASE,
 				&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
 	}
-	
+
 	if (gpio_is_valid(gpio_cam_core_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_core_en, "gpio_cam_core_en", PIN_OUTPUT, 0, 0);
 	} else {
@@ -258,7 +286,7 @@ int sensor_module_gc5035_probe(struct platform_device *pdev)
 		goto p_err;
 	}
 
-	probe_info("%s pdata->id(%d), module_enum id(%d), position(%d) \n", 
+	probe_info("%s pdata->id(%d), module_enum id(%d), position(%d) \n",
 		__func__, pdata->id, atomic_read(&device->module_count), pdata->position);
 	probe_info("%s start1\n", __func__);
 	module = &device->module_enum[atomic_read(&device->module_count)];
@@ -281,7 +309,7 @@ int sensor_module_gc5035_probe(struct platform_device *pdev)
 	module->max_framerate = 120;
 	module->position = pdata->position;
 	module->mode = CSI_MODE_DT_ONLY;
-	module->lanes = CSI_DATA_LANES_4;
+	module->lanes = CSI_DATA_LANES_2;
 	module->bitwidth = 10;
 	module->vcis = ARRAY_SIZE(vci_module_gc5035);
 	module->vci = vci_module_gc5035;
@@ -291,7 +319,7 @@ int sensor_module_gc5035_probe(struct platform_device *pdev)
 	module->cfgs = ARRAY_SIZE(config_gc5035);
 	module->cfg = config_gc5035;
 	module->ops = NULL;
-	
+
     /* Sensor peri */
 	module->private_data = kzalloc(sizeof(struct fimc_is_device_sensor_peri), GFP_KERNEL);
 	if (!module->private_data) {
@@ -385,15 +413,6 @@ p_err:
 	return ret;
 }
 
-static int sensor_module_gc5035_remove(struct platform_device *pdev)
-{
-	int ret = 0;
-
-	info("%s\n", __func__);
-
-	return ret;
-}
-
 static const struct of_device_id exynos_fimc_is_sensor_module_gc5035_match[] = {
 	{
 		.compatible = "samsung,sensor-module-gc5035",
@@ -403,8 +422,6 @@ static const struct of_device_id exynos_fimc_is_sensor_module_gc5035_match[] = {
 MODULE_DEVICE_TABLE(of, exynos_fimc_is_sensor_module_gc5035_match);
 
 static struct platform_driver sensor_module_gc5035_driver = {
-	.probe  = sensor_module_gc5035_probe,
-	.remove = sensor_module_gc5035_remove,
 	.driver = {
 		.name   = "FIMC-IS-SENSOR-MODULE-GC5035",
 		.owner  = THIS_MODULE,
@@ -412,5 +429,18 @@ static struct platform_driver sensor_module_gc5035_driver = {
 	}
 };
 
-module_platform_driver(sensor_module_gc5035_driver);
+
+static int __init fimc_is_sensor_module_gc5035_init(void)
+{
+	int ret;
+
+	ret = platform_driver_probe(&sensor_module_gc5035_driver,
+				sensor_module_gc5035_probe);
+	if (ret)
+		err("failed to probe %s driver: %d\n",
+			sensor_module_gc5035_driver.driver.name, ret);
+
+	return ret;
+}
+late_initcall(fimc_is_sensor_module_gc5035_init);
 

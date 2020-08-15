@@ -171,18 +171,29 @@ static int sensor_3l6_wait_stream_off_status(cis_shared_data *cis_data)
 int sensor_3l6_cis_init(struct v4l2_subdev *subdev)
 {
 	int ret = 0;
-	struct fimc_is_cis *cis;
+	struct fimc_is_core *core = NULL;
+	struct fimc_is_cis *cis = NULL;
 	u32 setfile_index = 0;
 	cis_setting_info setinfo;
+	struct fimc_is_device_sensor *device = NULL;
+	struct fimc_is_module_enum *module = NULL;
 #ifdef USE_CAMERA_HW_BIG_DATA
 	struct cam_hw_param *hw_param = NULL;
 	struct fimc_is_device_sensor_peri *sensor_peri = NULL;
 #endif
+	int retryCount = 3;
 
 	setinfo.param = NULL;
 	setinfo.return_value = 0;
 
 	BUG_ON(!subdev);
+	BUG_ON(!fimc_is_dev);
+
+	core = (struct fimc_is_core *)dev_get_drvdata(fimc_is_dev);
+	if (!core) {
+		probe_info("core device is not yet probed");
+		return -EINVAL;
+	}
 
 	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
 	if (!cis) {
@@ -191,13 +202,40 @@ int sensor_3l6_cis_init(struct v4l2_subdev *subdev)
 		goto p_err;
 	}
 
+	probe_info("%s sensor_id=%d\n", __func__, cis->device);
+
+	device = &core->sensor[cis->device];
+
 	BUG_ON(!cis->cis_data);
 	memset(cis->cis_data, 0, sizeof(cis_shared_data));
 	cis->rev_flag = false;
 
+retryCheck:
 	ret = sensor_cis_check_rev(cis);
 	probe_info("%s sensor_cis_check_rev:%d\n", __func__,ret);
 	if (ret < 0) {
+		if (retryCount > 0) {
+			retryCount--;
+			probe_info("%s sensor rev check fail!!! Sensor Power reset\n", __func__);
+
+			ret = fimc_is_sensor_g_module(device, &module);
+			if (ret) {
+				merr("fimc_is_sensor_g_module is fail(%d)", device, ret);
+				goto p_err;
+			}
+
+			clear_bit(FIMC_IS_SENSOR_GPIO_ON, &device->state);
+			clear_bit(FIMC_IS_MODULE_GPIO_ON, &module->state);
+
+			ret = fimc_is_sensor_gpio_on(device);
+			if (ret) {
+				warn("fimc_is_sensor_gpio_on is fail(%d)", ret);
+			} else {
+				ret = 0;
+				goto retryCheck;
+			}
+		}
+
 #ifdef USE_CAMERA_HW_BIG_DATA
 		sensor_peri = container_of(cis, struct fimc_is_device_sensor_peri, cis);
 		if (sensor_peri)
@@ -277,15 +315,23 @@ int sensor_3l6_cis_log_status(struct v4l2_subdev *subdev)
 
 	ret = fimc_is_sensor_read8(client, 0x0002, &data8);
 	if (unlikely(!ret))
-		dbg_sensor(1, "[SEN:DUMP] revision_number(%x)\n", data8);
+		pr_err("[SEN:DUMP] revision_number(%x)\n", data8);
 
 	ret = fimc_is_sensor_read8(client, 0x0005, &data8);
 	if (unlikely(!ret))
-		dbg_sensor(1, "[SEN:DUMP] frame_count(%x)\n", data8);
+		pr_err("[SEN:DUMP] frame_count(%x)\n", data8);
 
 	ret = fimc_is_sensor_read8(client, 0x0100, &data8);
 	if (unlikely(!ret))
-		dbg_sensor(1, "[SEN:DUMP] mode_select(%x)\n", data8);
+		pr_err("[SEN:DUMP] mode_select(%x)\n", data8);
+
+	ret = fimc_is_sensor_read16(client, 0x0340, &data16);
+	if (unlikely(!ret))
+		pr_err("[SEN:DUMP] 0x0340 register(%x)\n", data16);
+
+	ret = fimc_is_sensor_read16(client, 0x0202, &data16);
+	if (unlikely(!ret))
+		pr_err("[SEN:DUMP] 0x0202 register(%x)\n", data16);
 
 	sensor_cis_dump_registers(subdev, sensor_3l6_setfiles[0], sensor_3l6_setfile_sizes[0]);
 
@@ -372,11 +418,9 @@ int sensor_3l6_cis_set_global_setting(struct v4l2_subdev *subdev)
 	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
 	BUG_ON(!cis);
 
-	/* ARM start */
-	ret = fimc_is_sensor_write16(cis->client, 0xFCFC, 0xD000);
-	ret = fimc_is_sensor_write8(cis->client, 0x6010, 0x1);
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	/* 3ms delay to operate sensor FW */
-	usleep_range(3000, 3000);
+	usleep_range(8000, 8000);
 
 	/* setfile global setting is at camera entrance */
 	ret = sensor_cis_set_registers(subdev, sensor_3l6_global, sensor_3l6_global_size);
@@ -388,6 +432,7 @@ int sensor_3l6_cis_set_global_setting(struct v4l2_subdev *subdev)
 	dbg_sensor(1, "[%s] global setting done\n", __func__);
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -398,6 +443,7 @@ static bool sensor_3l6_is_padf_enable(u32 mode)
 	{
 		case SENSOR_3L6_MODE_1280x720_120FPS:
 		case SENSOR_3L6_MODE_1028x772_120FPS:
+		case SENSOR_3L6_MODE_1024x768_120FPS:
 			return false;
 		default:
 			return true;
@@ -451,18 +497,12 @@ int sensor_3l6_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 	}
 	else {
 		dbg_sensor(1, "USE_MS_PDAF: [%s] NOT using pdaf\n", __func__);
-		if (mode == SENSOR_3L6_MODE_1028x772_120FPS) {
-			cis->cis_data->cur_pos_x = (sensor_3l6_setfiles[mode][CURR_X_INDEX_3L6] - CALIBRATE_CUR_X_3L6) >> 2;
-			cis->cis_data->cur_pos_y = (sensor_3l6_setfiles[mode][CURR_Y_INDEX_3L6] - CALIBRATE_CUR_Y_3L6) >> 2;
-		}
-		else if (mode == SENSOR_3L6_MODE_1280x720_120FPS) {
-			cis->cis_data->cur_pos_x = (sensor_3l6_setfiles[mode][CURR_X_INDEX_3L6] - CALIBRATE_CUR_X_3L6) >> 1;
-			cis->cis_data->cur_pos_y = (sensor_3l6_setfiles[mode][CURR_Y_INDEX_3L6] - CALIBRATE_CUR_Y_3L6) >> 1;
-		}
+		cis->cis_data->cur_pos_x = 0;
+		cis->cis_data->cur_pos_y = 0;
 	}
 	dbg_sensor(1, "USE_MS_PDAF: [%s] cur_pos_x [%d] cur_pos_y [%d] \n", __func__, cis->cis_data->cur_pos_x, cis->cis_data->cur_pos_y);
 #endif /* defined (USE_MS_PDAF) */
-
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	ret = sensor_cis_set_registers(subdev, sensor_3l6_setfiles[mode], sensor_3l6_setfile_sizes[mode]);
 	if (ret < 0) {
 		err("sensor_3l6_set_registers fail!!");
@@ -472,6 +512,7 @@ int sensor_3l6_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 	dbg_sensor(1, "[%s] mode changed(%d)\n", __func__, mode);
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -537,7 +578,7 @@ int sensor_3l6_cis_set_size(struct v4l2_subdev *subdev, cis_shared_data *cis_dat
 		ret = -EINVAL;
 		goto p_err;
 	}
-
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	/* 1. page_select */
 	ret = fimc_is_sensor_write16(client, 0x6028, 0x2000);
 	if (ret < 0)
@@ -631,6 +672,7 @@ int sensor_3l6_cis_set_size(struct v4l2_subdev *subdev, cis_shared_data *cis_dat
 #endif
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
 
@@ -669,24 +711,25 @@ int sensor_3l6_cis_stream_on(struct v4l2_subdev *subdev)
 	if (ret < 0)
 		err("[%s] sensor_3l6_cis_group_param_hold_func fail\n", __func__);
 
-
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	/* Sensor stream on */
-	ret = fimc_is_sensor_write16(client, 0x3402, 0x4E42);
-	if (ret < 0)
-		err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x3402, 0x4E42, ret);
-
+	ret = fimc_is_sensor_write16(client, 0x3892, 0x3600);
 	ret = fimc_is_sensor_write16(client, 0x3C1E, 0x0100);
 	if (ret < 0)
 		err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x3C1E, 0x0100, ret);
 
+	usleep_range(3000, 3000);
 	ret = fimc_is_sensor_write16(client, 0x0100, 0x0100);
 	if (ret < 0)
 		err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x0100, 0x0100, ret);
 
+	usleep_range(3000, 3000);
 	ret = fimc_is_sensor_write16(client, 0x3C1E, 0x0000);
 	if (ret < 0)
 		err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x3C1E, 0x0000, ret);
 
+	usleep_range(3000, 3000);
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	cis_data->stream_on = true;
 
 #ifdef DEBUG_SENSOR_TIME
@@ -1374,12 +1417,12 @@ int sensor_3l6_cis_get_min_analog_gain(struct v4l2_subdev *subdev, u32 *min_agai
 	}
 
 	cis_data = cis->cis_data;
-
+#if 0
 	ret = fimc_is_sensor_read16(client, 0x0084, &read_value);
 	if (ret < 0)
 		err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x0084, read_value, ret);
-
-	cis_data->min_analog_gain[0] = read_value;
+#endif
+	cis_data->min_analog_gain[0] = 0x0020;//read_value;
 
 	cis_data->min_analog_gain[1] = sensor_cis_calc_again_permile(read_value);
 
@@ -1428,12 +1471,12 @@ int sensor_3l6_cis_get_max_analog_gain(struct v4l2_subdev *subdev, u32 *max_agai
 	}
 
 	cis_data = cis->cis_data;
-
+#if 0
 	ret = fimc_is_sensor_read16(client, 0x0086, &read_value);
 	if (ret < 0)
 		err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x0086, read_value, ret);
-
-	cis_data->max_analog_gain[0] = read_value;
+#endif
+	cis_data->max_analog_gain[0] = 0x0200;//read_value;
 
 	cis_data->max_analog_gain[1] = sensor_cis_calc_again_permile(read_value);
 
@@ -1576,7 +1619,7 @@ int sensor_3l6_cis_get_digital_gain(struct v4l2_subdev *subdev, u32 *dgain)
 		ret = hold;
 		goto p_err;
 	}
-
+	I2C_MUTEX_LOCK(cis->i2c_lock);
 	ret = fimc_is_sensor_read16(client, 0x020E, &digital_gain);
 	if (ret < 0)
 		goto p_err;
@@ -1592,6 +1635,7 @@ int sensor_3l6_cis_get_digital_gain(struct v4l2_subdev *subdev, u32 *dgain)
 #endif
 
 p_err:
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	if (hold > 0) {
 		hold = sensor_3l6_cis_group_param_hold_func(subdev, 0x00);
 		if (hold < 0)
@@ -1746,10 +1790,13 @@ int sensor_3l6_cis_wait_streamoff(struct v4l2_subdev *subdev)
 		dbg_sensor(1, "[MOD:D:%d] %s, sensor_fcount(%d), (wait_limit(%d) < time_out(%d))\n",
 				cis->id, __func__, sensor_fcount, wait_cnt, time_out_cnt);
 	}
+	#if defined(CONFIG_CAMERA_AAS_V20E)
+		msleep(7);
+	#endif
 
 	do_gettimeofday (&t_end);
 
-        u_delay = (t_end.tv_sec * 1000000 + t_end.tv_usec) - (t_start.tv_sec * 1000000 + t_start.tv_usec);
+	u_delay = (t_end.tv_sec * 1000000 + t_end.tv_usec) - (t_start.tv_sec * 1000000 + t_start.tv_usec);
 	info("%s:%d timediff min_delay[%ld] u_delay[%ld][required_sleep[%ld]] sensor_fcount(%d)\n", __func__, __LINE__,
 			min_delay, u_delay,  min_delay - u_delay, sensor_fcount);
 
@@ -1801,13 +1848,18 @@ int cis_3l6_probe(struct i2c_client *client,
 	struct fimc_is_cis *cis = NULL;
 	struct fimc_is_device_sensor *device = NULL;
 	struct fimc_is_device_sensor_peri *sensor_peri = NULL;
-	u32 sensor_id = 0;
+	u32 sensor_id[FIMC_IS_STREAM_COUNT] = {0, };
+	u32 sensor_id_len;
+	const u32 *sensor_id_spec;
 	char const *setfile;
 	struct device *dev;
 	struct device_node *dnode;
+	int i;
 
 	BUG_ON(!client);
 	BUG_ON(!fimc_is_dev);
+
+	probe_info("***** %s start *****\n", __func__);
 
 	core = (struct fimc_is_core *)dev_get_drvdata(fimc_is_dev);
 	if (!core) {
@@ -1818,68 +1870,91 @@ int cis_3l6_probe(struct i2c_client *client,
 	dev = &client->dev;
 	dnode = dev->of_node;
 
-	ret = of_property_read_u32(dnode, "id", &sensor_id);
+	sensor_id_spec = of_get_property(dnode, "id", &sensor_id_len);
+	if (!sensor_id_spec) {
+		err("sensor_id num read is fail(%d)", ret);
+		goto p_err;
+	}
+	sensor_id_len /= sizeof(*sensor_id_spec);
+
+	ret = of_property_read_u32_array(dnode, "id", sensor_id, sensor_id_len);
 	if (ret) {
-		err("sensor id read is fail(%d)", ret);
+		err("sensor_id read is fail(%d)", ret);
 		goto p_err;
 	}
 
-	probe_info("%s sensor id %d\n", __func__, sensor_id);
+	for (i = 0; i < sensor_id_len; i++) {
+		probe_info("%s sensor_id %d\n", __func__, sensor_id[i]);
+		device = &core->sensor[sensor_id[i]];
 
-	device = &core->sensor[sensor_id];
-
-	sensor_peri = find_peri_by_cis_id(device, SENSOR_NAME_S5K3L6);
-	if (!sensor_peri) {
-		probe_info("sensor peri is not yet probed");
-		return -EPROBE_DEFER;
-	}
-
-	cis = &sensor_peri->cis;
-	if (!cis) {
-		err("cis is NULL");
-		ret = -ENOMEM;
-		goto p_err;
-	}
-
-	subdev_cis = kzalloc(sizeof(struct v4l2_subdev), GFP_KERNEL);
-	if (!subdev_cis) {
-		probe_err("subdev_cis is NULL");
-		ret = -ENOMEM;
-		goto p_err;
-	}
-	sensor_peri->subdev_cis = subdev_cis;
-
-	cis->id = SENSOR_NAME_S5K3L6;
-	cis->subdev = subdev_cis;
-	cis->device = 0;
-	cis->client = client;
-	sensor_peri->module->client = cis->client;
-	cis->ctrl_delay = N_PLUS_TWO_FRAME;
-
-	cis->cis_data = kzalloc(sizeof(cis_shared_data), GFP_KERNEL);
-	if (!cis->cis_data) {
-		err("cis_data is NULL");
-		ret = -ENOMEM;
-		goto p_err;
-	}
-	cis->cis_ops = &cis_ops;
-
-	/* belows are depend on sensor cis. MUST check sensor spec */
-	cis->bayer_order = OTF_INPUT_ORDER_BAYER_GR_BG;
-
-	if (of_property_read_bool(dnode, "sensor_f_number")) {
-		ret = of_property_read_u32(dnode, "sensor_f_number", &cis->aperture_num);
-		if (ret) {
-			warn("f-number read is fail(%d)",ret);
+		sensor_peri = find_peri_by_cis_id(device, SENSOR_NAME_S5K3L6);
+		if (!sensor_peri) {
+			probe_info("sensor peri is not yet probed");
+			return -EPROBE_DEFER;
 		}
-	} else {
-		cis->aperture_num = F2_2;
 	}
 
-	probe_info("%s f-number %d\n", __func__, cis->aperture_num);
+	for (i = 0; i < sensor_id_len; i++) {
+		device = &core->sensor[sensor_id[i]];
+		sensor_peri = find_peri_by_cis_id(device, SENSOR_NAME_S5K3L6);
 
-	cis->use_dgain = true;
-	cis->hdr_ctrl_by_again = false;
+		cis = &sensor_peri->cis;
+		if (!cis) {
+			err("cis is NULL");
+			ret = -ENOMEM;
+			goto p_err;
+		}
+
+		subdev_cis = kzalloc(sizeof(struct v4l2_subdev), GFP_KERNEL);
+		if (!subdev_cis) {
+			probe_err("subdev_cis is NULL");
+			ret = -ENOMEM;
+			goto p_err;
+		}
+
+		sensor_peri->subdev_cis = subdev_cis;
+
+		cis->id = SENSOR_NAME_S5K3L6;
+		cis->subdev = subdev_cis;
+		cis->device = sensor_id[i];
+		cis->client = client;
+		sensor_peri->module->client = cis->client;
+		cis->ctrl_delay = N_PLUS_TWO_FRAME;
+
+		cis->cis_data = kzalloc(sizeof(cis_shared_data), GFP_KERNEL);
+		if (!cis->cis_data) {
+			err("cis_data is NULL");
+			ret = -ENOMEM;
+			goto p_err;
+		}
+		cis->cis_ops = &cis_ops;
+
+		/* belows are depend on sensor cis. MUST check sensor spec */
+		cis->bayer_order = OTF_INPUT_ORDER_BAYER_GR_BG;
+
+		if (of_property_read_bool(dnode, "sensor_f_number")) {
+			ret = of_property_read_u32(dnode, "sensor_f_number", &cis->aperture_num);
+			if (ret) {
+				warn("f-number read is fail(%d)",ret);
+			}
+		} else {
+			cis->aperture_num = F2_2;
+		}
+
+		probe_info("%s f-number %d\n", __func__, cis->aperture_num);
+
+		cis->use_dgain = true;
+		cis->hdr_ctrl_by_again = false;
+
+		cis->use_initial_ae = of_property_read_bool(dnode, "use_initial_ae");
+		if (cis->use_initial_ae)
+			probe_info("%s use_initial_ae(%d)\n", __func__, cis->use_initial_ae);
+
+		v4l2_i2c_subdev_init(subdev_cis, client, &subdev_ops);
+		v4l2_set_subdevdata(subdev_cis, cis);
+		v4l2_set_subdev_hostdata(subdev_cis, device);
+		snprintf(subdev_cis->name, V4L2_SUBDEV_NAME_SIZE, "cis-subdev.%d", cis->id);
+	}
 
 	ret = of_property_read_string(dnode, "setfile", &setfile);
 	if (ret) {
@@ -1914,11 +1989,6 @@ int cis_3l6_probe(struct i2c_client *client,
 		sensor_3l6_max_setfile_num = ARRAY_SIZE(sensor_3l6_setfiles_A);
 		sensor_3l6_pllinfos = sensor_3l6_pllinfos_A;
 	}
-
-	v4l2_i2c_subdev_init(subdev_cis, client, &subdev_ops);
-	v4l2_set_subdevdata(subdev_cis, cis);
-	v4l2_set_subdev_hostdata(subdev_cis, device);
-	snprintf(subdev_cis->name, V4L2_SUBDEV_NAME_SIZE, "cis-subdev.%d", cis->id);
 
 	probe_info("%s done\n", __func__);
 
@@ -1956,3 +2026,4 @@ static struct i2c_driver cis_3l6_driver = {
 	.id_table = cis_3l6_idt
 };
 module_i2c_driver(cis_3l6_driver);
+

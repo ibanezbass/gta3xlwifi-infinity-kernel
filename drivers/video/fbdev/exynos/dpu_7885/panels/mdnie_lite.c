@@ -924,6 +924,7 @@ static int fb_notifier_callback(struct notifier_block *self,
 
 	switch (event) {
 	case FB_EVENT_BLANK:
+	case DECON_EVENT_DOZE:
 		break;
 	default:
 		return NOTIFY_DONE;
@@ -933,10 +934,20 @@ static int fb_notifier_callback(struct notifier_block *self,
 
 	fb_blank = *(int *)evdata->data;
 
-	dev_info(mdnie->dev, "%s: %d\n", __func__, fb_blank);
+	dev_info(mdnie->dev, "%s: event: %lu, blank: %d\n", __func__, event, fb_blank);
 
 	if (evdata->info->node)
 		return NOTIFY_DONE;
+
+	if (event == DECON_EVENT_DOZE) {
+		mutex_lock(&mdnie->lock);
+		mdnie->lpm = 1;
+		mutex_unlock(&mdnie->lock);
+	} else if (event == FB_EVENT_BLANK) {
+		mutex_lock(&mdnie->lock);
+		mdnie->lpm = 0;
+		mutex_unlock(&mdnie->lock);
+	}
 
 	if (fb_blank == FB_BLANK_UNBLANK) {
 		mutex_lock(&mdnie->lock);

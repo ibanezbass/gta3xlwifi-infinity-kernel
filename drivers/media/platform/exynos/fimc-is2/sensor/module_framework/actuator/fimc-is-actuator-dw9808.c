@@ -397,6 +397,140 @@ p_err:
 	return ret;
 }
 
+#ifdef USE_CAMERA_ACT_DRIVER_SOFT_LANDING 
+int sensor_dw9808_actuator_wait_busy(struct v4l2_subdev *subdev)
+{
+	u32 info;
+	int count = 0;
+	msleep(5);
+	do {
+		sensor_dw9808_actuator_get_status(subdev, &info);
+		if (info == ACTUATOR_STATUS_BUSY) {
+			msleep(10);
+		}
+		count += 1;
+	}while (info == ACTUATOR_STATUS_BUSY && count < 15);
+	return 0;
+}
+
+int sensor_dw9808_actuator_soft_landing(struct v4l2_subdev *subdev)
+{
+	int ret = 0;
+	struct fimc_is_actuator *actuator;
+	struct i2c_client *client;
+
+	u8 i2c_data[2];
+	u8 pos1, pos2;
+	u16 position;
+
+#ifdef DEBUG_ACTUATOR_TIME
+	struct timeval st, end;
+	do_gettimeofday(&st);
+#endif
+
+	BUG_ON(!subdev);
+	actuator = (struct fimc_is_actuator *)v4l2_get_subdevdata(subdev);
+	BUG_ON(!actuator);    
+	client = actuator->client;
+	if (unlikely(!client)) {
+		err("client is NULL");
+		ret = -EINVAL;
+		goto p_err;
+	}
+	sensor_dw9808_actuator_wait_busy(subdev);
+
+	ret = fimc_is_sensor_addr8_read8(client, REG_VCM_MSB, &pos1);
+	if (ret < 0)
+		goto p_err;
+	ret = fimc_is_sensor_addr8_read8(client, REG_VCM_LSB, &pos2);
+	if (ret < 0)
+		goto p_err;
+	pos1 = pos1 & 0x03;
+	position = ((u16)pos1 << 8) | pos2;
+
+	/* Set the PRESET register */
+	i2c_data[0] = REG_PRESET;
+	i2c_data[1] = pos1 & 0x02 ? 0xff : position>>1;
+	//i2c_data[1] = pos1 & 0x03 ? 0xff : position;
+	ret = fimc_is_sensor_addr8_write8(client, i2c_data[0], i2c_data[1]);
+	if(ret < 0)
+		goto p_err;
+	sensor_dw9808_actuator_wait_busy(subdev);
+
+	/*It may be required for further tuning*/
+#if 0
+	/*  Set NRC_STEP */ 
+	i2c_data[0] = REG_NRC_STEP;
+	i2c_data[1] = 0xf5;       
+	ret = fimc_is_sensor_addr8_write8(client, i2c_data[0], i2c_data[1]);    
+	if (ret < 0)
+		goto p_err;
+	sensor_dw9808_actuator_wait_busy(subdev);
+#endif
+
+	/*It may be required for further tuning*/
+#if 0
+	/*Setting SACT register*/
+	i2c_data[0] = REG_RESONANCE;
+	i2c_data[1] = 0x3f;		//0x20 default   
+	ret = fimc_is_sensor_addr8_write8(client, i2c_data[0], i2c_data[1]);
+	if(ret < 0)
+		goto p_err;
+	sensor_dw9808_actuator_wait_busy(subdev);
+#endif
+
+	/* Enable RING Mode*/   
+	i2c_data[0] = REG_CONTROL;
+	i2c_data[1] = 0x02; 
+	ret = fimc_is_sensor_addr8_write8(client, i2c_data[0], i2c_data[1]);	
+	if (ret < 0)
+		goto p_err;
+	sensor_dw9808_actuator_wait_busy(subdev);
+	/* Set SAC[2:0] and SAC[7:2] as 101 00 001 i.e SAC4 & clock divide x1   */   
+	i2c_data[0] = REG_MODE;
+	i2c_data[1] = (0x05 << 5) | 0x01;
+	ret = fimc_is_sensor_addr8_write8(client, i2c_data[0], i2c_data[1]);
+	if (ret < 0)
+		goto p_err;
+	sensor_dw9808_actuator_wait_busy(subdev);
+
+
+	/*  Set up for NRC now complete...  RING_MODE Enabled + SAC[2:0] set Enable NRC_EN */    	
+	i2c_data[0] = REG_NRC_EN;
+	i2c_data[1] = 0x01;     
+	ret = fimc_is_sensor_addr8_write8(client, i2c_data[0], i2c_data[1]);
+	if (ret < 0)
+		goto p_err;
+	sensor_dw9808_actuator_wait_busy(subdev);
+    
+#ifdef DEBUG_ACTUATOR_TIME
+	do_gettimeofday(&end);
+	pr_info("[%s] time %lu us", __func__, (end.tv_sec - st.tv_sec) * 1000000 + (end.tv_usec - st.tv_usec));
+#endif
+
+	/*Get current position of the lens, to check if NRC works! */
+	ret = fimc_is_sensor_addr8_read8(client, REG_VCM_MSB, &pos1);
+	if (ret < 0)
+		goto p_err;
+	ret = fimc_is_sensor_addr8_read8(client, REG_VCM_LSB, &pos2);
+	if (ret < 0)
+		goto p_err;
+	pos1 = pos1 & 0x03;
+	position = ((u16)pos1 << 8) | pos2;
+    
+	if(position > 0){
+		pr_info("[%s] NRC Softlanding Failed, final position: [%x]\n",__func__, position);
+		actuator->position = position;
+		return HW_SOFTLANDING_FAIL;
+	}
+	pr_info("[%s] NRC Softlanding Successful, final position: [%x]\n",__func__, position);
+	return ret;
+
+p_err:
+	err("[%s] Actuator Softlanding Failed \n", __func__);
+	return ret;
+}
+#endif
 int sensor_dw9808_actuator_set_position(struct v4l2_subdev *subdev, u32 *info)
 {
 	int ret = 0;
@@ -488,6 +622,20 @@ static int sensor_dw9808_actuator_s_ctrl(struct v4l2_subdev *subdev, struct v4l2
 			goto p_err;
 		}
 		break;
+#ifdef USE_CAMERA_ACT_DRIVER_SOFT_LANDING 
+	case V4L2_CID_ACTUATOR_SOFT_LANDING:
+		ret = sensor_dw9808_actuator_soft_landing(subdev);
+		if(ret == HW_SOFTLANDING_FAIL) {
+			err("[%s] NRC Softlanding Failed \n",__func__);
+			goto p_err;
+		}
+		if (ret) {
+			err("[%s] Actuator Softlanding Failed  \n", __func__);
+			ret = -EINVAL;
+			goto p_err;
+		}
+		break;
+#endif
 	default:
 		err("err!!! Unknown CID(%#x)", ctrl->id);
 		ret = -EINVAL;

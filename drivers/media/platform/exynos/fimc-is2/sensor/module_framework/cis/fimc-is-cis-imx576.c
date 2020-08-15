@@ -40,10 +40,14 @@
 #include "fimc-is-cis-imx576.h"
 #include "fimc-is-cis-imx576-setA.h"
 #include "fimc-is-cis-imx576-setB.h"
+#include "fimc-is-cis-imx576-25M-setB.h"
 
 #include "fimc-is-helper-i2c.h"
 
 #include "interface/fimc-is-interface-library.h"
+#ifdef CONFIG_VENDER_MCD_V2
+#include "fimc-is-sec-define.h"
+#endif
 
 #define SENSOR_NAME "IMX576"
 #define SENSOR_NAME_REAR  "IMX576_REAR"
@@ -61,88 +65,34 @@ static const u32 *sensor_imx576_setfile_sizes;
 static const struct sensor_pll_info_compact **sensor_imx576_pllinfos;
 static u32 sensor_imx576_max_setfile_num;
 static bool sensor_imx576_cal_write_flag;
-
+static u32 max_height;
+static u32 max_width;
+static bool is_enable_25M = false;
+#ifndef CONFIG_VENDER_MCD_V2
 extern struct fimc_is_lib_support gPtr_lib_support;
+#endif
 
 static void sensor_imx576_set_integration_max_margin(u32 mode, cis_shared_data *cis_data)
 {
 	BUG_ON(!cis_data);
-
-	switch (mode) {
-		case SENSOR_IMX576_2832X2124_2X2BIN_30FPS:
-		case SENSOR_IMX576_2832X1592_2X2BIN_30FPS:
-		case SENSOR_IMX576_2832X1376_2X2BIN_30FPS:
-		case SENSOR_IMX576_2124X2124_2X2BIN_30FPS:
-		case SENSOR_IMX576_2832X2124_QBCHDR_30FPS:
-		case SENSOR_IMX576_2832X1592_QBCHDR_30FPS:
-		case SENSOR_IMX576_2832X1376_QBCHDR_30FPS:
-		case SENSOR_IMX576_2124X2124_QBCHDR_30FPS:
-		case SENSOR_IMX576_5664X4248_QBCREMOSAIC_30FPS:
-		case SENSOR_IMX576_5664X3184_QBCREMOSAIC_30FPS:
-		case SENSOR_IMX576_5664X2752_QBCREMOSAIC_30FPS:
-		case SENSOR_IMX576_4248X4248_QBCREMOSAIC_30FPS:
-		case SENSOR_IMX576_1870X1052_SSM_240FPS:
-		case SENSOR_IMX576_1920X1080_SSM_120FPS:
-		case SENSOR_IMX576_1280X720_SSM_240FPS:
-		case SENSOR_IMX576_1280X720_SSM_120FPS:
-		case SENSOR_IMX576_2832x2124_117FPS:
-		case SENSOR_IMX576_2832X2124_60FPS:
-		case SENSOR_IMX576_2832X1592_120FPS:
-			cis_data->max_margin_coarse_integration_time = SENSOR_IMX576_COARSE_INTEGRATION_TIME_MAX_MARGIN;
-			dbg_sensor(1, "max_margin_coarse_integration_time(%d)\n",
-				cis_data->max_margin_coarse_integration_time);
-			break;
-		default:
-			err("[%s] Unsupport imx576 sensor mode\n", __func__);
-			cis_data->max_margin_coarse_integration_time = SENSOR_IMX576_COARSE_INTEGRATION_TIME_MAX_MARGIN;
-			dbg_sensor(1, "max_margin_coarse_integration_time(%d)\n",
-				cis_data->max_margin_coarse_integration_time);
-			break;
-	}
+	cis_data->max_margin_coarse_integration_time = SENSOR_IMX576_COARSE_INTEGRATION_TIME_MAX_MARGIN;
+	dbg_sensor(1, "max_margin_coarse_integration_time(%d)\n",
+			cis_data->max_margin_coarse_integration_time);
 }
 
 static void sensor_imx576_set_integration_min(u32 mode, cis_shared_data *cis_data)
 {
 	BUG_ON(!cis_data);
 
-	switch (mode) {
-		case SENSOR_IMX576_2832X2124_2X2BIN_30FPS:
-		case SENSOR_IMX576_2832X1592_2X2BIN_30FPS:
-		case SENSOR_IMX576_2832X1376_2X2BIN_30FPS:
-		case SENSOR_IMX576_2124X2124_2X2BIN_30FPS:
-			cis_data->min_coarse_integration_time = SENSOR_IMX576_COARSE_INTEGRATION_TIME_MIN;
-			dbg_sensor(1, "min_coarse_integration_time(%d)\n",
+	if(IS_3DHDR(mode))
+	{
+		cis_data->min_coarse_integration_time = 0x06;
+		dbg_sensor(1, "min_coarse_integration_time(%d)\n",
 				cis_data->min_coarse_integration_time);
-			break;
-		case SENSOR_IMX576_2832X2124_QBCHDR_30FPS:
-		case SENSOR_IMX576_2832X1592_QBCHDR_30FPS:
-		case SENSOR_IMX576_2832X1376_QBCHDR_30FPS:
-		case SENSOR_IMX576_2124X2124_QBCHDR_30FPS:
-			cis_data->min_coarse_integration_time = 0x06;
-			dbg_sensor(1, "min_coarse_integration_time(%d)\n",
+	} else {
+		cis_data->min_coarse_integration_time = SENSOR_IMX576_COARSE_INTEGRATION_TIME_MIN;
+		dbg_sensor(1, "min_coarse_integration_time(%d)\n",
 				cis_data->min_coarse_integration_time);
-			break;
-		case SENSOR_IMX576_5664X4248_QBCREMOSAIC_30FPS:
-		case SENSOR_IMX576_5664X3184_QBCREMOSAIC_30FPS:
-		case SENSOR_IMX576_5664X2752_QBCREMOSAIC_30FPS:
-		case SENSOR_IMX576_4248X4248_QBCREMOSAIC_30FPS:
-		case SENSOR_IMX576_1870X1052_SSM_240FPS:
-		case SENSOR_IMX576_1920X1080_SSM_120FPS:
-		case SENSOR_IMX576_1280X720_SSM_240FPS:
-		case SENSOR_IMX576_1280X720_SSM_120FPS:
-		case SENSOR_IMX576_2832x2124_117FPS:
-		case SENSOR_IMX576_2832X2124_60FPS:
-		case SENSOR_IMX576_2832X1592_120FPS:
-			cis_data->min_coarse_integration_time = SENSOR_IMX576_COARSE_INTEGRATION_TIME_MIN;
-			dbg_sensor(1, "min_coarse_integration_time(%d)\n",
-				cis_data->min_coarse_integration_time);
-			break;
-		default:
-			err("[%s] Unsupport imx576 sensor mode\n", __func__);
-				cis_data->min_coarse_integration_time = SENSOR_IMX576_COARSE_INTEGRATION_TIME_MIN;
-			dbg_sensor(1, "min_coarse_integration_time(%d)\n",
-				cis_data->min_coarse_integration_time);
-			break;
 	}
 }
 
@@ -356,42 +306,45 @@ int sensor_imx576_cis_init(struct v4l2_subdev *subdev)
 	sensor_imx576_cal_write_flag = false;
 
 	info("[%s] cis_rev=%#x\n", __func__, cis->cis_data->cis_rev);
-
-	if (cis->cis_data->cis_rev == 0x11) {
-		probe_info("%s setfile_A for MP\n", __func__);
-		sensor_imx576_global = sensor_imx576_setfile_A_Global;
-		sensor_imx576_global_size = sizeof(sensor_imx576_setfile_A_Global) / sizeof(sensor_imx576_setfile_A_Global[0]);
-		sensor_imx576_imageQuality = sensor_imx576_setfile_A_ImageQuality;
-		sensor_imx576_imageQuality_size = sizeof(sensor_imx576_setfile_A_ImageQuality) / sizeof(sensor_imx576_setfile_A_ImageQuality[0]);
-		sensor_imx576_setfiles = sensor_imx576_setfiles_A;
-		sensor_imx576_setfile_sizes = sensor_imx576_setfile_A_sizes;
-		sensor_imx576_pllinfos = sensor_imx576_pllinfos_A;
-		sensor_imx576_max_setfile_num = sizeof(sensor_imx576_setfiles_A) / sizeof(sensor_imx576_setfiles_A[0]);
-	} else if (cis->cis_data->cis_rev == 0x10) {
-		probe_info("%s setfile_B for MP0\n", __func__);
-		sensor_imx576_global = sensor_imx576_setfile_B_Global;
-		sensor_imx576_global_size = sizeof(sensor_imx576_setfile_B_Global) / sizeof(sensor_imx576_setfile_B_Global[0]);
-		sensor_imx576_imageQuality = sensor_imx576_setfile_B_ImageQuality;
-		sensor_imx576_imageQuality_size = sizeof(sensor_imx576_setfile_B_ImageQuality) / sizeof(sensor_imx576_setfile_B_ImageQuality[0]);
-		sensor_imx576_setfiles = sensor_imx576_setfiles_B;
-		sensor_imx576_setfile_sizes = sensor_imx576_setfile_B_sizes;
-		sensor_imx576_pllinfos = sensor_imx576_pllinfos_B;
-		sensor_imx576_max_setfile_num = sizeof(sensor_imx576_setfiles_B) / sizeof(sensor_imx576_setfiles_B[0]);
-	} else {
-		probe_info("%s chip_rev(%d) is wrong! setfile_A for MP (default)\n", __func__, cis->cis_data->cis_rev);
-		sensor_imx576_global = sensor_imx576_setfile_A_Global;
-		sensor_imx576_global_size = sizeof(sensor_imx576_setfile_A_Global) / sizeof(sensor_imx576_setfile_A_Global[0]);
-		sensor_imx576_imageQuality = sensor_imx576_setfile_A_ImageQuality;
-		sensor_imx576_imageQuality_size = sizeof(sensor_imx576_setfile_A_ImageQuality) / sizeof(sensor_imx576_setfile_A_ImageQuality[0]);
-		sensor_imx576_setfiles = sensor_imx576_setfiles_A;
-		sensor_imx576_setfile_sizes = sensor_imx576_setfile_A_sizes;
-		sensor_imx576_pllinfos = sensor_imx576_pllinfos_A;
-		sensor_imx576_max_setfile_num = sizeof(sensor_imx576_setfiles_A) / sizeof(sensor_imx576_setfiles_A[0]);
+	if (sensor_imx576_global == NULL) {
+		if (cis->cis_data->cis_rev == 0x11) {
+			probe_info("%s setfile_A for MP\n", __func__);
+			sensor_imx576_global = sensor_imx576_setfile_A_Global;
+			sensor_imx576_global_size = sizeof(sensor_imx576_setfile_A_Global) / sizeof(sensor_imx576_setfile_A_Global[0]);
+			sensor_imx576_imageQuality = sensor_imx576_setfile_A_ImageQuality;
+			sensor_imx576_imageQuality_size = sizeof(sensor_imx576_setfile_A_ImageQuality) / sizeof(sensor_imx576_setfile_A_ImageQuality[0]);
+			sensor_imx576_setfiles = sensor_imx576_setfiles_A;
+			sensor_imx576_setfile_sizes = sensor_imx576_setfile_A_sizes;
+			sensor_imx576_pllinfos = sensor_imx576_pllinfos_A;
+			sensor_imx576_max_setfile_num = sizeof(sensor_imx576_setfiles_A) / sizeof(sensor_imx576_setfiles_A[0]);
+		} else if (cis->cis_data->cis_rev == 0x10) {
+			probe_info("%s setfile_B for MP0\n", __func__);
+			sensor_imx576_global = sensor_imx576_setfile_B_Global;
+			sensor_imx576_global_size = sizeof(sensor_imx576_setfile_B_Global) / sizeof(sensor_imx576_setfile_B_Global[0]);
+			sensor_imx576_imageQuality = sensor_imx576_setfile_B_ImageQuality;
+			sensor_imx576_imageQuality_size = sizeof(sensor_imx576_setfile_B_ImageQuality) / sizeof(sensor_imx576_setfile_B_ImageQuality[0]);
+			sensor_imx576_setfiles = sensor_imx576_setfiles_B;
+			sensor_imx576_setfile_sizes = sensor_imx576_setfile_B_sizes;
+			sensor_imx576_pllinfos = sensor_imx576_pllinfos_B;
+			sensor_imx576_max_setfile_num = sizeof(sensor_imx576_setfiles_B) / sizeof(sensor_imx576_setfiles_B[0]);
+		} else {
+			probe_info("%s chip_rev(%d) is wrong! setfile_A for MP (default)\n", __func__, cis->cis_data->cis_rev);
+			sensor_imx576_global = sensor_imx576_setfile_A_Global;
+			sensor_imx576_global_size = sizeof(sensor_imx576_setfile_A_Global) / sizeof(sensor_imx576_setfile_A_Global[0]);
+			sensor_imx576_imageQuality = sensor_imx576_setfile_A_ImageQuality;
+			sensor_imx576_imageQuality_size = sizeof(sensor_imx576_setfile_A_ImageQuality) / sizeof(sensor_imx576_setfile_A_ImageQuality[0]);
+			sensor_imx576_setfiles = sensor_imx576_setfiles_A;
+			sensor_imx576_setfile_sizes = sensor_imx576_setfile_A_sizes;
+			sensor_imx576_pllinfos = sensor_imx576_pllinfos_A;
+			sensor_imx576_max_setfile_num = sizeof(sensor_imx576_setfiles_A) / sizeof(sensor_imx576_setfiles_A[0]);
+		}
+		cis->cis_data->cur_width = SENSOR_IMX576_MAX_WIDTH;
+		max_width = SENSOR_IMX576_MAX_WIDTH;
+		cis->cis_data->cur_height = SENSOR_IMX576_MAX_HEIGHT;
+		max_height = SENSOR_IMX576_MAX_HEIGHT;
 	}
 
 	cis->cis_data->product_name = cis->id;
-	cis->cis_data->cur_width = SENSOR_IMX576_MAX_WIDTH;
-	cis->cis_data->cur_height = SENSOR_IMX576_MAX_HEIGHT;
 	cis->cis_data->low_expo_start = 33000;
 	cis->need_mode_change = false;
 	cis->long_term_mode.sen_strm_off_on_step = 0;
@@ -483,12 +436,17 @@ int sensor_imx576_cis_QuadSensCal_write(struct v4l2_subdev *subdev)
 	struct fimc_is_cis *cis;
 	struct i2c_client *client = NULL;
 	struct fimc_is_device_sensor_peri *sensor_peri = NULL;
-	struct fimc_is_lib_support *lib = &gPtr_lib_support;
 	int position;
 	u16 start_addr;
 	ulong cal_addr;
 	u16 data_size;
 	u8 cal_data[SENSOR_IMX576_QUAD_SENS_CAL_SIZE] = {0, };
+#ifdef CONFIG_VENDER_MCD_V2
+	char *rom_cal_buf = NULL;
+	ulong qsc_cal_addr = 0;
+#else
+	struct fimc_is_lib_support *lib = &gPtr_lib_support;
+#endif
 
 	BUG_ON(!subdev);
 
@@ -506,6 +464,35 @@ int sensor_imx576_cis_QuadSensCal_write(struct v4l2_subdev *subdev)
 	}
 
 	position = sensor_peri->module->position;
+
+#ifdef CONFIG_VENDER_MCD_V2
+	ret = fimc_is_sec_get_cal_buf(position, &rom_cal_buf);
+	if (ret < 0) {
+		goto p_err;
+	}
+
+	if (is_enable_25M) {
+		if (position == SENSOR_POSITION_REAR)
+			qsc_cal_addr = SENSOR_IMX576_25M_QUAD_SENS_CAL_BASE_REAR;
+		else
+			qsc_cal_addr = 0;
+	} else {
+		if (position == SENSOR_POSITION_REAR)
+			qsc_cal_addr = SENSOR_IMX576_QUAD_SENS_CAL_BASE_REAR;
+		else if (position == SENSOR_POSITION_FRONT)
+			qsc_cal_addr = SENSOR_IMX576_QUAD_SENS_CAL_BASE_FRONT;
+		else
+			qsc_cal_addr = 0;
+	}
+	
+	if (qsc_cal_addr == 0) {
+		info("cis_imx576 qsc_cal_addr is invalid : position(%d) \n", position);
+		goto p_err;
+	}
+
+	cal_addr = (ulong)rom_cal_buf;
+	cal_addr += qsc_cal_addr;
+#else
 	if (position == SENSOR_POSITION_REAR)
 		cal_addr = lib->minfo->kvaddr_rear_cal + SENSOR_IMX576_QUAD_SENS_CAL_BASE_REAR;
 	else if (position == SENSOR_POSITION_FRONT)
@@ -514,6 +501,7 @@ int sensor_imx576_cis_QuadSensCal_write(struct v4l2_subdev *subdev)
 		err("cis_imx576 position(%d) is invalid!\n", position);
 		goto p_err;
 	}
+#endif
 
 	memcpy(cal_data, (u16 *)cal_addr, SENSOR_IMX576_QUAD_SENS_CAL_SIZE);
 
@@ -545,7 +533,6 @@ int sensor_imx576_cis_DPC_write(struct v4l2_subdev *subdev)
 	struct fimc_is_cis *cis;
 	struct i2c_client *client = NULL;
 	struct fimc_is_device_sensor_peri *sensor_peri = NULL;
-	struct fimc_is_lib_support *lib = &gPtr_lib_support;
 	int position;
 	u16 start_val[2] = {0, };
 	u16 count_val[2] = {0, };
@@ -553,6 +540,12 @@ int sensor_imx576_cis_DPC_write(struct v4l2_subdev *subdev)
 	u16 data_size = 0;
 	ulong cal_addr;
 	u8 *cal_data = NULL;
+#ifdef CONFIG_VENDER_MCD_V2
+	char *rom_cal_buf = NULL;
+	ulong dpc_cal_addr = 0;
+#else
+	struct fimc_is_lib_support *lib = &gPtr_lib_support;
+#endif
 
 	BUG_ON(!subdev);
 
@@ -570,6 +563,35 @@ int sensor_imx576_cis_DPC_write(struct v4l2_subdev *subdev)
 	}
 
 	position = sensor_peri->module->position;
+	
+#ifdef CONFIG_VENDER_MCD_V2
+	ret = fimc_is_sec_get_cal_buf(position, &rom_cal_buf);
+	if (ret < 0) {
+		goto p_err;
+	}
+
+	if (is_enable_25M) {
+		if (position == SENSOR_POSITION_REAR)
+			dpc_cal_addr = SENSOR_IMX576_25M_DPC_CAL_BASE_REAR;
+		else
+			dpc_cal_addr = 0;
+	} else {
+		if (position == SENSOR_POSITION_REAR)
+			dpc_cal_addr = SENSOR_IMX576_DPC_CAL_BASE_REAR;
+		else if (position == SENSOR_POSITION_FRONT)
+			dpc_cal_addr = SENSOR_IMX576_DPC_CAL_BASE_FRONT;
+		else
+			dpc_cal_addr = 0;
+	}
+	
+	if (dpc_cal_addr == 0) {
+		info("cis_imx576 dpc_cal_addr is invalid : position(%d) \n", position);
+		goto p_err;
+	}
+
+	cal_addr = (ulong)rom_cal_buf;
+	cal_addr += dpc_cal_addr;
+#else
 	if (position == SENSOR_POSITION_REAR)
 		cal_addr = lib->minfo->kvaddr_rear_cal + SENSOR_IMX576_DPC_CAL_BASE_REAR;
 	else if (position == SENSOR_POSITION_FRONT)
@@ -578,6 +600,7 @@ int sensor_imx576_cis_DPC_write(struct v4l2_subdev *subdev)
 		err("cis_imx576 position(%d) is invalid!\n", position);
 		goto p_err;
 	}
+#endif
 
 	cal_data = kzalloc(SENSOR_IMX576_DPC_CAL_SIZE, GFP_KERNEL);
 	if (!cal_data) {
@@ -806,9 +829,7 @@ int sensor_imx576_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 	}
 	dbg_sensor(1, "[%s] mode changed(%d)\n", __func__, mode);
 
-	if (mode >= SENSOR_IMX576_5664X4248_QBCREMOSAIC_30FPS
-		&& mode <= SENSOR_IMX576_4248X4248_QBCREMOSAIC_30FPS
-		&& sensor_imx576_cal_write_flag == false) {
+	if (IS_REMOSAIC(mode) && sensor_imx576_cal_write_flag == false) {
 		sensor_imx576_cal_write_flag = true;
 
 		info("[%s] %d mode is QBC Remosaic Mode! Write QSC and DPC data.\n", __func__, mode);
@@ -877,15 +898,15 @@ int sensor_imx576_cis_set_size(struct v4l2_subdev *subdev, cis_shared_data *cis_
 
 	binning = cis_data->binning;
 	if (binning) {
-		ratio_w = (SENSOR_IMX576_MAX_WIDTH / cis_data->cur_width);
-		ratio_h = (SENSOR_IMX576_MAX_HEIGHT / cis_data->cur_height);
+		ratio_w = (max_width / cis_data->cur_width);
+		ratio_h = (max_height / cis_data->cur_height);
 	} else {
 		ratio_w = 1;
 		ratio_h = 1;
 	}
 
-	if (((cis_data->cur_width * ratio_w) > SENSOR_IMX576_MAX_WIDTH) ||
-		((cis_data->cur_height * ratio_h) > SENSOR_IMX576_MAX_HEIGHT)) {
+	if (((cis_data->cur_width * ratio_w) > max_width) ||
+		((cis_data->cur_height * ratio_h) > max_height)) {
 		err("Config max sensor size over~!!\n");
 		ret = -EINVAL;
 		goto p_err;
@@ -898,8 +919,8 @@ int sensor_imx576_cis_set_size(struct v4l2_subdev *subdev, cis_shared_data *cis_
 		 goto p_err;
 
 	/* 2. pixel address region setting */
-	start_x = ((SENSOR_IMX576_MAX_WIDTH - cis_data->cur_width * ratio_w) / 2) & (~0x1);
-	start_y = ((SENSOR_IMX576_MAX_HEIGHT - cis_data->cur_height * ratio_h) / 2) & (~0x1);
+	start_x = ((max_width - cis_data->cur_width * ratio_w) / 2) & (~0x1);
+	start_y = ((max_height - cis_data->cur_height * ratio_h) / 2) & (~0x1);
 	end_x = start_x + (cis_data->cur_width * ratio_w - 1);
 	end_y = start_y + (cis_data->cur_height * ratio_h - 1);
 
@@ -1391,8 +1412,11 @@ int sensor_imx576_cis_adjust_frame_duration(struct v4l2_subdev *subdev,
 	dbg_sensor(1, "[%s](vsync cnt = %d) adj duration, frame duraion(%d), min_frame_us(%d), max_frame_us_time(%d)\n",
 			__func__, cis_data->sen_vsync_count, frame_duration, cis_data->min_frame_us_time, max_frame_us_time);
 
+	dbg_sensor(1, "[%s] min_fps(%d), max_fps(%d)\n", __func__, cis->min_fps, cis->max_fps);
 	*target_duration = MAX(frame_duration, cis_data->min_frame_us_time);
-	*target_duration = MIN(frame_duration, max_frame_us_time);
+	if(cis->min_fps == cis->max_fps) {
+		*target_duration = MIN(frame_duration, max_frame_us_time);
+	}
 
 #ifdef DEBUG_SENSOR_TIME
 	do_gettimeofday(&end);
@@ -2073,7 +2097,7 @@ int sensor_imx576_cis_set_wb_gain(struct v4l2_subdev *subdev, struct wb_gains wb
 {
 	int ret = 0;
 	int hold = 0;
-	int mode = 0;
+	u32 mode = 0;
 	struct fimc_is_cis *cis;
 	struct i2c_client *client;
 	u16 abs_gains[4] = {0, };	//[0]=gr, [1]=r, [2]=b, [3]=gb
@@ -2102,7 +2126,7 @@ int sensor_imx576_cis_set_wb_gain(struct v4l2_subdev *subdev, struct wb_gains wb
 
 	mode = cis->cis_data->sens_config_index_cur;
 
-	if ( mode < SENSOR_IMX576_5664X4248_QBCREMOSAIC_30FPS || mode > SENSOR_IMX576_4248X4248_QBCREMOSAIC_30FPS)
+	if(!IS_REMOSAIC(mode))
 		return 0;
 
 	dbg_sensor(1, "[SEN:%d]%s:DDK vlaue: wb_gain_gr(%d), wb_gain_r(%d), wb_gain_b(%d), wb_gain_gb(%d)\n",
@@ -2296,7 +2320,23 @@ int cis_imx576_probe(struct i2c_client *client,
 		err("setfile index read fail(%d), take default setfile!!", ret);
 		setfile = "default";
 	}
-
+	if (of_property_read_bool(dnode, "enable_25M")) {
+		probe_info("%s setfile_B for 25M \n", __func__);
+		sensor_imx576_global = sensor_imx576_25M_setfile_B_Global;
+		sensor_imx576_global_size = sizeof(sensor_imx576_25M_setfile_B_Global) / sizeof(sensor_imx576_25M_setfile_B_Global[0]);
+		sensor_imx576_imageQuality = sensor_imx576_25M_setfile_B_ImageQuality;
+		sensor_imx576_imageQuality_size = sizeof(sensor_imx576_25M_setfile_B_ImageQuality) / sizeof(sensor_imx576_25M_setfile_B_ImageQuality[0]);
+		sensor_imx576_setfiles = sensor_imx576_25M_setfiles_B;
+		sensor_imx576_setfile_sizes = sensor_imx576_25M_setfile_B_sizes;
+		sensor_imx576_pllinfos = sensor_imx576_25M_pllinfos_B;
+		sensor_imx576_max_setfile_num = sizeof(sensor_imx576_25M_setfiles_B) / sizeof(sensor_imx576_25M_setfiles_B[0]);
+		cis->cis_data->cur_width = SENSOR_IMX576_25M_MAX_WIDTH;
+		max_width = SENSOR_IMX576_25M_MAX_WIDTH;
+		cis->cis_data->cur_height = SENSOR_IMX576_25M_MAX_HEIGHT;
+		max_height = SENSOR_IMX576_25M_MAX_HEIGHT;
+		is_enable_25M = true;
+	}
+	
 	probe_info("%s done\n", __func__);
 
 p_err:

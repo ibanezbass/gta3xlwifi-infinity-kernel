@@ -139,13 +139,15 @@ static void __exynos_show_wakeup_registers_extra(void)
 		pr_info("%s : 0x%08x\n", pm_info->ws_extra[i].name, wkup_stats);
 
 		wkup_stats &= pm_info->ws_extra[i].src_check_bit;
-		for_each_set_bit(bit, (unsigned long *) &wkup_stats, WKUP_STAT_SIZE)
-			pr_info("%s Resume caused by %s\n", EXYNOS_PM_PREFIX,
-					pm_info->ws_extra[i].wkup_src[bit]);
 
 		if (pm_info->ws_extra[i].eint_wkup_bit >= 0 &&
 				wkup_stats & (1 << pm_info->ws_extra[i].eint_wkup_bit))
 			is_eint_wkup = true;
+		else {
+			for_each_set_bit(bit, (unsigned long *) &wkup_stats, WKUP_STAT_SIZE)
+				pr_info("%s Resume caused by %s\n", EXYNOS_PM_PREFIX,
+					pm_info->ws_extra[i].wkup_src[bit]);
+		}
 	}
 
 	if (is_eint_wkup) {
@@ -197,6 +199,8 @@ static void exynos_show_wakeup_registers(void)
 static void exynos_show_wakeup_reason(bool sleep_abort)
 {
 	int i;
+
+	pr_info("---------- wakeup ----------\n");
 
 	if (sleep_abort) {
 		pr_info("%s early wakeup! Dumping pending registers...\n", EXYNOS_PM_PREFIX);

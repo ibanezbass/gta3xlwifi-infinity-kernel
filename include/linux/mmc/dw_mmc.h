@@ -245,6 +245,7 @@ struct dw_mci {
 	unsigned int		req_state;
 	struct dw_mci_debug_info        *debug_info;    /* debug info */
 	
+
 	/* HWACG q-active ctrl check */
 	unsigned int qactive_check;
 

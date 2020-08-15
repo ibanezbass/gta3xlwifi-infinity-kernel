@@ -257,9 +257,10 @@ int mms_enable(struct mms_ts_info *info)
 	if (!info->init)
 		mms_power_control(info, 1);
 
-	enable_irq(info->client->irq);
 	info->enabled = true;
 	info->ic_status = PWR_ON;
+
+	enable_irq(info->client->irq);
 
 	mutex_unlock(&info->lock);
 
@@ -326,10 +327,10 @@ int mms_disable(struct mms_ts_info *info)
 
 	mutex_lock(&info->lock);
 
-	info->enabled = false;
-	info->ic_status = PWR_OFF;	
-
 	disable_irq(info->client->irq);
+
+	info->enabled = false;
+	info->ic_status = PWR_OFF;
 
 	if (info->prox_power_off) {
 		input_report_key(info->input_dev, KEY_INT_CANCEL, 1);
@@ -406,6 +407,10 @@ static int mms_input_open(struct input_dev *dev)
 		mms_enable(info);
 	}
 	mutex_unlock(&info->modechange);
+	cancel_delayed_work(&info->work_print_info);
+	info->print_info_cnt_open = 0;
+	info->print_info_cnt_release = 0;
+	schedule_work(&info->work_print_info.work);
 	return 0;
 }
 
@@ -439,11 +444,8 @@ static void mms_input_close(struct input_dev *dev)
 		}
 	}
 #endif
-#ifdef CONFIG_SAMSUNG_TUI
-	stui_cancel_session();
-#endif
 
-	if (info->lowpower_mode) {
+	if (info->lowpower_mode || info->fod_lp_mode) {
 		mms_lowpower_mode(info, TO_LOWPOWER_MODE);
 		if (device_may_wakeup(&info->client->dev))
 			enable_irq_wake(info->client->irq);
@@ -453,6 +455,7 @@ static void mms_input_close(struct input_dev *dev)
 	}
 
 	mutex_unlock(&info->modechange);
+	cancel_delayed_work(&info->work_print_info);
 }
 #endif
 
@@ -521,6 +524,7 @@ int mms_get_fw_version(struct mms_ts_info *info, u8 *ver_buf)
 		ver_buf[i] = rbuf[i];
 	}
 
+	info->fw_model_ver_ic = (ver_buf[4] << 8 | ver_buf[5]);
 	info->fw_ver_ic = (ver_buf[6] << 8 | ver_buf[7]);
 
 	input_info(true, &info->client->dev,
@@ -687,6 +691,35 @@ int mms_alert_handler_sponge(struct mms_ts_info *info, u8 *rbuf, u8 size)
 	return 0;
 }
 
+/*
+ * Alert event handler - mode state
+ */
+#define ENTER_NOISE_MODE	0
+#define EXIT_NOISE_MODE		1
+#define ENTER_WET_MODE		2
+#define EXIT_WET_MODE		3
+static int mms_alert_handler_mode_state(struct mms_ts_info *info, u8 data)
+{
+	if (data == ENTER_NOISE_MODE) {
+		input_info(true, &info->client->dev, "%s: NOISE ON[%d]\n", __func__, data);
+		info->noise_mode = 1;
+	} else if (data == EXIT_NOISE_MODE) {
+		input_info(true, &info->client->dev, "%s: NOISE OFF[%d]\n", __func__, data);
+		info->noise_mode = 0;
+	} else if (data == ENTER_WET_MODE) {
+		input_info(true, &info->client->dev, "%s: WET MODE ON[%d]\n", __func__, data);
+		info->wet_mode = 1;
+	} else if (data == EXIT_WET_MODE) {
+		input_info(true, &info->client->dev, "%s: WET MODE OFF[%d]\n", __func__, data);
+		info->wet_mode = 0;
+	} else {
+		input_info(true, &info->client->dev, "%s: MOT DEFINED[%d]\n", __func__, data);
+		return 1;
+	}
+
+	return 0;
+}
+
 #ifdef CONFIG_VBUS_NOTIFIER
 int mms_charger_attached(struct mms_ts_info *info, bool status)
 {
@@ -791,6 +824,9 @@ static irqreturn_t mms_interrupt(int irq, void *dev_id)
 		} else if (alert_type == MIP_ALERT_SRAM_FAILURE) {
 			//SRAM failure
 			if (mms_alert_handler_sram(info, &rbuf[1]))
+				goto ERROR;
+		} else if (alert_type == MIP_ALERT_MODE_STATE) {
+			if (mms_alert_handler_mode_state(info, rbuf[1]))
 				goto ERROR;
 		} else {
 			input_err(true, &client->dev, "%s [ERROR] Unknown alert type [%d]\n",
@@ -1239,6 +1275,32 @@ static void mms_set_input_prop_proximity(struct mms_ts_info *info, struct input_
 	input_set_drvdata(dev, info);
 }
 
+static void mms_ts_print_info_work(struct work_struct *work)
+{
+	struct mms_ts_info *info = container_of(work, struct mms_ts_info, work_print_info.work);
+
+#ifdef TCLM_CONCEPT
+	input_info(true, &info->client->dev, "mode:%04X, tc:%d, noise:%x,%x, wet:%d wc:%x, lp:%x D%05X fn:%04X/%04X // v:%02X%02X cal:%02X(%02X) C%02XT%04X.%4s%s Cal_flag:%s,%d // %d %d\n",
+		0, info->touch_count, info->noise_mode, 0, info->wet_mode,
+		0/*wireless charger*/, info->lowpower_mode/*lp*/, info->defect_probability, 0/*touch function*/, info->ic_status,
+		info->fw_ver_ic >> 8, info->fw_ver_ic & 0xFF,
+		0, 0, 0, 0, " ", " ", " ", 0/*TCLM*/,
+		info->print_info_cnt_open, info->print_info_cnt_release);
+#else
+	input_info(true, &info->client->dev, "mode:%04X, tc:%d, noise:%x,%x, wet:%d wc:%x, lp:%x D%05X fn:%04X/%04X // v:%02X%02X cal:NOCAL // %d %d\n",
+		0, info->touch_count, info->noise_mode, 0, info->wet_mode,
+		0/*wireless charger*/, info->lowpower_mode/*lp*/, info->defect_probability, 0/*touch function*/, info->ic_status,
+		info->fw_ver_ic >> 8, info->fw_ver_ic & 0xFF,
+		info->print_info_cnt_open, info->print_info_cnt_release);
+
+#endif
+	info->print_info_cnt_open++;
+	if (info->touch_count == 0)
+		info->print_info_cnt_release++;
+
+	schedule_delayed_work(&info->work_print_info, msecs_to_jiffies(30 * 1000));
+}
+
 #if defined(CONFIG_TOUCHSCREEN_DUMP_MODE)
 static void sec_ts_check_rawdata(struct work_struct *work)
 {
@@ -1491,6 +1553,7 @@ static int mms_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto err_create_dev_link;
 	}
 
+	INIT_DELAYED_WORK(&info->work_print_info, mms_ts_print_info_work);
 	INIT_DELAYED_WORK(&info->work_read_info, mms_read_info_work);
 	mutex_init(&info->modechange);
 	schedule_delayed_work(&info->work_read_info, msecs_to_jiffies(5000));
@@ -1511,7 +1574,8 @@ static int mms_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	info->ic_status = PWR_ON;
 	input_info(true, &client->dev,
 		"MELFAS %s Touchscreen is initialized successfully\n", CHIP_NAME);
-	input_log_fix();	
+	input_log_fix();
+	schedule_work(&info->work_print_info.work);
 	return 0;
 
 
@@ -1598,6 +1662,7 @@ static int mms_remove(struct i2c_client *client)
 	class_destroy(info->class);
 #endif
 	cancel_delayed_work_sync(&info->work_read_info);
+	cancel_delayed_work_sync(&info->work_print_info);
 	flush_delayed_work(&info->work_read_info);
 
 	if (info->dtdata->support_ear_detect) {
@@ -1619,6 +1684,9 @@ static void mms_shutdown(struct i2c_client *client)
 
 	input_err(true, &info->client->dev, "%s\n", __func__);
 
+	cancel_delayed_work_sync(&info->work_read_info);
+	cancel_delayed_work_sync(&info->work_print_info);
+
 	mms_disable(info);
 }
 
@@ -1627,8 +1695,7 @@ static int mms_suspend(struct device *dev)
 {
 	struct mms_ts_info *info = dev_get_drvdata(dev);
 
-	if (info->lowpower_mode)
-		reinit_completion(&info->resume_done);
+	reinit_completion(&info->resume_done);
 
 	return 0;
 }
@@ -1637,8 +1704,7 @@ static int mms_resume(struct device *dev)
 {
 	struct mms_ts_info *info = dev_get_drvdata(dev);
 
-	if (info->lowpower_mode)
-		complete_all(&info->resume_done);
+	complete_all(&info->resume_done);
 
 	return 0;
 }

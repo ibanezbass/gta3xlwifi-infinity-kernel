@@ -36,9 +36,29 @@ struct fimc_is_rom_share {
 	int			share_position;
 };
 
+#if defined(VENDER_CAL_STRUCT_VER2)
+struct rom_extend_cal_addr {
+	char *name;
+	void *data;
+	struct rom_extend_cal_addr *next;
+};
+#else
 struct rom_extend_cal_addr {
 	char *name;
 	int32_t addr;
+};
+#endif
+
+/***** Extend data define of Calibration map(ROM address)  *****/
+#define EXTEND_OEM_CHECKSUM      "oem_checksum_base_addr"
+#define EXTEND_AE_CAL            "ae_cal_data"
+
+struct rom_ae_cal_data {
+	int32_t		rom_header_main_ae_start_addr;
+	int32_t		rom_header_main_ae_end_addr;
+	int32_t		rom_ae_module_info_start_addr;
+	int32_t		rom_ae_checksum_addr;
+	int32_t		rom_ae_checksum_len;
 };
 
 struct fimc_is_vender_rom_addr {

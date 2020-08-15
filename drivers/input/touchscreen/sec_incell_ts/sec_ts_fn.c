@@ -3439,17 +3439,11 @@ OUT:
  *		8  :  set landscape mode data
  *		16 :  mode clear
  *	data
- *		0x30, FFF (y start), FFF (y end),  FF(direction)
- *		0x31, FFFF (edge zone)
- *		0x32, FF (up x), FF (down x), FFFF (y)
- *		0x33, FF (mode), FFF (edge), FFF (dead zone)
+ *		0x94, FF (mode), FFF (edge), FFF (dead zone x), FF (dead zone top y), FF (dead zone bottom y)
  *	case
- *		edge handler set :  0x30....
- *		booting time :  0x30...  + 0x31...
- *		normal mode : 0x32...  (+0x31...)
- *		landscape mode : 0x33...
- *		landscape -> normal (if same with old data) : 0x33, 0
- *		landscape -> normal (etc) : 0x32....  + 0x33, 0
+ *		landscape mode : 0x94...
+ *		landscape -> normal (if same with old data) : 0x94, 0
+ *		landscape -> normal (etc) : 0xAC....  + 0x94, 0
  */
 
 void set_grip_data_to_ic(struct sec_ts_data *ts, u8 flag)
@@ -3457,7 +3451,7 @@ void set_grip_data_to_ic(struct sec_ts_data *ts, u8 flag)
 	u8 data[8] = { 0 };
 
 	input_info(true, &ts->client->dev, "%s: flag: %02X (clr,lan,nor,edg,han)\n", __func__, flag);
-
+/*
 	if (flag & G_SET_EDGE_HANDLER) {
 		if (ts->grip_edgehandler_direction == 0) {
 			data[0] = 0x0;
@@ -3492,15 +3486,17 @@ void set_grip_data_to_ic(struct sec_ts_data *ts, u8 flag)
 		input_info(true, &ts->client->dev, "%s: 0x%02X %02X,%02X,%02X,%02X\n",
 				__func__, SEC_TS_CMD_DEAD_ZONE, data[0], data[1], data[2], data[3]);
 	}
-
+*/
 	if (flag & G_SET_LANDSCAPE_MODE) {
 		data[0] = ts->grip_landscape_mode & 0x1;
 		data[1] = (ts->grip_landscape_edge >> 4) & 0xFF;
 		data[2] = (ts->grip_landscape_edge << 4 & 0xF0) | ((ts->grip_landscape_deadzone >> 8) & 0xF);
 		data[3] = ts->grip_landscape_deadzone & 0xFF;
-		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_LANDSCAPE_MODE, data, 4);
-		input_info(true, &ts->client->dev, "%s: 0x%02X %02X,%02X,%02X,%02X\n",
-				__func__, SEC_TS_CMD_LANDSCAPE_MODE, data[0], data[1], data[2], data[3]);
+		data[4] = ts->grip_landscape_top_deadzone & 0xFF;
+		data[5] = ts->grip_landscape_bottom_deadzone & 0xFF;
+		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_LANDSCAPE_MODE, data, 6);
+		input_info(true, &ts->client->dev, "%s: 0x%02X %02X,%02X,%02X,%02X,%02X,%02X\n",
+				__func__, SEC_TS_CMD_LANDSCAPE_MODE, data[0], data[1], data[2], data[3], data[4], data[5]);
 	}
 
 	if (flag & G_CLR_LANDSCAPE_MODE) {
@@ -3587,6 +3583,8 @@ static void set_grip_data(void *device_data)
 			ts->grip_landscape_mode = 1;
 			ts->grip_landscape_edge = sec->cmd_param[2];
 			ts->grip_landscape_deadzone	= sec->cmd_param[3];
+			ts->grip_landscape_top_deadzone = sec->cmd_param[4];
+			ts->grip_landscape_bottom_deadzone = sec->cmd_param[5];
 			mode = mode | G_SET_LANDSCAPE_MODE;
 		} else {
 			input_err(true, &ts->client->dev, "%s: cmd1 is abnormal, %d (%d)\n",

@@ -210,7 +210,7 @@ struct dsim_device {
 	struct decon_lcd lcd_info;
 
 	struct panel_private priv;
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 	unsigned int doze_state;
 #endif
 
@@ -247,9 +247,15 @@ struct dsim_lcd_driver {
 	int (*resume_early)(struct dsim_device *dsim);
 	int (*after_reset)(struct dsim_device *dsim);
 	int (*dump)(struct dsim_device *dsim);
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
-	int (*enteralpm)(struct dsim_device *dsim);
-	int (*exitalpm)(struct dsim_device *dsim);
+#if defined(CONFIG_EXYNOS_DOZE)
+	int (*doze)(struct dsim_device *dsim);
+#endif
+	int (*match)(void *maybe_unused);
+#if defined(CONFIG_LOGGING_BIGDATA_BUG)
+	unsigned int (*get_buginfo)(struct dsim_device *dsim);
+#endif
+#if defined(CONFIG_SUPPORT_MASK_LAYER)
+	int (*mask_brightness)(struct dsim_device *dsim);
 #endif
 };
 
@@ -350,7 +356,7 @@ u32 dsim_reg_payload_fifo_is_empty(u32 id);
 void dsim_reg_clear_int(u32 id, u32 int_src);
 void dsim_reg_set_fifo_ctrl(u32 id, u32 cfg);
 void dsim_reg_enable_shadow_read(u32 id, u32 en);
-bool dsim_reg_is_writable_ph_fifo_state(u32 id);
+bool dsim_reg_is_writable_ph_fifo_state(u32 id, struct decon_lcd *lcd_info);
 void dsim_reg_wr_tx_header(u32 id, u32 data_id, unsigned long data0, u32 data1, u32 bta_type);
 void dsim_set_bist(u32 id, u32 en);
 void dsim_reg_set_partial_update(u32 id, struct decon_lcd *lcd_info);
@@ -366,7 +372,7 @@ void dsim_reg_enable_word_clock(u32 id, u32 en);
 void dsim_reg_set_esc_clk_prescaler(u32 id, u32 en, u32 p);
 u32 dsim_reg_is_pll_stable(u32 id);
 void dsim_reg_set_cmd_transfer_mode(u32 id, u32 lp);
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 int dsim_doze(struct dsim_device *dsim);
 int dsim_doze_suspend(struct dsim_device *dsim);
 void dphy_power_on(struct dsim_device *dsim, int on);

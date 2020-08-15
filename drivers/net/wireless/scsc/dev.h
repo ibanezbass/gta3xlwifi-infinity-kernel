@@ -77,6 +77,12 @@
 #define SLSI_FW_API_RATE_SGI                0x0100
 #define SLSI_FW_API_RATE_GF                 0x0080
 
+#define SLSI_HOSTSTATE_LCD_ACTIVE         0x0001
+#define SLSI_HOSTSTATE_CELLULAR_ACTIVE    0x0002
+#define SLSI_HOSTSTATE_SAR_ACTIVE         0x0004
+#define SLSI_HOSTSTATE_GRIP_ACTIVE        0x0040
+#define SLSI_HOSTSTATE_LOW_LATENCY_ACTIVE 0x0080
+
 /* indices: 3= BW20->idx_0, BW40->idx_1, BW80->idx_2.
  *             2= noSGI->idx_0, SGI->idx_1
  *             10= mcs index
@@ -122,11 +128,13 @@ static const u16 slsi_rates_table[3][2][10] = {
 #define SLSI_RX_WAKELOCK_TIME (1000)
 #define MAX_BA_BUFFER_SIZE 64
 #define NUM_BA_SESSIONS_PER_PEER 8
-#define MAX_CHANNEL_LIST 20
+#define SLSI_NCHO_MAX_CHANNEL_LIST 20
 #define SLSI_MAX_RX_BA_SESSIONS (8)
 #define SLSI_STA_ACTION_FRAME_BITMAP (SLSI_ACTION_FRAME_PUBLIC | SLSI_ACTION_FRAME_WMM | SLSI_ACTION_FRAME_WNM |\
 				      SLSI_ACTION_FRAME_QOS | SLSI_ACTION_FRAME_PROTECTED_DUAL |\
 				      SLSI_ACTION_FRAME_RADIO_MEASUREMENT)
+#define SLSI_STA_ACTION_FRAME_SUSPEND_BITMAP (SLSI_ACTION_FRAME_PUBLIC | SLSI_ACTION_FRAME_WMM | SLSI_ACTION_FRAME_WNM |\
+				      SLSI_ACTION_FRAME_QOS | SLSI_ACTION_FRAME_PROTECTED_DUAL)
 
 /* Default value for MIB SLSI_PSID_UNIFI_DISCONNECT_TIMEOUT + 1 sec*/
 #define SLSI_DEFAULT_AP_DISCONNECT_IND_TIMEOUT 3000
@@ -288,6 +296,8 @@ struct slsi_scan_result {
 	struct sk_buff *beacon;
 	struct slsi_scan_result *next;
 	int band;
+	u8 ssid[32];
+	u8 ssid_length;
 };
 
 /* Per Interface Scan Data
@@ -313,6 +323,21 @@ struct slsi_ssid_map {
 	u8 age;
 	int band;
 };
+
+#ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+struct slsi_enhanced_arp_counters {
+	u16 arp_req_count_from_netdev;
+	u16 arp_req_count_to_lower_mac;
+	u16 arp_req_rx_count_by_lower_mac;
+	u16 arp_req_count_tx_success;
+	u16 arp_rsp_rx_count_by_lower_mac;
+	u16 arp_rsp_rx_count_by_upper_mac;
+	u16 arp_rsp_count_to_netdev;
+	u16 arp_rsp_count_out_of_order_drop;
+	u16 ap_link_active;
+	bool is_duplicate_addr_detected;
+};
+#endif
 
 struct slsi_peer {
 	/* Flag MUST be set last when creating a record and immediately when removing.
@@ -370,6 +395,7 @@ struct slsi_peer {
 	bool	 qos_map_set;
 	struct cfg80211_qos_map qos_map;
 #endif
+	u16 ndl_vif;
 };
 
 /* Used to update vif type on vif deactivation indicating vif is no longer available */
@@ -429,7 +455,14 @@ enum slsi_filter_id {
 #ifndef CONFIG_SCSC_WLAN_DISABLE_NAT_KA
 	SLSI_NAT_IPSEC_FILTER_ID,						/* 0x84 */
 #endif
-	SLSI_REGD_MC_FILTER_ID = 0x85
+#ifdef CONFIG_SCSC_WLAN_ENHANCED_PKT_FILTER
+	SLSI_OPT_OUT_ALL_FILTER_ID,						/* 0x85 */
+	SLSI_OPT_IN_TCP4_FILTER_ID,						/* 0x86 */
+	SLSI_OPT_IN_TCP6_FILTER_ID,						/* 0x87 */
+#endif
+	SLSI_ABNORMAL_MULTICAST_ID,						/* 0x85 / 0x88*/
+	SLSI_ALL_ARP_FILTER_ID,							/* 0x86 / 0x89 */
+	SLSI_REGD_MC_FILTER_ID,							/* 0x87 / 0x8a */
 };
 #else
 
@@ -443,7 +476,14 @@ enum slsi_filter_id {
 #ifndef CONFIG_SCSC_WLAN_DISABLE_NAT_KA
 	SLSI_NAT_IPSEC_FILTER_ID,						/* 0x85 */
 #endif
-	SLSI_REGD_MC_FILTER_ID = 0x86
+#ifdef CONFIG_SCSC_WLAN_ENHANCED_PKT_FILTER
+	SLSI_OPT_OUT_ALL_FILTER_ID,						/* 0x86 */
+	SLSI_OPT_IN_TCP4_FILTER_ID,						/* 0x87 */
+	SLSI_OPT_IN_TCP6_FILTER_ID,						/* 0x88 */
+#endif
+	SLSI_ABNORMAL_MULTICAST_ID,						/* 0x86 / 0x89 */
+	SLSI_ALL_ARP_FILTER_ID,							/* 0x87 / 0x8a */
+	SLSI_REGD_MC_FILTER_ID,							/* 0x88 / 0x8b */
 };
 
 #endif
@@ -522,13 +562,17 @@ struct slsi_vif_sta {
 	struct list_head        network_map;
 
 	struct slsi_wmm_ac wmm_ac[4];
+	bool                    nd_offload_enabled;
+	unsigned long           data_rate_mbps;
+	unsigned long           max_rate_mbps;
 
 	/*This structure is used to store last disconnected bss info and valid even when vif is deactivated. */
 	struct slsi_last_connected_bss last_connected_bss;
-	bool                    nd_offload_enabled;
 
 	/* Variable to indicate if roamed_ind needs to be dropped in driver, to maintain roam synchronization. */
 	atomic_t                drop_roamed_ind;
+	u8                      *vendor_disconnect_ies;
+	int                     vendor_disconnect_ies_len;
 };
 
 struct slsi_vif_unsync {
@@ -579,12 +623,41 @@ struct slsi_vif_ap {
 	u8                                ssid_len;
 };
 
-#define SLSI_NAN_MAX_PUBLISH_ID 16
-#define SLSI_NAN_MAX_SUBSCRIBE_ID 16
+struct slsi_nan_ndl_info {
+    u8 peer_nmi[ETH_ALEN];
+    s8 ndp_count;
+};
+
+enum ndp_slot_status {
+	ndp_slot_status_free,
+	ndp_slot_status_in_use,
+	ndp_slot_status_terminating,
+};
 
 struct slsi_vif_nan {
-	u32 publish_id_map;
-	u32 subscribe_id_map;
+	struct slsi_hal_nan_config_req config;
+	u32 service_id_map;
+	u32 followup_id_map;
+	u32 ndp_id_map;
+	struct slsi_nan_ndl_info ndl_list[SLSI_NAN_MAX_NDP_INSTANCES];
+	u8  ndp_ndi[SLSI_NAN_MAX_NDP_INSTANCES][ETH_ALEN];
+	u16 ndp_id2ndl_vif[SLSI_NAN_MAX_NDP_INSTANCES];
+	u16 ndp_local_ndp_id[SLSI_NAN_MAX_NDP_INSTANCES];
+	enum ndp_slot_status ndp_state[SLSI_NAN_MAX_NDP_INSTANCES];
+	u32 followup_trans_id;
+
+	u8 disable_cluster_merge;
+	u16 nan_sdf_flags[SLSI_NAN_MAX_SERVICE_ID+1];
+	/* fields used for nan stats/status*/
+	u8 local_nmi[ETH_ALEN];
+	u8 cluster_id[ETH_ALEN];
+	u32 operating_channel[2];
+	u8 role;
+	u8 state; /* 1 -> nan on; 0 -> nan off */
+	u8 master_pref_value;
+	u8 amt;
+	u8 hopcount;
+	u32 random_mac_interval_sec;
 };
 
 #define TCP_ACK_SUPPRESSION_RECORDS_MAX				16
@@ -745,6 +818,12 @@ struct netdev_vif {
 	struct slsi_tcp_ack_s *last_tcp_ack;
 	struct slsi_tcp_ack_s ack_suppression[TCP_ACK_SUPPRESSION_RECORDS_MAX];
 	struct slsi_tcp_ack_stats tcp_ack_stats;
+#ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+	bool enhanced_arp_detect_enabled;
+	struct slsi_enhanced_arp_counters enhanced_arp_stats;
+	u8 target_ip_addr[4];
+	int enhanced_arp_host_tag[5];
+#endif
 };
 
 struct slsi_802_11d_reg_domain {
@@ -753,10 +832,15 @@ struct slsi_802_11d_reg_domain {
 	int                        country_len;
 };
 
+struct slsi_apf_capabilities {
+	u16 version;
+	u16 max_length;
+};
+
 #ifdef CONFIG_SCSC_WLAN_WES_NCHO
 struct slsi_wes_mode_roam_scan_channels {
 	int n;
-	u8  channels[MAX_CHANNEL_LIST];
+	u8  channels[SLSI_NCHO_MAX_CHANNEL_LIST];
 };
 #endif
 
@@ -808,18 +892,22 @@ struct slsi_dev_config {
 
 	int                                     roam_scan_mode;
 
+	int                                     dfs_scan_mode;
+
+	int                                     ncho_mode;
+
 	/*WES mode roam scan channels*/
 	struct slsi_wes_mode_roam_scan_channels wes_roam_scan_list;
 #endif
 	struct slsi_802_11d_reg_domain          domain_info;
-
 	int                                     ap_disconnect_ind_timeout;
-
 	u8                                      host_state;
-
-	int                                      rssi_boost_5g;
-	int                                      rssi_boost_2g;
-	bool                                   disable_ch12_ch13;
+	int                                     rssi_boost_5g;
+	int                                     rssi_boost_2g;
+	bool                                    disable_ch12_ch13;
+	bool                                    fw_enhanced_arp_detect_supported;
+	bool                                    fw_apf_supported;
+	struct                                  slsi_apf_capabilities apf_cap;
 };
 
 #define SLSI_DEVICE_STATE_ATTACHING 0
@@ -1062,7 +1150,7 @@ struct slsi_dev {
 	int                        wifi_sharing_5g_restricted_channels[25];
 	int                        num_5g_restricted_channels;
 #endif
-	bool                       fw_2g_40mhz_enabled;
+	bool                       fw_SoftAp_2g_40mhz_enabled;
 	bool                       nan_enabled;
 	u16                        assoc_result_code; /* Status of latest association in STA mode */
 	bool                       allow_switch_40_mhz; /* Used in AP cert to disable HT40 when not configured */
@@ -1088,6 +1176,12 @@ struct slsi_dev {
 #ifdef CONFIG_SCSC_WLAN_ENABLE_MAC_RANDOMISATION
 	bool                            fw_mac_randomization_enabled;
 #endif
+
+#ifdef CONFIG_SCSC_WLAN_ENHANCED_PKT_FILTER
+	bool                       enhanced_pkt_filter_enabled;
+#endif
+	u8                         fw_ext_cap_ie[9]; /*extended capability IE length is 9 */
+	u32                        fw_ext_cap_ie_len;
 };
 
 /* Compact representation of channels a ESS has been seen on
@@ -1127,7 +1221,7 @@ void slsi_rx_dbg_sap_work(struct work_struct *work);
 void slsi_rx_netdev_data_work(struct work_struct *work);
 void slsi_rx_netdev_mlme_work(struct work_struct *work);
 int slsi_rx_enqueue_netdev_mlme(struct slsi_dev *sdev, struct sk_buff *skb, u16 vif);
-void slsi_rx_scan_pass_to_cfg80211(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
+struct ieee80211_channel *slsi_rx_scan_pass_to_cfg80211(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb);
 void slsi_rx_buffered_frames(struct slsi_dev *sdev, struct net_device *dev, struct slsi_peer *peer);
 int slsi_rx_blocking_signals(struct slsi_dev *sdev, struct sk_buff *skb);
 void slsi_scan_complete(struct slsi_dev *sdev, struct net_device *dev, u16 scan_id, bool aborted);
@@ -1149,6 +1243,11 @@ bool slsi_dev_vo_vi_block_ack(void);
 int slsi_dev_get_scan_result_count(void);
 bool slsi_dev_llslogs_supported(void);
 int slsi_dev_nan_supported(struct slsi_dev *sdev);
+#ifdef CONFIG_SCSC_WIFI_NAN_ENABLE
+bool slsi_dev_nan_is_ipv6_link_tlv_include(void);
+int slsi_get_nan_max_ndp_instances(void);
+int slsi_get_nan_max_ndi_ifaces(void);
+#endif
 void slsi_regd_init(struct slsi_dev *sdev);
 bool slsi_dev_rtt_supported(void);
 
@@ -1194,6 +1293,54 @@ static inline struct net_device *slsi_get_netdev(struct slsi_dev *sdev, u16 ifnu
 
 	SLSI_MUTEX_LOCK(sdev->netdev_add_remove_mutex);
 	dev = slsi_get_netdev_locked(sdev, ifnum);
+	SLSI_MUTEX_UNLOCK(sdev->netdev_add_remove_mutex);
+
+	return dev;
+}
+
+static inline struct net_device *slsi_get_netdev_by_mac_addr_locked(struct slsi_dev *sdev, u8 *mac_addr, int start_idx)
+{
+	int i;
+
+	if (!start_idx)
+		start_idx = 1;
+	WARN_ON(!SLSI_MUTEX_IS_LOCKED(sdev->netdev_add_remove_mutex));
+	for (i = start_idx; i < CONFIG_SCSC_WLAN_MAX_INTERFACES + 1; i++) {
+		if (sdev->netdev[i] && ether_addr_equal(mac_addr, sdev->netdev[i]->dev_addr))
+			return sdev->netdev[i];
+	}
+	return NULL;
+}
+
+static inline struct net_device *slsi_get_netdev_by_mac_addr(struct slsi_dev *sdev, u8 *mac_addr, int start_idx)
+{
+	struct net_device *dev;
+
+	SLSI_MUTEX_LOCK(sdev->netdev_add_remove_mutex);
+	dev = slsi_get_netdev_by_mac_addr_locked(sdev, mac_addr, start_idx);
+	SLSI_MUTEX_UNLOCK(sdev->netdev_add_remove_mutex);
+
+	return dev;
+}
+
+static inline struct net_device *slsi_get_netdev_by_ifname_locked(struct slsi_dev *sdev, u8 *ifname)
+{
+	int i;
+
+	WARN_ON(!SLSI_MUTEX_IS_LOCKED(sdev->netdev_add_remove_mutex));
+	for (i = 1; i < CONFIG_SCSC_WLAN_MAX_INTERFACES + 1; i++) {
+		if (sdev->netdev[i] && strcmp(ifname, sdev->netdev[i]->name) == 0)
+			return sdev->netdev[i];
+	}
+	return NULL;
+}
+
+static inline struct net_device *slsi_get_netdev_by_ifname(struct slsi_dev *sdev, u8 *ifname)
+{
+	struct net_device *dev;
+
+	SLSI_MUTEX_LOCK(sdev->netdev_add_remove_mutex);
+	dev = slsi_get_netdev_by_ifname_locked(sdev, ifname);
 	SLSI_MUTEX_UNLOCK(sdev->netdev_add_remove_mutex);
 
 	return dev;

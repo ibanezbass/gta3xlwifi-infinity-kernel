@@ -17,7 +17,7 @@
 #define DSIM_LP_RX_TIMEOUT		0xffff
 #define DSIM_MULTI_PACKET_CNT		0xffff
 #define DSIM_PLL_STABLE_TIME		0x15f90
-#define DSIM_PH_FIFOCTRL_THRESHOLD	1 /* 1 ~ 32 */
+#define DSIM_PH_FIFOCTRL_THRESHOLD	32 /* 1 ~ 32 */
 
 /* If below values depend on panel. These values wil be move to panel file.
   * And these values are valid in case of video mode only. */
@@ -888,12 +888,22 @@ u32 dsim_reg_payload_fifo_is_empty(u32 id)
 	return dsim_read_mask(id, DSIM_FIFOCTRL, DSIM_FIFOCTRL_EMPTY_PL_SFR);
 }
 
-bool dsim_reg_is_writable_ph_fifo_state(u32 id)
+bool dsim_reg_is_writable_ph_fifo_state(u32 id, struct decon_lcd *lcd_info)
 {
 	u32 val = dsim_read(id, DSIM_FIFOCTRL);
+	u32 threshold = DSIM_PH_FIFOCTRL_THRESHOLD;
+
+
+	if (lcd_info->mode == DECON_VIDEO_MODE) {
+		/* VIDEO MODE threshold = cmd allow length */
+		threshold = lcd_info->vfp - DSIM_STABLE_VFP_VALUE - 3;
+
+		if (threshold > DSIM_PH_FIFOCTRL_THRESHOLD)
+			threshold = DSIM_PH_FIFOCTRL_THRESHOLD;
+	}
 
 	val = DSIM_FIFOCTRL_NUMBER_OF_PH_SFR_GET(val);
-	if (val < DSIM_PH_FIFOCTRL_THRESHOLD)
+	if (val < threshold)
 		return true;
 	else
 		return false;

@@ -136,9 +136,6 @@ static int tzdev_sysconf(struct tzio_sysconf *sysconf)
 	sysconf->nwd_sysconf.flags |= SYSCONF_NWD_TZDEV_DEPLOY_TZAR;
 #endif /* CONFIG_TZDEV_DEPLOY_TZAR */
 
-#ifdef CONFIG_TZDEV_INDICATOR_TZSL
-	sysconf->nwd_sysconf.flags |= SYSCONF_NWD_TZDEV_INDICATOR_TZSL;
-#endif
 	memcpy(ch->buffer, &sysconf->nwd_sysconf, sizeof(struct tzio_nwd_sysconf));
 
 	ret = tzdev_smc_sysconf();

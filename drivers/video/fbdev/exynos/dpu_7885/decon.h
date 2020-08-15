@@ -30,6 +30,7 @@
 
 #include "regs-decon.h"
 #include "./panels/decon_lcd.h"
+#include "decon_abd.h"
 #include "dsim.h"
 #include "../../../../staging/android/sw_sync.h"
 
@@ -644,6 +645,7 @@ struct decon_win_config {
 		DECON_WIN_STATE_COLOR,
 		DECON_WIN_STATE_BUFFER,
 		DECON_WIN_STATE_UPDATE,
+		DECON_WIN_STATE_FINGERPRINT = 0x20000,
 	} state;
 
 	/* Reusability:This struct is used for IDMA and ODMA */
@@ -702,6 +704,10 @@ struct decon_reg_data {
 	bool protection[MAX_DECON_WIN];
 	/* release fence*/
 	struct sync_pt *pt;
+
+#if defined(CONFIG_SUPPORT_MASK_LAYER)
+	bool mask_layer;
+#endif
 };
 
 struct decon_win_config_data {
@@ -1052,98 +1058,6 @@ struct decon_bts {
 	u32 disp_freq_minlock;
 };
 
-#define ABD_EVENT_LOG_MAX	50
-#define ABD_LOG_MAX		10
-
-struct abd_event_log {
-	u64 stamp;
-	const char *print;
-};
-
-struct abd_event {
-	struct abd_event_log log[ABD_EVENT_LOG_MAX];
-	atomic_t log_idx;
-};
-
-struct abd_log {
-	u64 stamp;
-
-	unsigned int level;
-	unsigned int state;
-	unsigned int onoff;
-
-	unsigned int winid;
-	struct sync_fence fence;
-
-	unsigned int frm_status;
-	unsigned long mif;
-	unsigned long iint;
-	unsigned long disp;
-	struct decon_bts bts;
-};
-
-struct abd_trace {
-	const char *name;
-	unsigned int count;
-	unsigned int lcdon_flag;
-	struct abd_log log[ABD_LOG_MAX];
-};
-
-struct abd_pin {
-	const char *name;
-	unsigned int irq;
-	struct irq_desc *desc;
-	int gpio;
-	int level;
-	int active_level;
-
-	struct abd_trace p_first;
-	struct abd_trace p_lcdon;
-	struct abd_trace p_event;
-
-	irq_handler_t	handler;
-	void		*dev_id;
-};
-
-enum {
-	ABD_PIN_PCD,
-	ABD_PIN_DET,
-	ABD_PIN_ERR,
-	ABD_PIN_CON,
-	ABD_PIN_MAX
-};
-
-struct abd_protect {
-	struct abd_pin pin[ABD_PIN_MAX];
-	struct abd_event event;
-
-	struct abd_trace f_first;
-	struct abd_trace f_lcdon;
-	struct abd_trace f_event;
-
-	struct abd_trace u_first;
-	struct abd_trace u_lcdon;
-	struct abd_trace u_event;
-
-	unsigned int irq_enable;
-	struct notifier_block reboot_notifier;
-	spinlock_t slock;
-
-	struct workqueue_struct *con_workqueue;
-	struct work_struct con_work;
-	unsigned int con_irq;
-
-	struct notifier_block fb_notifier;
-	struct fb_ops decon_fbops;
-};
-
-void decon_abd_enable(struct decon_device *decon, int enable);
-int decon_abd_register(struct decon_device *decon);
-void decon_abd_save_log_fto(struct abd_protect *abd, struct sync_fence *fence);
-void decon_abd_save_log_udr(struct abd_protect *abd, unsigned long mif, unsigned long iint, unsigned long disp);
-int decon_abd_register_pin_handler(int irq, irq_handler_t handler, void *dev_id);
-void decon_abd_save_log_event(struct abd_protect *abd, const char *print);
-
 struct decon_device {
 	int id;
 	enum decon_state state;
@@ -1151,10 +1065,17 @@ struct decon_device {
 	unsigned int ignore_vsync;
 	struct abd_protect abd;
 	unsigned int esd_recovery;
-	atomic_t win_config;
+	atomic_t ffu_flag;	/* first frame update */
 
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 	unsigned int doze_state;
+#endif
+
+#if defined(CONFIG_SUPPORT_MASK_LAYER)
+	bool current_mask_layer;
+	struct decon_reg_data *mask_regs;
+	u32 wait_mask_layer_trigger;
+	wait_queue_head_t wait_mask_layer_trigger_queue;
 #endif
 
 	unsigned long prev_used_dpp;
@@ -1221,6 +1142,7 @@ struct decon_device {
 #ifdef CONFIG_EXYNOS_SUPPORT_FB_HANDOVER
 	unsigned int reserved_release;
 #endif
+	unsigned int partial_force_disable;
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
@@ -1560,7 +1482,7 @@ void decon_set_protected_content(struct decon_device *decon,
 int decon_runtime_suspend(struct device *dev);
 int decon_runtime_resume(struct device *dev);
 void decon_dpp_stop(struct decon_device *decon, bool do_reset);
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 int decon_set_doze_mode(struct decon_device *decon, u32 mode);
 
 enum doze_state {

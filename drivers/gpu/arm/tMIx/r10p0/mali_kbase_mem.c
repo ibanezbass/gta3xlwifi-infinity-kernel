@@ -2598,6 +2598,7 @@ bool kbase_jit_evict(struct kbase_context *kctx)
 		reg = list_entry(kctx->jit_pool_head.prev,
 				struct kbase_va_region, jit_node);
 		list_del(&reg->jit_node);
+		list_del_init(&reg->gpu_alloc->evict_node);
 	}
 	mutex_unlock(&kctx->jit_evict_lock);
 
@@ -2615,12 +2616,6 @@ void kbase_jit_term(struct kbase_context *kctx)
 
 	/* Free all allocations for this context */
 
-	/*
-	 * Flush the freeing of allocations whose backing has been freed
-	 * (i.e. everything in jit_destroy_head).
-	 */
-	cancel_work_sync(&kctx->jit_work);
-
 	kbase_gpu_vm_lock(kctx);
 	mutex_lock(&kctx->jit_evict_lock);
 	/* Free all allocations from the pool */
@@ -2628,6 +2623,7 @@ void kbase_jit_term(struct kbase_context *kctx)
 		walker = list_first_entry(&kctx->jit_pool_head,
 				struct kbase_va_region, jit_node);
 		list_del(&walker->jit_node);
+		list_del_init(&walker->gpu_alloc->evict_node);
 		mutex_unlock(&kctx->jit_evict_lock);
 		walker->flags &= ~KBASE_REG_JIT;
 		kbase_mem_free_region(kctx, walker);
@@ -2639,6 +2635,7 @@ void kbase_jit_term(struct kbase_context *kctx)
 		walker = list_first_entry(&kctx->jit_active_head,
 				struct kbase_va_region, jit_node);
 		list_del(&walker->jit_node);
+		list_del_init(&walker->gpu_alloc->evict_node);
 		mutex_unlock(&kctx->jit_evict_lock);
 		walker->flags &= ~KBASE_REG_JIT;
 		kbase_mem_free_region(kctx, walker);
@@ -2646,6 +2643,12 @@ void kbase_jit_term(struct kbase_context *kctx)
 	}
 	mutex_unlock(&kctx->jit_evict_lock);
 	kbase_gpu_vm_unlock(kctx);
+
+	/*
+	 * Flush the freeing of allocations whose backing has been freed
+	 * (i.e. everything in jit_destroy_head).
+	 */
+	cancel_work_sync(&kctx->jit_work);
 }
 
 static int kbase_jd_user_buf_map(struct kbase_context *kctx,
@@ -2678,7 +2681,7 @@ static int kbase_jd_user_buf_map(struct kbase_context *kctx,
 			address,
 			alloc->imported.user_buf.nr_pages,
 			reg->flags & KBASE_REG_GPU_WR,
-			0, pages, NULL);
+			pages, NULL);
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	pinned_pages = get_user_pages_remote(NULL, mm,
 			address,

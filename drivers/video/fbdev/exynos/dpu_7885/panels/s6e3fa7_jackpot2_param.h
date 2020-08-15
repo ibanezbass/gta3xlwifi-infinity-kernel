@@ -64,35 +64,79 @@
 #define LDI_GPARA_HBM_ELVSS	23	/* B5h 24th Para: ELVSS_Cal_Offset for HBM */
 #define LDI_GPARA_MANUFACTURE_INFO	1	/* C9h 2nd Para */
 
-#define	LDI_REG_RDDPM		0x0A	/* Read Display Power Mode */
-#define	LDI_LEN_RDDPM		1
+struct bit_info {
+	unsigned int reg;
+	unsigned int len;
+	char **print;
+	unsigned int expect;
+	unsigned int offset;
+	unsigned int g_para;
+	unsigned int invert;
+	unsigned int mask;
+	unsigned int result;
+};
 
-#define	LDI_REG_RDDSM		0x0E	/* Read Display Signal Mode */
-#define	LDI_LEN_RDDSM		1
+enum {
+	LDI_BIT_ENUM_05,	LDI_BIT_ENUM_RDNUMPE = LDI_BIT_ENUM_05,
+	LDI_BIT_ENUM_0A,	LDI_BIT_ENUM_RDDPM = LDI_BIT_ENUM_0A,
+	LDI_BIT_ENUM_0E,	LDI_BIT_ENUM_RDDSM = LDI_BIT_ENUM_0E,
+	LDI_BIT_ENUM_0F,	LDI_BIT_ENUM_RDDSDR = LDI_BIT_ENUM_0F,
+	LDI_BIT_ENUM_EE,	LDI_BIT_ENUM_ESDERR = LDI_BIT_ENUM_EE,
+	LDI_BIT_ENUM_MAX
+};
 
-#ifdef CONFIG_DISPLAY_USE_INFO
-#define	LDI_REG_RDNUMPE		0x05		/* DPUI_KEY_PNDSIE: Read Number of the Errors on DSI */
-#define	LDI_LEN_RDNUMPE		1
-#define LDI_PNDSIE_MASK		(GENMASK(6, 0))
+static char *LDI_BIT_DESC_05[BITS_PER_BYTE] = {
+	[0 ... 6] = "number of corrupted packets",
+	[7] = "overflow on number of corrupted packets",
+};
+
+static char *LDI_BIT_DESC_0A[BITS_PER_BYTE] = {
+	[2] = "Display is Off",
+	[7] = "Booster has a fault",
+};
+
+static char *LDI_BIT_DESC_0E[BITS_PER_BYTE] = {
+	[0] = "Error on DSI",
+};
+
+static char *LDI_BIT_DESC_0F[BITS_PER_BYTE] = {
+	[7] = "Register Loading Detection",
+};
+
+static char *LDI_BIT_DESC_EE[BITS_PER_BYTE] = {
+	[2] = "VLIN3 error",
+	[3] = "ELVDD error",
+	[6] = "VLIN1 error",
+};
+
+static struct bit_info ldi_bit_info_list[LDI_BIT_ENUM_MAX] = {
+	[LDI_BIT_ENUM_05] = {0x05, 1, LDI_BIT_DESC_05, 0x00, },
+	[LDI_BIT_ENUM_0A] = {0x0A, 1, LDI_BIT_DESC_0A, 0x9E, .invert = (BIT(2) | BIT(7)), },
+	[LDI_BIT_ENUM_0E] = {0x0E, 1, LDI_BIT_DESC_0E, 0x80, },
+	[LDI_BIT_ENUM_0F] = {0x0F, 1, LDI_BIT_DESC_0F, 0xC0, .invert = (BIT(7)), },
+	[LDI_BIT_ENUM_EE] = {0xEE, 1, LDI_BIT_DESC_EE, 0x00, },
+};
+
+#if defined(CONFIG_DISPLAY_USE_INFO)
+#define LDI_LEN_RDNUMPE		1		/* DPUI_KEY_PNDSIE: Read Number of the Errors on DSI */
+#define LDI_PNDSIE_MASK		(GENMASK(7, 0))
 
 /*
- * ESD_ERROR[0] =  MIPI DSI error is occurred by ESD.
- * ESD_ERROR[1] =  HS CLK lane error is occurred by ESD.
- * ESD_ERROR[2] =  VLIN3 error is occurred by ESD.
- * ESD_ERROR[3] =  ELVDD error is occurred by ESD.
- * ESD_ERROR[4]  = CHECK_SUM error is occurred by ESD.
- * ESD_ERROR[5] =  Internal HSYNC error is occurred by ESD.
- * ESD_ERROR[6] =  VLIN1 error is occurred by ESD
+ * ESD_ERROR[0] = MIPI DSI error is occurred by ESD.
+ * ESD_ERROR[1] = HS CLK lane error is occurred by ESD.
+ * ESD_ERROR[2] = VLIN3 error is occurred by ESD.
+ * ESD_ERROR[3] = ELVDD error is occurred by ESD.
+ * ESD_ERROR[4] = CHECK_SUM error is occurred by ESD.
+ * ESD_ERROR[5] = Internal HSYNC error is occurred by ESD.
+ * ESD_ERROR[6] = VLIN1 error is occurred by ESD
  */
-#define LDI_REG_ESDERR		0xEE		/* DPUI_KEY_PNELVDE, DPUI_KEY_PNVLI1E, DPUI_KEY_PNVLO3E, DPUI_KEY_PNESDE */
-#define LDI_LEN_ESDERR		1
+#define LDI_LEN_ESDERR		1		/* DPUI_KEY_PNELVDE, DPUI_KEY_PNVLI1E, DPUI_KEY_PNVLO3E, DPUI_KEY_PNESDE */
 #define LDI_PNELVDE_MASK	(BIT(3))	/* ELVDD error */
 #define LDI_PNVLI1E_MASK	(BIT(6))	/* VLIN1 error */
 #define LDI_PNVLO3E_MASK	(BIT(2))	/* VLIN3 error */
 #define LDI_PNESDE_MASK		(BIT(2) | BIT(3) | BIT(6))
 
-#define LDI_REG_RDDSDR		0x0F		/* DPUI_KEY_PNSDRE: Read Display Self-Diagnostic Result */
-#define LDI_LEN_RDDSDR		1
+#define LDI_LEN_RDDSDR		1		/* DPUI_KEY_PNSDRE: Read Display Self-Diagnostic Result */
 #define LDI_PNSDRE_MASK		(BIT(7))	/* D7: REG_DET: Register Loading Detection */
 #endif
 
@@ -252,7 +296,7 @@ static unsigned char SEQ_VINT_SETTING[] = {
 	0xBB, 0x1E
 };
 
-#if defined(CONFIG_EXYNOS_SUPPORT_DOZE)
+#if defined(CONFIG_EXYNOS_DOZE)
 enum {
 	ALPM_OFF,
 	ALPM_ON_LOW,	/* ALPM 2 NIT */
@@ -260,6 +304,26 @@ enum {
 	ALPM_ON_HIGH,	/* ALPM 60 NIT */
 	HLPM_ON_HIGH,	/* HLPM 60 NIT */
 	ALPM_MODE_MAX
+};
+
+enum {
+	AOD_MODE_OFF,
+	AOD_MODE_ALPM,
+	AOD_MODE_HLPM,
+	AOD_MODE_MAX
+};
+
+static unsigned int lpm_old_table[ALPM_MODE_MAX] = {
+	ALPM_OFF,
+	HLPM_ON_LOW,
+	HLPM_ON_LOW,
+	ALPM_ON_HIGH,
+	HLPM_ON_HIGH,
+};
+
+static unsigned int lpm_brightness_table[EXTEND_BRIGHTNESS + 1] = {
+	[0 ... 93]			= HLPM_ON_LOW,
+	[94 ... EXTEND_BRIGHTNESS]	= HLPM_ON_HIGH,
 };
 
 static unsigned char SEQ_AOR_CONTROL_HLPM_ON[] = {

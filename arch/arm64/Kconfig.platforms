@@ -73,8 +73,6 @@ config ARCH_TEGRA_132_SOC
 	bool "NVIDIA Tegra132 SoC"
 	depends on ARCH_TEGRA
 	select PINCTRL_TEGRA124
-	select USB_ULPI if USB_PHY
-	select USB_ULPI_VIEWPORT if USB_PHY
 	help
 	  Enable support for NVIDIA Tegra132 SoC, based on the Denver
 	  ARMv8 CPU.  The Tegra132 SoC is similar to the Tegra124 SoC,
@@ -159,6 +157,16 @@ config SOC_EXYNOS7885_ANDROID_VERSION_P
 	bool "Samsung EXYNOS7885 Android version P"
 	help
 	  This enables support for Android version P of EXYNOS7885
+
+config SOC_EXYNOS7885_ANDROID_VERSION_Q
+	bool "Samsung EXYNOS7885 Android version Q"
+	help
+	  This enables support for Android version Q of EXYNOS7885
+
+config SOC_EXYNOS7885_ANDROID_VERSION_Q_MR
+	bool "Samsung EXYNOS7885 Android version Q maintenance release"
+	help
+	  This enables support for Android version Q_MR of EXYNOS7885
 
 config SOC_EXYNOS7885_ANDROID_VERSION_P_MR
 	bool "Samsung EXYNOS7885 Android version P maintenance release"

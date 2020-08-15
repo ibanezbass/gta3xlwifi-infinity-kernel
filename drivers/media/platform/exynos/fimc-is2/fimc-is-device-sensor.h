@@ -413,6 +413,8 @@ int fimc_is_sensor_s_input(struct fimc_is_device_sensor *device,
 #endif
 int fimc_is_sensor_s_ctrl(struct fimc_is_device_sensor *device,
 	struct v4l2_control *ctrl);
+int fimc_is_sensor_s_ext_ctrls(struct fimc_is_device_sensor *device,
+	struct v4l2_ext_controls *ctrls);
 int fimc_is_sensor_subdev_buffer_queue(struct fimc_is_device_sensor *device,
 	enum fimc_is_subdev_id subdev_id,
 	u32 index);

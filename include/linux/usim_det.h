@@ -23,6 +23,8 @@ struct usim_det_data {
 	char *name;
 
 	u32 num_of_usim_det;
+	
+	u32 usim_check_delay_msec;
 
 	int usim_det0_irq;
 	int gpio_usim_det0;

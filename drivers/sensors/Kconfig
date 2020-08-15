@@ -190,7 +190,40 @@ config SENSORS_A96T3X6
 
 	  Say N here if you do not use A96T3X6 for grip.
 
+config SENSORS_A96T3X6_2CH
+	depends on I2C
+	tristate "SENSORS_A96T3X6_2CH driver for grip"
+	default n
+	help
+	  Say Y here if you use SENSORS_A96T3X6_2CH for grip.
+	  This option enables grip sensors using
+	  Above SENSORS_A96T3X6_2CH device driver for grip.
+
+	  Say N here if you do not use SENSORS_A96T3X6_2CH for grip.
+
 config SENSORS_A96T3X6_A40
+	depends on I2C
+	tristate "A96T3X6 touchkey"
+	default n
+	help
+	  Say Y here if you use A96T3X6 for grip.
+	  This option enables grip sensors using
+	  Above A96T3X6 device driver for grip.
+
+	  Say N here if you do not use A96T3X6 for grip.
+
+config SENSORS_A96T3X6_A30
+	depends on I2C
+	tristate "A96T3X6 touchkey"
+	default n
+	help
+	  Say Y here if you use A96T3X6 for grip.
+	  This option enables grip sensors using
+	  Above A96T3X6 device driver for grip.
+
+	  Say N here if you do not use A96T3X6 for grip.
+
+config SENSORS_A96T3X6_A30S
 	depends on I2C
 	tristate "A96T3X6 touchkey"
 	default n
@@ -296,6 +329,18 @@ config SENSORS_TC3XXK_A30
 
 	  Say N here if you do not use TC3XXK for grip Sensor.
 
+
+config SENSORS_TC3XXK_A30_JPN
+	depends on I2C
+	tristate "TC3XXK driver for grip Sensor"
+	default n
+	help
+	  Say Y here if you use TC3XXK IC for grip Sensor.
+	  This option enables grip sensors using
+	  Coreriver TC3XXK device driver for grip Sensor.
+
+	  Say N here if you do not use TC3XXK for grip Sensor.
+
 config SENSORS_TC3XXK_A20
 	depends on I2C
 	tristate "TC3XXK driver for grip Sensor"
@@ -328,6 +373,28 @@ config SENSORS_TC3XXK_A10
 	  Coreriver TC3XXK device driver for grip Sensor.
 
 	  Say N here if you do not use TC3XXK for grip Sensor.
+
+config SENSORS_TC3XXK_A10E
+	depends on I2C
+	tristate "TC3XXK driver for grip Sensor"
+	default n
+	help
+	  Say Y here if you use TC3XXK IC for grip Sensor.
+	  This option enables grip sensors using
+	  Coreriver TC3XXK device driver for grip Sensor.
+	  
+	  Say N here if you do not use TC3XXK for grip.
+
+config SENSORS_TC3XXK_A10E_KOR
+	depends on I2C
+	tristate "TC3XXK driver for grip Sensor"
+	default n
+	help
+	  Say Y here if you use TC3XXK IC for grip Sensor.
+	  This option enables grip sensors using
+	  Coreriver TC3XXK device driver for grip Sensor.
+	  
+	  Say N here if you do not use TC3XXK for grip.
 
 config SENSORS_SX9330
 	depends on I2C
@@ -369,8 +436,26 @@ config SENSORS_SX9360_WIFI
 	  SemTech sx9360 wifi device driver.
 	  Say N here if you do not use sx9360 wifi.      
 
+config SENSORS_LPS22HB
+	depends on I2C
+	tristate "lps22hb driver"
+	default n
+	help
+	  Say Y here if you use lps22hb wifi.
+	  This option enables barometer sensors using
+	  SemTech lps22hb device driver.
+	  Say N here if you do not use lps22hb.
+
 config SENSORS_LSM6DSL_SUPPORT_VDIS
 	bool "SENSORS_LSM6DSL_SUPPORT_VDIS"
 	default n
 	help
 	  This enables the real time thread to support vdis.
+
+config SENSORS_AK09918C
+	tristate "AK09918C compass support"
+	default n
+	depends on I2C
+	help
+	  If you say yes here you get support for Asahi Kasei's
+	  orientation sensor AK09918C.

@@ -2033,23 +2033,34 @@ static ssize_t lis2ds_write_register_store(struct device *dev,
 	return count;
 }
 
+static void lis2ds_read_register(struct lis2ds_data *cdata)
+{
+	u8 reg, offset;
+	u8 reg_value[16] = {0x00,};
+	u8 i, unit = 16;
+	s8 ret;
+	char buf[84] = {0,};
+
+	for (reg = 0x00; reg <= 0x7f; reg+=unit) {
+		ret = cdata->tf->read(cdata, reg, unit, reg_value, true);
+		if (ret < 0) {
+			SENSOR_ERR("[0x%02x-0x%02x]: fail %d\n", reg, reg+unit-1, ret);
+		}
+		else {
+			offset = 0;
+			for (i = 0; i < unit; i++)
+				offset += snprintf(buf + offset, sizeof(buf) - offset, "0x%02x ", reg_value[i]);
+			SENSOR_INFO("[0x%02x-0x%02x]:%s\n", reg, reg+unit-1, buf);
+		}
+	}
+}
+
 static ssize_t lis2ds_read_register_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct lis2ds_data *cdata = dev_get_drvdata(dev);
 
-	u8 reg;
-	u8 reg_value = 0x00;
-	int ret;
-
-	for (reg = 0x00; reg <= 0x7f; reg++) {
-		ret = cdata->tf->read(cdata, reg, 1, &reg_value, true);
-	if (ret < 0)
-		SENSOR_ERR("failed %d\n", ret);
-	else
-		SENSOR_INFO("Read Reg: 0x%x Value: 0x%x\n", reg, reg_value);
-	}
-
+	lis2ds_read_register(cdata);
 	return snprintf(buf, PAGE_SIZE, "%d\n", 1);
 }
 
@@ -2393,6 +2404,17 @@ static int lis2ds_vdd_onoff(struct lis2ds_data *cdata, int onoff)
 	return 0;
 }
 
+int lis2ds_dump_register_data_notify(struct notifier_block *nb,
+	unsigned long val, void *v)
+{
+	struct lis2ds_data *cdata = container_of(nb, struct lis2ds_data, dump_nb);
+
+	if(val == 1) {
+		lis2ds_read_register(cdata);
+	}
+	return 0;
+}
+
 int lis2ds_common_probe(struct lis2ds_data *cdata, int irq, u16 bustype)
 {
 	int32_t i;
@@ -2427,8 +2449,10 @@ int lis2ds_common_probe(struct lis2ds_data *cdata, int irq, u16 bustype)
 			break;
 	}
 
-	if (retry < 0)
+	if (retry < 0) {
+		err = -ENODEV;
 		goto exit_err_chip_id_or_i2c_error;
+	}
 
 	/* input device init */
 	err = lis2ds_acc_input_init(cdata);
@@ -2530,6 +2554,10 @@ int lis2ds_common_probe(struct lis2ds_data *cdata, int irq, u16 bustype)
 
 		SENSOR_INFO("Smart alert init, irq = %d\n", cdata->irq);
 	}
+	
+	cdata->dump_nb.notifier_call = lis2ds_dump_register_data_notify;
+	cdata->dump_nb.priority = 1;
+	sensordump_notifier_register(&cdata->dump_nb);
 
 	SENSOR_INFO(" probed\n");
 	return 0;

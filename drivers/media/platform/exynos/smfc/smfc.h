@@ -110,7 +110,7 @@ struct smfc_dev {
 	struct clk *clk_gate2; /* available if clk_gate is valid */
 	struct pm_qos_request qosreq_int;
 	s32 qosreq_int_level;
-
+	struct notifier_block reboot_notifier;
 };
 
 #define SMFC_CTX_COMPRESS	(1 << 0)

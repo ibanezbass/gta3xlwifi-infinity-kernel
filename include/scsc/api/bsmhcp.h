@@ -49,6 +49,8 @@
 #define BSMHCP_EVENT_TYPE_NONE                  (0x00)
 #define BSMHCP_EVENT_TYPE_CONNECTED             (0x01)
 #define BSMHCP_EVENT_TYPE_DISCONNECTED          (0x02)
+#define BSMHCP_EVENT_TYPE_IQ_REPORT_ENABLED     (0x03)
+#define BSMHCP_EVENT_TYPE_IQ_REPORT_DISABLED    (0x04)
 
 #define BSMHCP_ACL_BC_FLAG_BCAST_NON            (0x00)
 #define BSMHCP_ACL_BC_FLAG_BCAST_ACTIVE         (0x40)
@@ -254,9 +256,13 @@ struct BSMHCP_HEADER {
 	uint32_t                        reserved12_u32;             /* 0xB8 */
 	uint16_t                        info_ap_to_bg_int_src;      /* 0xBC */
 	uint16_t                        info_bg_to_ap_int_src;      /* 0xBE */
-	uint32_t                        mxlog_filter;               /* 0xC0 */
+	uint32_t                        btlog_enables0_low;         /* 0xC0 */
 	uint32_t                        firmware_control;           /* 0xC4 */
-	uint8_t                         reserved6[0x24];            /* 0xC8 */
+	uint32_t                        reserved13_u32;             /* 0xC8 */
+	uint32_t                        btlog_enables0_high;        /* 0xCC */
+	uint32_t                        btlog_enables1_low;         /* 0xD0 */
+	uint32_t                        btlog_enables1_high;        /* 0xD4 */
+	uint8_t                         reserved6[0x14];            /* 0xD8 */
 
 	/* Obsolete region - not used */
 	uint32_t                        smm_debug_read;             /* 0xEC */

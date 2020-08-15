@@ -28,6 +28,7 @@ struct isdbt_platform_data {
 	int gpio_b28_ctrl;
 	int gpio_ant_ctrl1;
 	int gpio_ant_ctrl2;
+	int gpio_dtv_check;
 	u32 gpio_ant_ctrl_sel[6];
 	int gpio_fm_dtv_ctrl1;
 	int gpio_fm_dtv_ctrl2;

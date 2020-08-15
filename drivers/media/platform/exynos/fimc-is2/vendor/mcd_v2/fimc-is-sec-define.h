@@ -91,6 +91,8 @@
 
 #define FW_2P6_Q			"Q16LL" /*2P6 REAR*/
 #define FW_3P8SP_P			"P16LL" /*3P8SP FRONT*/
+#define FW_IMX471_P			"B16LS" /*IMX471 FRONT*/
+#define FW_3L6_P			"L13LL" /*3L6 REAR*/
 
 #define FW_4H5YC_P			"P08LL" /*4H5YC FRONT*/
 #define FW_4H5YC_Q			"Q08LL" /*4H5YC REAR*/
@@ -120,10 +122,12 @@
 #define FIMC_IS_IMX258_SETF			"setfile_imx258.bin"
 #define FIMC_IS_IMX576_SETF			"setfile_imx576.bin"
 #define FIMC_IS_IMX576_FRONT_SETF	"setfile_imx576_front.bin"
+#define FIMC_IS_IMX471_FRONT_SETF	"setfile_imx471_front.bin"
 
 #define FIMC_IS_SR556_SETF			"setfile_sr556.bin"
 #define FIMC_IS_SR846_FRONT_SETF	"setfile_sr846_front.bin"
 #define FIMC_IS_GC5035_SETF			"setfile_gc5035.bin"
+#define FIMC_IS_HI1631_SETF			"setfile_hi1631.bin"
 
 #define FIMC_IS_CAL_SDCARD_FRONT		"/data/cal_data_front.bin"
 #define FIMC_IS_FW_FROM_SDCARD			"/data/media/0/CamFW_Main.bin"
@@ -150,6 +154,9 @@
 #endif
 #ifdef USE_AP_PDAF
 #define FIMC_IS_AP_PDAF_VER_SIZE     11
+#endif
+#ifdef USE_AE_CAL
+#define FIMC_IS_AE_CAL_VER_SIZE      11
 #endif
 
 #define FIMC_IS_RESOLUTION_DATA_SIZE 54
@@ -208,6 +215,13 @@ struct fimc_is_rom_info {
 	char		ap_pdaf_ver[FIMC_IS_AP_PDAF_VER_SIZE + 1];
 #endif
 
+#ifdef USE_AE_CAL
+	u32		ae_cal_section_crc_addr;
+	u32		ae_cal_start_addr;
+	u32		ae_cal_end_addr;
+	char		ae_cal_ver[FIMC_IS_AE_CAL_VER_SIZE+1];
+#endif
+
 	unsigned long		fw_size;
 	unsigned long		setfile_size;
 	u8		sensor_version;
@@ -258,6 +272,7 @@ int fimc_is_sec_ldo_enable(struct device *dev, char *name, bool on);
 int fimc_is_sec_rom_power_on(struct fimc_is_core *core, int position);
 int fimc_is_sec_rom_power_off(struct fimc_is_core *core, int position);
 
+int fimc_is_get_dual_cal_buf(u32 slave_position, char **buf, int *size);
 int fimc_is_sec_get_pixel_size(char *header_ver);
 int fimc_is_sec_core_voltage_select(struct device *dev, char *header_ver);
 

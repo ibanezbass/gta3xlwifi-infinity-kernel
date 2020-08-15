@@ -9,7 +9,7 @@
 /* temporary solution: Do not use these sysfs as official purpose */
 /* these function are not official one. only purpose is for temporary test */
 
-#if defined(CONFIG_DEBUG_FS) && !defined(CONFIG_SAMSUNG_PRODUCT_SHIP) && defined(CONFIG_SEC_GPIO_DVS) && defined(CONFIG_EXYNOS_DECON_MDNIE_LITE)
+#if defined(CONFIG_DEBUG_FS) && !defined(CONFIG_SAMSUNG_PRODUCT_SHIP) && defined(CONFIG_SEC_GPIO_DVS) && defined(CONFIG_EXYNOS_DECON_MDNIE)
 #include <linux/debugfs.h>
 #include <linux/sort.h>
 #include <linux/ctype.h>
@@ -146,6 +146,8 @@ static uintptr_t mdnie_request_firmware(char *path, char *name, int *ret)
 	while (!IS_ERR_OR_NULL(ptr)) {
 		ptr = (name) ? strstr(ptr, name) : ptr;
 		while ((token = strsep(&ptr, "\n")) != NULL) {
+			if (*token == '\0')
+				continue;
 			numperline = sscanf(token, "%8i, %8i", &data[0], &data[1]);
 			if (numperline < 0)
 				goto exit;

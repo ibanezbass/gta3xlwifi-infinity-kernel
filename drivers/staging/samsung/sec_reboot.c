@@ -60,6 +60,9 @@ enum sec_reset_reason {
 #ifdef CONFIG_MUIC_S2MU005
 	SEC_RESET_REASON_MUIC_1K   = (SEC_RESET_REASON_PREFIX | 0xe), /* setting for muic 1k */
 #endif
+#ifdef CONFIG_SEC_PERIPHERAL_SECURE_CHK
+	SEC_RESET_REASON_CROSS_FAIL   = (SEC_RESET_REASON_PREFIX | 0xf), /* setting for muic 1k */
+#endif
 	SEC_RESET_REASON_EMERGENCY = 0x0,
 	SEC_RESET_SET_FORCE_UPLOAD = (SEC_RESET_SET_PREFIX | 0x40000),
 	SEC_RESET_SET_DEBUG        = (SEC_RESET_SET_PREFIX | 0xd0000),
@@ -194,6 +197,10 @@ static void sec_reboot(enum reboot_mode reboot_mode, const char *cmd)
 #ifdef CONFIG_MUIC_S2MU005
 		else if (!strcmp(cmd, "muic_1k"))
 			exynos_pmu_write(EXYNOS_PMU_INFORM3, SEC_RESET_REASON_MUIC_1K);
+#endif
+#ifdef CONFIG_SEC_PERIPHERAL_SECURE_CHK
+		else if (!strcmp(cmd, "cross_fail"))
+			exynos_pmu_write(EXYNOS_PMU_INFORM3, SEC_RESET_REASON_CROSS_FAIL);
 #endif
 #if defined(CONFIG_SEC_ABC)
 		else if (!strcmp(cmd, "user_dram_test") && sec_abc_get_enabled())

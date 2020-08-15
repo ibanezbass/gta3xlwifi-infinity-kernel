@@ -342,6 +342,10 @@ typedef struct {
 	unsigned int cur_coarse_integration_time_step;
 
 	unsigned int cur_frame_us_time;
+#ifdef USE_MS_PDAF_INTERFACE
+	unsigned int cur_pos_x;
+	unsigned int cur_pos_y;
+#endif /* USE_MS_PDAF_INTERFACE */
 	unsigned int cur_width;
 	unsigned int cur_height;
 	unsigned int pre_width;
@@ -773,9 +777,17 @@ struct fimc_is_cis_interface_ops {
 				u32 *frame_length_lines,
 				u32 *max_margin_cit);
 
+#ifdef USE_MS_PDAF_INTERFACE
+	int (*get_sensor_cur_size)(struct fimc_is_sensor_interface *itf,
+				u32 *cur_pos_x,
+				u32 *cur_pos_y,
+				u32 *cur_width,
+				u32 *cur_height);
+#else
 	int (*get_sensor_cur_size)(struct fimc_is_sensor_interface *itf,
 				u32 *cur_width,
 				u32 *cur_height);
+#endif
 
 	int (*get_sensor_max_fps)(struct fimc_is_sensor_interface *itf,
 				u32 *max_fps);

@@ -361,11 +361,16 @@ int s5p_mfc_wakeup(struct s5p_mfc_dev *dev)
 		ret = -EIO;
 		goto err_mfc_wakeup;
 	}
+	/* Dump the status of POWER/CLK */
+	s5p_mfc_dump_power_clk_status();
 
 err_mfc_wakeup:
 	s5p_mfc_pm_clock_off(dev);
 
 	s5p_mfc_release_hwlock_dev(dev);
+
+	/* Dump the status of POWER/CLK */
+	s5p_mfc_dump_power_clk_status();
 
 	mfc_debug_leave();
 

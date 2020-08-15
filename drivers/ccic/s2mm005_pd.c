@@ -239,6 +239,7 @@ void process_message_role(void *data)
 	is_src = usbpd_data->func_state & (0x1 << 25) ? 1 : 0;
 	pr_info("%s func_state :0x%X, is_dfp : %d, is_src : %d\n", __func__,
 		usbpd_data->func_state, is_dfp, is_src);
+#if defined(CONFIG_TYPEC)
 	pr_info("%s current port data_role : %d, power_role : %d\n", __func__,
 		usbpd_data->typec_data_role, usbpd_data->typec_power_role);
 
@@ -246,7 +247,7 @@ void process_message_role(void *data)
 		pr_info("%s skip. already power role is set.\n", __func__);
 		return;
 	}
-		
+#endif		
 	// 2. process power role
 	if (usbpd_data->pd_state != State_PE_PRS_SNK_SRC_Source_on) {
 		pr_info("%s pd_state is not PE_PRS_SNK_SRC_Source_on\n", __func__);
@@ -283,7 +284,6 @@ void process_message_role(void *data)
 #elif defined (CONFIG_TYPEC)
 	usbpd_data->typec_power_role = is_src ? TYPEC_SOURCE : TYPEC_SINK;
 	typec_set_pwr_role(usbpd_data->port, usbpd_data->typec_power_role);
-#endif
 
 	if (usbpd_data->typec_try_state_change == TRY_ROLE_SWAP_PR) {
 		pr_info("%s : power role is changed %s\n",
@@ -292,6 +292,7 @@ void process_message_role(void *data)
 		complete(&usbpd_data->typec_reverse_completion);
 		pr_info("%s typec_reverse_completion!\n", __func__);
 	}
+#endif
 }
 
 void process_pd(void *data, u8 plug_attach_done, u8 *pdic_attach, MSG_IRQ_STATUS_Type *MSG_IRQ_State)
@@ -312,10 +313,14 @@ void process_pd(void *data, u8 plug_attach_done, u8 *pdic_attach, MSG_IRQ_STATUS
 		usbpd_data->is_pr_swap++;
 		dev_info(&i2c->dev, "PR_Swap requested to %s, receive\n", is_src ? "SOURCE" : "SINK");
 		process_message_role(usbpd_data);
-	} else if (usbpd_data->typec_try_state_change == TRY_ROLE_SWAP_PR) {
+	}
+#if defined(CONFIG_TYPEC)
+	else if (usbpd_data->typec_try_state_change == TRY_ROLE_SWAP_PR) {
 		dev_info(&i2c->dev, "PR_Swap requested to %s, send\n", is_src ? "SOURCE" : "SINK");
 		process_message_role(usbpd_data);
-	} else ;
+	}
+#endif
+	else ;
 
 	if (MSG_IRQ_State->BITS.Data_Flag_SRC_Capability)
 	{

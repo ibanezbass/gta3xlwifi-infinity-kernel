@@ -655,8 +655,20 @@ config ENABLE_100MA_CHARGING_BEFORE_USB_CONFIGURED
 	help
 	  Say Y to enable 100mA before usb configured
 
+config ABNORMAL_BAT_THM_WA
+	bool "enable SW Workaround for abnormal jump in battery thermistor ADC"
+	default n
+	help
+	  Say Y to enable SW Workaround for abnormal jump in battery thermistor ADC
+
 config S2MU004_MODE_CHANGE_BY_TOPOFF
 	bool "enable s2mu004 mode change by topoff"
 	default n
 	help
 	  Say Y to enable s2mu004 mode change by topoff
+	  
+config A10_FACTORY_MAX_SOC
+	bool "enable maximum store mode SOC in factory binary"
+	default n
+	help
+	  Say Y to enable  maximum store mode SOC in factory binary

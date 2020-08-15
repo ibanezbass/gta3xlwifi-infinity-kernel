@@ -442,6 +442,14 @@ static void s2mu106_if_hv_muic_afc_9v_charger(void *mdata)
 	s2mu106_hv_muic_handle_attach(muic_data, ATTACHED_DEV_AFC_CHARGER_9V_MUIC);
 }
 
+#if IS_ENABLED(CONFIG_MUIC_NOT_SUPPORT_QC)
+static void s2mu106_if_hv_muic_qc_charger(void *mdata)
+{
+	struct s2mu106_muic_data *muic_data = (struct s2mu106_muic_data *)mdata;
+
+	s2mu106_hv_muic_handle_attach(muic_data, ATTACHED_DEV_TA_MUIC);
+}
+#else
 static void s2mu106_if_hv_muic_qc_charger(void *mdata)
 {
     struct s2mu106_muic_data *muic_data =
@@ -459,6 +467,7 @@ static void s2mu106_if_hv_muic_qc_charger(void *mdata)
 
 	schedule_delayed_work(&muic_data->qc_retry_work, msecs_to_jiffies(150));
 }
+#endif
 
 static void s2mu106_if_hv_muic_qc_5v_charger(void *mdata)
 {
@@ -488,6 +497,7 @@ static void s2mu106_hv_muic_handle_attach(struct s2mu106_muic_data* muic_data,
 	muic_data->pdata->attached_dev = new_dev;
 
 	switch (new_dev) {
+	case ATTACHED_DEV_TA_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_PREPARE_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_PREPARE_DUPLI_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_5V_MUIC:
@@ -659,7 +669,7 @@ int muic_afc_get_voltage(void)
 	struct s2mu106_muic_data *muic_data = static_data;
 	struct muic_platform_data *muic_pdata = muic_data->pdata;
 	int ret = -1;
-	
+
 	mutex_lock(&muic_data->afc_mutex);
 	switch (muic_pdata->attached_dev) {
 	case ATTACHED_DEV_AFC_CHARGER_9V_MUIC:

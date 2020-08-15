@@ -38,6 +38,9 @@
 #include "fimc-is-device-module-base.h"
 #include "interface/fimc-is-interface-library.h"
 #include "pdp/fimc-is-pdp.h"
+#ifdef CONFIG_VENDER_MCD_V2
+#include "fimc-is-sec-define.h"
+#endif
 
 int sensor_module_init(struct v4l2_subdev *subdev, u32 val)
 {
@@ -619,15 +622,66 @@ int sensor_module_g_ext_ctrls(struct v4l2_subdev *subdev, struct v4l2_ext_contro
 int sensor_module_s_ext_ctrls(struct v4l2_subdev *subdev, struct v4l2_ext_controls *ctrls)
 {
 	int ret = 0;
-	struct fimc_is_module_enum *module;
+	int i = 0;
+	struct fimc_is_module_enum *module = NULL;
+	struct fimc_is_device_sensor *device = NULL;
+	struct v4l2_ext_control *ext_ctrl;
+	struct v4l2_control ctrl;
+
+#ifdef CONFIG_VENDER_MCD_V2
+	char *dual_cal = NULL;
+	int cal_size = 0;
+#endif
 
 	BUG_ON(!subdev);
 
 	module = (struct fimc_is_module_enum *)v4l2_get_subdevdata(subdev);
+	BUG_ON(!module);
 
-	/* TODO */
-	pr_info("[MOD:%s] %s Not implemented\n", module->sensor_name, __func__);
+	device = (struct fimc_is_device_sensor *)v4l2_get_subdev_hostdata(subdev);
+	BUG_ON(!device);
 
+	for (i = 0; i < ctrls->count; i++) {
+		ext_ctrl = (ctrls->controls + i);
+
+		switch (ext_ctrl->id) {
+			case V4L2_CID_IS_GET_DUAL_CAL:
+#ifdef CONFIG_VENDER_MCD_V2
+			ret = fimc_is_get_dual_cal_buf(device->position, &dual_cal, &cal_size);
+			if (ret == 0) {
+				info("dual cal[%d] : ver[%d]", device->position, *((s32 *)dual_cal));
+				ret = copy_to_user(ext_ctrl->ptr, dual_cal, cal_size);
+				if (ret) {
+					err("failed copying %d bytes of data\n", ret);
+					ret = -EINVAL;
+					goto p_err;
+				}
+			} else {
+				err("failed to fimc_is_get_dual_cal_buf : %d\n", ret);
+				ret = -EINVAL;
+				goto p_err;
+			}
+#else
+			err("Available version is not defined. Not apply dual cal.");
+			ret = -EINVAL;
+			goto p_err;
+#endif
+			break;
+
+		default:
+			ctrl.id = ext_ctrl->id;
+			ctrl.value = ext_ctrl->value;
+
+			ret = sensor_module_s_ctrl(subdev, &ctrl);
+			if (ret) {
+				err("v4l2_s_ctrl is fail(%d)\n", ret);
+				goto p_err;
+			}
+			break;
+		}
+	}
+
+p_err:
 	return ret;
 }
 

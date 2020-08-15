@@ -8,6 +8,8 @@
  * published by the Free Software Foundation.
  */
 
+#define pr_fmt(fmt) "[VIB] " fmt
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include "../staging/android/timed_output.h"
@@ -34,7 +36,7 @@
 #endif
 
 #define TEST_MODE_TIME 10000
-#define MAX_INTENSITY 10000
+#define MAX_INTENSITY 100
 
 struct s2mu106_haptic_data {
 	struct s2mu106_dev *s2mu106;
@@ -85,11 +87,11 @@ static void s2mu106_set_intensity(struct s2mu106_haptic_data *haptic, int intens
 	else if (intensity != 0) {
 		long long tmp;
 
-		tmp = (intensity * max) / 10000;
+		tmp = (intensity * max) / 100;
 		data = (int)tmp;
 	} else
 		data = 0;
-
+	data = (data * haptic->pdata->intensity) / 100;	
 	data &= 0x7FFFF;
 	val1 = data & 0x0000F;
 	val2 = (data & 0x00FF0) >> 4;
@@ -115,6 +117,9 @@ static void s2mu106_haptic_onoff(struct s2mu106_haptic_data *haptic, bool en)
 
 		switch (haptic->hap_mode) {
 		case S2MU106_HAPTIC_LRA:
+			s2mu106_write_reg(haptic->i2c, S2MU106_REG_HAPTIC_MODE, LRA_MODE_EN);
+			pwm_config(haptic->pwm, haptic->pdata->duty,
+					haptic->pdata->period);
 			pwm_enable(haptic->pwm);
 			break;
 		case S2MU106_HAPTIC_ERM_GPIO:
@@ -136,13 +141,14 @@ static void s2mu106_haptic_onoff(struct s2mu106_haptic_data *haptic, bool en)
 		switch (haptic->hap_mode) {
 		case S2MU106_HAPTIC_LRA:
 			pwm_disable(haptic->pwm);
+			s2mu106_write_reg(haptic->i2c, S2MU106_REG_HAPTIC_MODE, HAPTIC_MODE_OFF);
 			break;
 		case S2MU106_HAPTIC_ERM_GPIO:
 			if (gpio_is_valid(haptic->motor_en))
 				gpio_direction_output(haptic->motor_en, 0);
 			break;
 		case S2MU106_HAPTIC_ERM_I2C:
-			s2mu106_write_reg(haptic->i2c, S2MU106_REG_HAPTIC_MODE, ERM_MODE_OFF);
+			s2mu106_write_reg(haptic->i2c, S2MU106_REG_HAPTIC_MODE, HAPTIC_MODE_OFF);
 			break;
 		default:
 			break;
@@ -177,7 +183,7 @@ static void haptic_enable(struct timed_output_dev *tout_dev, int value)
 	value = min_t(int, value, (int)pdata->max_timeout);
 	hap_data->timeout = value;
 
-	pr_info("[VIB] %s : %u ms\n", __func__, value);
+	pr_info("%s : %u ms\n", __func__, value);
 
 	if (value > 0) {
 		mutex_lock(&hap_data->mutex);
@@ -200,7 +206,7 @@ static void haptic_enable(struct timed_output_dev *tout_dev, int value)
 		setSensorCallback(false, 0);
 #endif
 		mutex_unlock(&hap_data->mutex);
-		pr_debug("[VIB] %s : off\n", __func__);
+		pr_debug("%s : off\n", __func__);
 	}
 
 }
@@ -209,7 +215,7 @@ static enum hrtimer_restart haptic_timer_func(struct hrtimer *timer)
 {
 	struct s2mu106_haptic_data *hap_data
 		= container_of(timer, struct s2mu106_haptic_data, timer);
-	pr_info("[VIB] : %s\n", __func__);
+	pr_info("%s\n", __func__);
 
 	hap_data->timeout = 0;
 	queue_kthread_work(&hap_data->kworker, &hap_data->kwork);
@@ -222,7 +228,7 @@ static void haptic_work(struct kthread_work *work)
 		= container_of(work, struct s2mu106_haptic_data, kwork);
 	
 	mutex_lock(&hap_data->mutex);
-	pr_info("[VIB] %s : hap_data->running = %d\n", __func__, hap_data->running);
+	pr_info("%s : hap_data->running = %d\n", __func__, hap_data->running);
 
 	if (!hap_data->running) {
 		mutex_unlock(&hap_data->mutex);
@@ -247,7 +253,7 @@ static ssize_t intensity_store(struct device *dev,
         int intensity = 0, ret = 0;
 
         ret = kstrtoint(buf, 0, &intensity);
-
+		intensity = intensity / 100;
         if (intensity < 0 || MAX_INTENSITY < intensity) {
 		pr_err("out of rage\n");
 		return -EINVAL;
@@ -350,6 +356,15 @@ static int s2mu106_haptic_parse_dt(struct device *dev,
 	} else
 		pdata->pwm_id = (u16)temp;
 
+	ret = of_property_read_u32(np, "haptic,intensity", &temp);
+	if (ret < 0) {
+		pr_info("%s : intensity set to 100%%\n", __func__);
+		pdata->intensity = 100;
+	} else {
+		pr_info("%s : intensity set to %d%%\n", __func__,temp);
+		pdata->intensity = (u32)temp;
+	}
+
 	/*	Haptic operation mode
 		0 : S2MU106_HAPTIC_ERM_I2C
 		1 : S2MU106_HAPTIC_ERM_GPIO
@@ -371,7 +386,7 @@ static int s2mu106_haptic_parse_dt(struct device *dev,
 	
 	ret = of_property_read_u32(np, "haptic,max_timeout", &temp);
 	if (IS_ERR_VALUE(ret)) {
-		pr_err("[VIB] %s : error to get dt node max_timeout\n", __func__);
+		pr_err("%s : error to get dt node max_timeout\n", __func__);
 	} else
 		pdata->max_timeout = (u16)temp;
 	
@@ -436,18 +451,23 @@ static void s2mu106_haptic_initial(struct s2mu106_haptic_data *haptic)
 		}
 	} else {
 		pr_info("%s : HDVIN - Vsys HDVIN voltage : Min 3.5V\n", __func__);
+#if IS_ENABLED(CONFIG_MOTOR_VOLTAGE_3P3)
+		s2mu106_update_reg(haptic->i2c, S2MU106_REG_HT_OTP2, 0x40, VCEN_SEL_MASK);
+		s2mu106_update_reg(haptic->i2c, S2MU106_REG_HT_OTP3, 0x01, VCENUP_TRIM_MASK);
+#else
 		s2mu106_update_reg(haptic->i2c, S2MU106_REG_HT_OTP2, 0x00, VCEN_SEL_MASK);
 		s2mu106_update_reg(haptic->i2c, S2MU106_REG_HT_OTP3, 0x03, VCENUP_TRIM_MASK);
+#endif
 	}
-
-	/* Intensity setting to 100% */
+	
+	/* Intensity setting */
 	s2mu106_set_intensity(haptic, haptic->intensity);
 	haptic->running = false;
 
 	/* mode setting */
 	switch (haptic->hap_mode) {
 	case S2MU106_HAPTIC_LRA:
-		data = LRA_MODE_EN;
+		data = HAPTIC_MODE_OFF;
 		pwm_config(haptic->pwm, haptic->pdata->duty,
 				haptic->pdata->period);
 		s2mu106_update_reg(haptic->i2c, S2MU106_REG_OV_BK_OPTION,
@@ -455,6 +475,7 @@ static void s2mu106_haptic_initial(struct s2mu106_haptic_data *haptic)
 		s2mu106_write_reg(haptic->i2c, S2MU106_REG_FILTERCOEF1, 0x7F);
 		s2mu106_write_reg(haptic->i2c, S2MU106_REG_FILTERCOEF2, 0x5A);
 		s2mu106_write_reg(haptic->i2c, S2MU106_REG_FILTERCOEF3, 0x02);
+		s2mu106_write_reg(haptic->i2c, S2MU106_REG_PWM_CNT_NUM, 0x40);
 		s2mu106_update_reg(haptic->i2c, S2MU106_REG_OV_WAVE_NUM, 0xF0, 0xF0);
 		break;
 	case S2MU106_HAPTIC_ERM_GPIO:
@@ -467,7 +488,7 @@ static void s2mu106_haptic_initial(struct s2mu106_haptic_data *haptic)
 		}
 		break;
 	case S2MU106_HAPTIC_ERM_I2C:
-		data = ERM_MODE_OFF;
+		data = HAPTIC_MODE_OFF;
 		break;
 	default:
 		data = ERM_HDPWM_MODE_EN;
@@ -481,7 +502,11 @@ static void s2mu106_haptic_initial(struct s2mu106_haptic_data *haptic)
 		s2mu106_write_reg(haptic->i2c, S2MU106_REG_PERI_TAR2, 0x00);
 		s2mu106_write_reg(haptic->i2c, S2MU106_REG_DUTY_TAR1, 0x00);
 		s2mu106_write_reg(haptic->i2c, S2MU106_REG_DUTY_TAR2, 0x00);
+#if IS_ENABLED(CONFIG_MOTOR_VOLTAGE_3P3)
+		s2mu106_write_reg(haptic->i2c, S2MU106_REG_AMPCOEF1, 0x5D);
+#else
 		s2mu106_write_reg(haptic->i2c, S2MU106_REG_AMPCOEF1, 0x74);
+#endif
 	}
 
 	pr_info("%s, haptic operation mode = %d\n", __func__, haptic->hap_mode);
@@ -541,10 +566,10 @@ static int s2mu106_haptic_probe(struct platform_device *pdev)
 		haptic->pwm = pwm_request(haptic->pdata->pwm_id, "vibrator");
 		if (IS_ERR(haptic->pwm)) {
 			error = -EFAULT;
-			pr_err("[VIB] Failed to request pwm, err num: %d\n", error);
+			pr_err("Failed to request pwm, err num: %d\n", error);
 			goto err_pwm_request;
 		}
-		pr_err("[VIB] request pwm, success: \n");
+		pr_err("request pwm, success: \n");
 		pwm_config(haptic->pwm, haptic->pdata->duty, haptic->pdata->period);
 	}
 
@@ -561,7 +586,7 @@ static int s2mu106_haptic_probe(struct platform_device *pdev)
 	error = timed_output_dev_register(&haptic->tout_dev);
 	if (error < 0) {
 		error = -EFAULT;
-		pr_err("[VIB] Failed to register timed_output : %d\n", error);
+		pr_err("Failed to register timed_output : %d\n", error);
 		goto err_timed_output_register;
 	}
 	if(haptic->pdata->hap_mode == S2MU106_HAPTIC_LRA) {
@@ -605,7 +630,7 @@ static int s2mu106_haptic_suspend(struct device *dev)
 	struct platform_device *pdev = container_of(dev, struct platform_device, dev);
 	struct s2mu106_haptic_data *haptic = platform_get_drvdata(pdev);
 
-	pr_debug("[VIB] %s\n", __func__);
+	pr_info("%s\n", __func__);
 	flush_kthread_worker(&haptic->kworker);
 	hrtimer_cancel(&haptic->timer);
 	s2mu106_haptic_onoff(haptic, false);
@@ -614,6 +639,7 @@ static int s2mu106_haptic_suspend(struct device *dev)
 
 static int s2mu106_haptic_resume(struct device *dev)
 {
+	pr_info("%s\n", __func__);
 	return 0;
 }
 

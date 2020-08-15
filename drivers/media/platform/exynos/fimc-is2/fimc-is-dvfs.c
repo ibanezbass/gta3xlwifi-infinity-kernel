@@ -514,7 +514,9 @@ int fimc_is_set_dvfs(struct fimc_is_core *core, struct fimc_is_device_ischain *d
 #if defined(ENABLE_HMP_BOOST)
 	/* hpg_qos : number of minimum online CPU */
 	if (hpg_qos && dvfs_ctrl->cur_hpg_qos != hpg_qos) {
+#if !defined(CONFIG_SOC_EXYNOS7885)        /* QOS related to online cpu is not supported by Lassen. */
 		pm_qos_update_request(&exynos_isp_qos_hpg, hpg_qos);
+#endif
 		dvfs_ctrl->cur_hpg_qos = hpg_qos;
 
 #if defined(CONFIG_HMP_VARIABLE_SCALE)

@@ -124,16 +124,26 @@ int slsi_check_rf_test_mode(void)
 #else
 	char *filepath = "/data/misc/conn/.psm.info";
 #endif
+	char *file_path = "/data/vendor/wifi/rftest.info";
 	char power_val = 0;
 
+	/* reading power value from /data/vendor/conn/.psm.info */
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp) || (!fp)) {
 		pr_err("%s is not exist.\n", filepath);
-		return -ENOENT; /* -2 */
+		/* reading power value from /data/vendor/wifi/rftest.info */
+		fp = filp_open(file_path, O_RDONLY, 0);
+		if(IS_ERR(fp) || (!fp)) {
+			pr_err("%s is not exist.\n", file_path);
+			return -ENOENT; /* -2 */
+		}
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	kernel_read(fp, &power_val, 1, &fp->f_pos);
+#else
 	kernel_read(fp, fp->f_pos, &power_val, 1);
-
+#endif
 	/* if power_val is 0, it means rf_test mode by rf. */
 	if (power_val == '0') {
 		pr_err("*#rf# is enabled.\n");

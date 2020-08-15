@@ -364,6 +364,7 @@ static int exynos8890_tmu_initialize(struct platform_device *pdev)
 	/* Check tmu core ready status */
 	trim_info = readl(data->base + EXYNOS_TMU_REG_TRIMINFO);
 
+
 	/* Check thermal calibration type */
 	pdata->cal_type = (trim_info >> EXYNOS_TMU_CALIB_SEL_SHIFT)
 			& EXYNOS_TMU_CALIB_SEL_MASK;

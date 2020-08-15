@@ -299,31 +299,21 @@ static unsigned long tzdev_get_migratetype(struct page *page)
 	return migrate_type;
 }
 
-static int tzdev_verify_migration_page(struct page *page)
+static void tzdev_verify_migration_page(struct page *page)
 {
 	unsigned long migrate_type;
 
 	migrate_type = tzdev_get_migratetype(page);
-	if (migrate_type == MIGRATE_CMA || migrate_type == MIGRATE_ISOLATE) {
+	if (migrate_type == MIGRATE_CMA || migrate_type == MIGRATE_ISOLATE)
 		tzdev_print(0, "%s: migrate_type == %lu\n", __func__, migrate_type);
-		return -EFAULT;
-	}
-
-	return 0;
 }
 
-static int tzdev_verify_migration(struct page **pages, unsigned long nr_pages)
+static void tzdev_verify_migration(struct page **pages, unsigned long nr_pages)
 {
 	unsigned long i;
-	int ret;
 
-	for (i = 0; i < nr_pages; i++) {
-		ret = tzdev_verify_migration_page(pages[i]);
-		if (ret)
-			return ret;
-	}
-
-	return 0;
+	for (i = 0; i < nr_pages; i++)
+		tzdev_verify_migration_page(pages[i]);
 }
 
 static int __tzdev_migrate_pages(struct task_struct *task, struct mm_struct *mm,
@@ -415,13 +405,9 @@ static int __tzdev_migrate_pages(struct task_struct *task, struct mm_struct *mm,
 		if (pinned != nr_pin)
 			return -EFAULT;
 
-		/* Check that migrated pages are not MIGRATE_CMA or MIGRATE_ISOLATE
-		 * and mark them as verified. If it is not true inform caller
-		 * to repeat migrate operation */
-		if (tzdev_verify_migration(cur_pages, nr_pin) == 0)
-			bitmap_set(verified_bitmap, cur_pages_index, nr_pin);
-		else
-			ret = -EAGAIN;
+		/* Check that migrated pages are not MIGRATE_CMA or MIGRATE_ISOLATE */
+		tzdev_verify_migration(cur_pages, nr_pin);
+		bitmap_set(verified_bitmap, cur_pages_index, nr_pin);
 
 		migrate_nr -= nr_pin;
 	} while (migrate_nr);

@@ -19,55 +19,95 @@
 #define LDI_REG_ID				0x04
 #define LDI_REG_COORDINATE			0xA1
 #define LDI_REG_DATE				LDI_REG_COORDINATE
-#define LDI_REG_MANUFACTURE_INFO		LDI_REG_COORDINATE
-#define LDI_REG_CELL_ID		LDI_REG_COORDINATE
+#define LDI_REG_MANUFACTURE_INFO		0xA8	/* A1->A8 because A1 does not support usual GPara */
 #define LDI_REG_CHIP_ID				0xD6
-#define LDI_REG_ELVSS			0xBF
 
 /* len is read length */
 #define LDI_LEN_ID				3
 #define LDI_LEN_COORDINATE			4
 #define LDI_LEN_DATE				7
 #define LDI_LEN_MANUFACTURE_INFO		20
-#define LDI_LEN_CELL_ID		20
 #define LDI_LEN_CHIP_ID				5
 #define LDI_LEN_ELVSS				(ELVSS_CMD_CNT - 1)
 
 /* offset is position including addr, not only para */
 #define LDI_OFFSET_HBM		1
-#define LDI_OFFSET_ELVSS_1	4		/* BFh 4th para: ELVSS	*/
-#define LDI_OFFSET_ELVSS_2	1		/* BFh 1th para: TSET	*/
+#define LDI_OFFSET_ELVSS_1	4		/* BFh 4th para: ELVSS */
+#define LDI_OFFSET_ELVSS_2	1		/* BFh 1th para: TSET */
 
 #define LDI_GPARA_COORDINATE			0	/* A1h 1st Para: x, y */
 #define LDI_GPARA_DATE				4	/* A1h 5th Para: [D7:D4]: Year */
 #define LDI_GPARA_MANUFACTURE_INFO		11	/* A1h 12th Para: [D7:D4]:Site */
-#define LDI_GPARA_CELL_ID		15	/* A1h 16th Para ~ 31th para */
 
-#define	LDI_REG_RDDPM		0x0A	/* Read Display Power Mode */
-#define	LDI_LEN_RDDPM		1
+struct bit_info {
+	unsigned int reg;
+	unsigned int len;
+	char **print;
+	unsigned int expect;
+	unsigned int offset;
+	unsigned int g_para;
+	unsigned int invert;
+	unsigned int mask;
+	unsigned int result;
+};
 
-#define	LDI_REG_RDDSM		0x0E	/* Read Display Signal Mode */
-#define	LDI_LEN_RDDSM		1
+enum {
+	LDI_BIT_ENUM_05,	LDI_BIT_ENUM_RDNUMED = LDI_BIT_ENUM_05,
+	LDI_BIT_ENUM_0A,	LDI_BIT_ENUM_RDDPM = LDI_BIT_ENUM_0A,
+	LDI_BIT_ENUM_0E,	LDI_BIT_ENUM_RDDSM = LDI_BIT_ENUM_0E,
+	LDI_BIT_ENUM_0F,	LDI_BIT_ENUM_RDDSDR = LDI_BIT_ENUM_0F,
+	LDI_BIT_ENUM_EE,	LDI_BIT_ENUM_ESDERR = LDI_BIT_ENUM_EE,
+	LDI_BIT_ENUM_MAX
+};
 
-#ifdef CONFIG_DISPLAY_USE_INFO
-#define	LDI_REG_RDNUMPE		0x05		/* DPUI_KEY_PNDSIE: Read Number of the Errors on DSI */
-#define	LDI_LEN_RDNUMPE		1
-#define LDI_PNDSIE_MASK		(GENMASK(6, 0))
+static char *LDI_BIT_DESC_05[BITS_PER_BYTE] = {
+	[0 ... 6] = "number of corrupted packets",
+	[7] = "overflow on number of corrupted packets",
+};
+
+static char *LDI_BIT_DESC_0A[BITS_PER_BYTE] = {
+	[2] = "Display is Off",
+	[7] = "Booster has a fault",
+};
+
+static char *LDI_BIT_DESC_0E[BITS_PER_BYTE] = {
+	[0] = "Error on DSI",
+};
+
+static char *LDI_BIT_DESC_0F[BITS_PER_BYTE] = {
+	[7] = "Register Loading Detection",
+};
+
+static char *LDI_BIT_DESC_EE[BITS_PER_BYTE] = {
+	[2] = "VLIN3 error",
+	[3] = "ELVDD error",
+	[6] = "VLIN1 error",
+};
+
+static struct bit_info ldi_bit_info_list[LDI_BIT_ENUM_MAX] = {
+	[LDI_BIT_ENUM_05] = {0x05, 1, LDI_BIT_DESC_05, 0x00, },
+	[LDI_BIT_ENUM_0A] = {0x0A, 1, LDI_BIT_DESC_0A, 0x9F, .invert = (BIT(2) | BIT(7)), },
+	[LDI_BIT_ENUM_0E] = {0x0E, 1, LDI_BIT_DESC_0E, 0x00, },
+	[LDI_BIT_ENUM_0F] = {0x0F, 1, LDI_BIT_DESC_0F, 0x80, .invert = (BIT(7)), },
+	[LDI_BIT_ENUM_EE] = {0xEE, 1, LDI_BIT_DESC_EE, 0x00, .offset = 1, },
+};
+
+#if defined(CONFIG_DISPLAY_USE_INFO)
+#define LDI_LEN_RDNUMED		1		/* DPUI_KEY_PNDSIE: Read Number of the Errors on DSI */
+#define LDI_PNDSIE_MASK		(GENMASK(7, 0))
 
 /*
- * ESD_ERROR[2] =  VLIN3 error is occurred by ESD.
- * ESD_ERROR[3] =  ELVDD error is occurred by ESD.
- * ESD_ERROR[6] =  VLIN1 error is occurred by ESD
+ * ESD_ERROR[2] = VLIN3 error is occurred by ESD.
+ * ESD_ERROR[3] = ELVDD error is occurred by ESD.
+ * ESD_ERROR[6] = VLIN1 error is occurred by ESD
  */
-#define LDI_REG_ESDERR		0xEE		/* DPUI_KEY_PNELVDE, DPUI_KEY_PNVLI1E, DPUI_KEY_PNVLO3E, DPUI_KEY_PNESDE */
-#define LDI_LEN_ESDERR		1
+#define LDI_LEN_ESDERR		1		/* DPUI_KEY_PNELVDE, DPUI_KEY_PNVLI1E, DPUI_KEY_PNVLO3E, DPUI_KEY_PNESDE */
 #define LDI_PNELVDE_MASK	(BIT(3))	/* ELVDD error */
 #define LDI_PNVLI1E_MASK	(BIT(6))	/* VLIN1 error */
 #define LDI_PNVLO3E_MASK	(BIT(2))	/* VLIN3 error */
 #define LDI_PNESDE_MASK		(BIT(2) | BIT(3) | BIT(6))
 
-#define LDI_REG_RDDSDR		0x0F		/* DPUI_KEY_PNSDRE: Read Display Self-Diagnostic Result */
-#define LDI_LEN_RDDSDR		1
+#define LDI_LEN_RDDSDR		1		/* DPUI_KEY_PNSDRE: Read Display Self-Diagnostic Result */
 #define LDI_PNSDRE_MASK		(BIT(7))	/* D7: REG_DET: Register Loading Detection */
 #endif
 
@@ -113,32 +153,22 @@ static unsigned char SEQ_TEST_KEY_OFF_FC[] = {
 	0xA5, 0xA5
 };
 
-static unsigned char SEQ_TE_ON[] = {
-	0x35,
-	0x00
-};
-
 static unsigned char SEQ_ERR_FG_SET[] = {
 	0xED,
-	0x00, 0x4C
-};
-
-static unsigned char SEQ_GPARA_CELL_ID[] = {
-	0xB0,
-	0x0F, LDI_REG_CELL_ID
+	0x00, 0x4C, 0x40
 };
 
 static unsigned char SEQ_ELVSS_SET[] = {
 	0xBF,
-	0x19,	/* 1st para TSET	*/
+	0x19,	/* 1st para TSET */
 	0x0D, 0x80,
-	0xD0,	/* 4th para ELVSS	*/
-	0x04		/* 5th para 4 frame dim speed */
+	0xD0,	/* 4th para ELVSS */
+	0x04	/* 5th para 4 frame dim speed */
 };
 
 static unsigned char SEQ_HBM_ON[] = {
 	0x53,
-	0xE0,
+	0xE8,
 };
 
 static unsigned char SEQ_HBM_OFF[] = {
@@ -154,8 +184,8 @@ static unsigned char SEQ_EDGE_DIM[] = {
 static unsigned char SEQ_ACL_OPR_OFF[] = {
 	0xC1,
 	0x41,	/* 16 Frame Avg. at ACL Off */
-	0x11, 0x12, 0x15, 0x55, 0x55, 0x55, 0x0F, 0x1B, 0x18, 0x47,
-	0x02,
+	0x11, 0x12, 0x15, 0x55, 0x55, 0x55, 0x0F, 0x1B, 0x18,
+	0x47, 0x02,
 	0x61, 0x28,	/* 13th~14th para ACL 15% */
 	0x4A,
 	0x41, 0xFC,	/* 16th~17th para Start step 50% */
@@ -165,8 +195,8 @@ static unsigned char SEQ_ACL_OPR_OFF[] = {
 static unsigned char SEQ_ACL_OPR_08P[] = {
 	0xC1,
 	0x41,	/* 16 Frame Avg. at ACL Off */
-	0x11, 0x12, 0x15, 0x55, 0x55, 0x55, 0x0F, 0x1B, 0x18, 0x47,
-	0x02,
+	0x11, 0x12, 0x15, 0x55, 0x55, 0x55, 0x0F, 0x1B, 0x18,
+	0x47, 0x02,
 	0x60, 0x98,	/* 13th~14th para ACL 8% */
 	0x4A,
 	0x42, 0x64,	/* 16th~17th para Start step 60% */
@@ -176,8 +206,8 @@ static unsigned char SEQ_ACL_OPR_08P[] = {
 static unsigned char SEQ_ACL_OPR_15P[] = {
 	0xC1,
 	0x51,	/* 32 Frame Avg. at ACL On */
-	0x11, 0x12, 0x15, 0x55, 0x55, 0x55, 0x0F, 0x1B, 0x18, 0x47,
-	0x02,
+	0x11, 0x12, 0x15, 0x55, 0x55, 0x55, 0x0F, 0x1B, 0x18,
+	0x47, 0x02,
 	0x61, 0x28,	/* 13th~14th para ACL 15% */
 	0x4A,
 	0x41, 0xFC,	/* 16th~17th para Start step 50% */
@@ -237,55 +267,55 @@ static unsigned int brightness_opr_table[ACL_STATUS_MAX][EXTEND_BRIGHTNESS + 1] 
 /* platform brightness <-> gamma level */
 static unsigned int brightness_table[EXTEND_BRIGHTNESS + 1] = {
 	15,
-	18, 21, 23, 26, 29, 32, 35, 38, 40, 43,
-	46, 49, 52, 54, 56, 63, 66, 71, 74, 80,
-	83, 86, 91, 94, 100, 102, 108, 111, 117, 119,
-	122, 128, 131, 136, 139, 145, 148, 153, 156, 159,
-	164, 167, 173, 176, 181, 184, 190, 193, 195, 201,
-	204, 210, 212, 218, 221, 227, 229, 232, 238, 241,
-	246, 249, 255, 258, 263, 266, 269, 274, 277, 283,
-	286, 291, 294, 300, 303, 305, 311, 314, 320, 322,
-	328, 331, 337, 339, 342, 348, 351, 356, 359, 362,
-	368, 373, 376, 379, 384, 387, 393, 396, 399, 404,
-	410, 413, 415, 421, 424, 430, 432, 438, 441, 446,
-	449, 452, 458, 461, 466, 469, 475, 478, 483, 486,
-	492, 494, 497, 503, 506, 511, 514, 517, 523, 526,
-	531, 534, 537, 543, 546, 551, 554, 557, 563, 566,
-	571, 574, 577, 583, 586, 591, 594, 600, 603, 606,
-	611, 614, 617, 623, 626, 628, 634, 637, 643, 646,
-	649, 654, 657, 663, 666, 669, 674, 677, 683, 686,
-	691, 694, 697, 703, 706, 711, 714, 717, 720, 726,
-	729, 734, 737, 740, 746, 749, 754, 757, 763, 766,
-	769, 774, 777, 783, 786, 789, 794, 797, 803, 806,
-	809, 814, 817, 820, 826, 829, 831, 837, 840, 846,
-	849, 854, 857, 860, 866, 869, 874, 877, 880, 886,
-	889, 894, 897, 900, 906, 909, 914, 917, 920, 926,
-	929, 932, 937, 940, 946, 949, 952, 957, 960, 966,
-	969, 972, 977, 980, 986, 989, 992, 997, 1000, 1006,
-	1009, 1012, 1017, 1020, 1023, 0, 1, 2, 3, 4,
-	4, 5, 6, 7, 8, 9, 10, 10, 11, 12,
-	13, 14, 15, 16, 17, 17, 18, 19, 20, 21,
-	22, 23, 23, 24, 25, 26, 27, 28, 29, 29,
-	30, 31, 32, 33, 34, 35, 36, 36, 37, 38,
-	39, 40, 41, 42, 43, 43, 44, 45, 46, 47,
-	48, 49, 49, 50, 51, 52, 53, 54, 55, 56,
-	57, 57, 58, 59, 60, 61, 62, 63, 63, 64,
+	18, 21, 24, 27, 29, 32, 35, 38, 41, 44,
+	47, 50, 53, 56, 61, 64, 67, 73, 76, 82,
+	84, 87, 93, 96, 102, 105, 110, 113, 119, 122,
+	125, 131, 134, 139, 142, 148, 151, 157, 160, 163,
+	168, 171, 177, 180, 186, 189, 194, 197, 200, 206,
+	209, 215, 218, 223, 226, 232, 235, 238, 244, 246,
+	252, 255, 261, 264, 270, 273, 275, 281, 284, 290,
+	293, 299, 301, 307, 310, 313, 319, 322, 327, 330,
+	336, 339, 345, 348, 351, 356, 359, 365, 368, 371,
+	377, 382, 385, 388, 394, 397, 403, 406, 408, 414,
+	420, 423, 426, 432, 435, 440, 443, 449, 452, 458,
+	461, 463, 469, 472, 478, 481, 487, 489, 495, 498,
+	504, 507, 510, 516, 518, 524, 527, 530, 536, 538,
+	544, 547, 549, 555, 558, 563, 566, 569, 575, 577,
+	583, 586, 588, 594, 597, 602, 605, 611, 614, 616,
+	622, 625, 627, 633, 636, 639, 644, 647, 653, 655,
+	658, 664, 666, 672, 675, 678, 683, 686, 692, 694,
+	700, 703, 705, 711, 714, 719, 722, 725, 728, 733,
+	736, 742, 744, 747, 753, 756, 761, 764, 770, 772,
+	775, 781, 783, 789, 792, 795, 800, 803, 809, 811,
+	814, 820, 822, 825, 831, 834, 836, 842, 845, 850,
+	853, 859, 861, 864, 870, 873, 878, 881, 884, 889,
+	892, 898, 900, 903, 909, 912, 917, 920, 923, 928,
+	931, 934, 939, 942, 948, 951, 953, 959, 962, 967,
+	970, 973, 978, 981, 987, 990, 992, 998, 1001, 1006,
+	1009, 1012, 1017, 1020, 1023, 1, 2, 3, 4, 5,
+	5, 6, 7, 8, 9, 10, 11, 11, 12, 13,
+	14, 15, 16, 17, 18, 18, 19, 20, 21, 22,
+	23, 24, 25, 25, 26, 26, 28, 29, 29, 31,
+	31, 31, 33, 34, 34, 36, 37, 37, 37, 38,
+	39, 41, 42, 42, 44, 44, 44, 45, 47, 47,
+	49, 49, 50, 50, 51, 52, 53, 55, 55, 57,
+	57, 57, 58, 60, 60, 61, 62, 63, 63, 65,
 	65, 66, 67, 68, 69, 70, 70, 71, 72, 73,
-	74, 75, 76, 76, 77, 78, 79, 80, 81, 82,
+	74, 75, 76, 77, 77, 78, 79, 80, 81, 82,
 	83, 83, 84, 85, 86,
 };
 
 static u8 elvss_table[EXTEND_BRIGHTNESS + 1] = {
 	[0 ... 255] = 0xD0,
-	[256 ... 260] = 0xDD,
-	[260 ... 265] = 0xDC,
-	[266 ... 271] = 0xDB,
-	[272 ... 277] = 0xDA,
-	[278 ... 285] = 0xD9,
-	[286 ... 295] = 0xD8,
+	[256 ... 259] = 0xDD,
+	[260 ... 264] = 0xDC,
+	[265 ... 270] = 0xDB,
+	[271 ... 276] = 0xDA,
+	[277 ... 284] = 0xD9,
+	[285 ... 295] = 0xD8,
 	[296 ... 304] = 0xD7,
-	[305 ... 311] = 0xD6,
-	[312 ... 317] = 0xD5,
+	[305 ... 310] = 0xD6,
+	[311 ... 317] = 0xD5,
 	[318 ... 325] = 0xD4,
 	[326 ... 331] = 0xD3,
 	[332 ... 337] = 0xD2,

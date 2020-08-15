@@ -1568,6 +1568,18 @@ static struct isdbt_platform_data *isdbt_populate_dt_pdata(struct device *dev)
 		pr_err("%s : isdbt-detect-gpio gpio_cp_dt =%d\n"
 			, __func__, pdata->gpio_cp_dt);
 
+	pdata->gpio_dtv_check = of_get_named_gpio(dev->of_node, "isdbt,gpio-dtv-check", 0);
+	if (pdata->gpio_dtv_check < 0)
+		of_property_read_u32(dev->of_node, "isdbt,gpio-dtv-check"
+			, &pdata->gpio_dtv_check);
+	if (pdata->gpio_dtv_check < 0)	{
+		pr_err("%s : can not find the isdbt-detect-gpio gpio-dtv-check in the dt\n"
+			, __func__);
+	} else {
+		pr_err("%s : isdbt-detect-gpio gpio-dtv-check =%d\n"
+			, __func__, pdata->gpio_dtv_check);
+	}
+
 /*
 	pdata->isdb_pinctrl = devm_pinctrl_get(dev);
 	if (IS_ERR(pdata->isdb_pinctrl)) {
@@ -1731,6 +1743,16 @@ static int isdbt_probe(struct platform_device *pdev)
 	if (!isdbt_pdata) {
 		pr_err("%s : isdbt_pdata is NULL.\n", __func__);
 		return -ENODEV;
+	}
+
+	/*support dtv model check GPIO*/
+	if (gpio_is_valid(isdbt_pdata->gpio_dtv_check)) {
+		if (gpio_get_value(isdbt_pdata->gpio_dtv_check)) {
+			pr_info("%s : dtv support model\n", __func__);
+		}else{
+			pr_info("%s : dtv not support model\n", __func__);
+			return -ENXIO;
+		}
 	}
 
 #ifdef CONFIG_SEC_ISDBT_FORCE_OFF

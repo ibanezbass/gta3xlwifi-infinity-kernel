@@ -189,10 +189,6 @@ struct mptcp_tcp_sock {
 #define MPTCP_SCHED_SIZE 16
 	u8	mptcp_sched[MPTCP_SCHED_SIZE] __aligned(8);
 
-	struct sk_buff  *shortcut_ofoqueue; /* Shortcut to the current modified
-					     * skb in the ofo-queue.
-					     */
-
 	int	init_rcv_wnd;
 	u32	infinite_cutoff_seq;
 	struct delayed_work work;
@@ -771,8 +767,6 @@ void mptcp_write_space(struct sock *sk);
 
 void mptcp_add_meta_ofo_queue(const struct sock *meta_sk, struct sk_buff *skb,
 			      struct sock *sk);
-void mptcp_ofo_queue(struct sock *meta_sk);
-void mptcp_purge_ofo_queue(struct tcp_sock *meta_tp);
 void mptcp_cleanup_rbuf(struct sock *meta_sk, int copied);
 int mptcp_add_sock(struct sock *meta_sk, struct sock *sk, u8 loc_id, u8 rem_id,
 		   gfp_t flags);
@@ -1356,7 +1350,6 @@ static inline int is_master_tp(const struct tcp_sock *tp)
 {
 	return 0;
 }
-static inline void mptcp_purge_ofo_queue(struct tcp_sock *meta_tp) {}
 static inline void mptcp_del_sock(const struct sock *sk) {}
 static inline void mptcp_update_metasocket(struct sock *sock, const struct sock *meta_sk) {}
 static inline void mptcp_reinject_data(struct sock *orig_sk, int clone_it) {}

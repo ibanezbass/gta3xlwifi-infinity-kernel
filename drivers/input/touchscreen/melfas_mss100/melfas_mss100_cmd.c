@@ -238,6 +238,7 @@ static void cmd_get_fw_ver_ic(void *device_data)
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
 	struct mms_ts_info *info = container_of(sec, struct mms_ts_info, sec);
 	char buff[16] = { 0 };
+	char model[16] = { 0 };
 	u8 rbuf[16];
 
 	sec_cmd_set_default_result(sec);
@@ -259,9 +260,14 @@ static void cmd_get_fw_ver_ic(void *device_data)
 
 	snprintf(buff, sizeof(buff),"ME%02X%02X%02X%02X",
 					rbuf[4], rbuf[5], rbuf[6], rbuf[7]);
+	snprintf(model, sizeof(model), "ME%02X%02X",
+					rbuf[4], rbuf[5]);
+
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
-	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING)
+	if (sec->cmd_all_factory_state == SEC_CMD_STATUS_RUNNING) {
 		sec_cmd_set_cmd_result_all(sec, buff, strnlen(buff, sizeof(buff)), "FW_VER_IC");
+		sec_cmd_set_cmd_result_all(sec, model, strnlen(model, sizeof(model)), "FW_MODEL");
+	}
 
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 
@@ -1051,7 +1057,7 @@ static void cmd_run_prox_intensity_read_all(void *device_data)
 	struct mms_ts_info *info = container_of(sec, struct mms_ts_info, sec);
 	u8 wbuf[4] = {0, };
 	u8 rbuf[4] = {0, };
-	char data[16] = {0};
+	char data[SEC_CMD_STR_LEN] = {0};
 
 	sec_cmd_set_default_result(sec);
 
@@ -1070,7 +1076,7 @@ static void cmd_run_prox_intensity_read_all(void *device_data)
 	}
 
 	/* melfas : avg,thd */
-	snprintf(data, sizeof(data), "%d,%d", info->image_buf[3], rbuf[0]);
+	snprintf(data, sizeof(data), "SUM_X:%d THD_X:%d", info->image_buf[3], rbuf[0]);
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 out:
 	sec_cmd_set_cmd_result(sec, data, strlen(data));
@@ -1244,8 +1250,15 @@ static void run_trx_short_test(void *device_data)
 	}
 
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	snprintf(result, sizeof(result), "RESULT=PASS");
-	sec_cmd_send_event_to_user(sec, test, result);
+
+	if (info->open_short_result == 1) {
+		snprintf(result, sizeof(result), "RESULT=PASS");
+		sec_cmd_send_event_to_user(sec, test, result);
+	} else {
+		snprintf(result, sizeof(result), "RESULT=FAIL");
+		sec_cmd_send_event_to_user(sec, test, result);
+	}
+
 	sec_cmd_set_cmd_result(sec, info->print_buf, strlen(info->print_buf));
 }
 
@@ -1476,6 +1489,24 @@ err_grip_data:
 	snprintf(buff, sizeof(buff), "%s", "NG");
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+	sec_cmd_set_cmd_exit(sec);
+}
+
+static void fod_lp_mode(void *device_data)
+{
+	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
+	struct mms_ts_info *info = container_of(sec, struct mms_ts_info, sec);
+	char buff[64] = { 0 };
+
+	sec_cmd_set_default_result(sec);
+
+	info->fod_lp_mode = sec->cmd_param[0];
+
+	input_info(true, &info->client->dev, "%s: fod_lp_mode %d\n", __func__, info->fod_lp_mode);
+
+	snprintf(buff, sizeof(buff), "%s", "OK");
+	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+	sec->cmd_state = SEC_CMD_STATUS_OK;
 	sec_cmd_set_cmd_exit(sec);
 }
 
@@ -1749,6 +1780,8 @@ static void set_aod_rect(void *device_data)
 
 	sec_cmd_set_default_result(sec);
 
+	disable_irq(info->client->irq);
+
 	if (!info->enabled) {
 		input_err(true, &info->client->dev,
 			  "%s: [ERROR] Touch is stopped\n", __func__);
@@ -1765,7 +1798,6 @@ static void set_aod_rect(void *device_data)
 		data[i * 2 + 1] = (sec->cmd_param[i] >> 8) & 0xFF;
 	}
 
-	disable_irq(info->client->irq);
 	ret = mms_set_custom_library(info, SPONGE_TOUCHBOX_W_OFFSET, data, 8);
 	if (ret < 0) {
 		input_err(true, &info->client->dev, "%s: fail set custom lib \n", __func__);
@@ -1950,7 +1982,8 @@ static struct sec_cmd sec_cmds[] = {
 	{SEC_CMD_H("aod_enable", aod_enable),},
 	{SEC_CMD_H("singletap_enable", singletap_enable),},
 	{SEC_CMD_H("aot_enable", aot_enable),},
-	{SEC_CMD_H("fod_enable", fod_enable),},	
+	{SEC_CMD("fod_enable", fod_enable),},
+	{SEC_CMD_H("fod_lp_mode", fod_lp_mode),},
 	{SEC_CMD("set_aod_rect", set_aod_rect),},
 	{SEC_CMD("get_aod_rect", get_aod_rect),},
 	{SEC_CMD("set_grip_data", set_grip_data),},
@@ -2015,8 +2048,8 @@ static ssize_t read_module_id_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct mms_ts_info *info = container_of(sec, struct mms_ts_info, sec);
 
-	return snprintf(buf, PAGE_SIZE, "ME%02X%02X%02X0000",
-		info->dtdata->panel, info->core_ver_ic, info->config_ver_ic);
+	return snprintf(buf, PAGE_SIZE, "ME%04x%04x",
+		info->fw_model_ver_ic, info->fw_ver_ic);
 }
 
 static ssize_t read_vendor_show(struct device *dev,

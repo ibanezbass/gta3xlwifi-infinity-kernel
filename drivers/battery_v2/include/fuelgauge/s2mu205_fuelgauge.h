@@ -158,6 +158,7 @@ struct s2mu205_fuelgauge_data {
 	unsigned int capacity_old;      /* only for atomic calculation */
 	unsigned int capacity_max;      /* only for dynamic calculation */
 	unsigned int standard_capacity;
+	int raw_capacity;
 
 	bool initial_update_of_soc;
 	bool init_battery_temp;

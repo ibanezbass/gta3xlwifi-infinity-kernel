@@ -768,6 +768,8 @@ static ssize_t attached_dev_show(struct device *dev,
 		return sprintf(buf, "JIG UART OFF/VB\n");
 	case ATTACHED_DEV_JIG_UART_ON_MUIC:
 		return sprintf(buf, "JIG UART ON\n");
+	case ATTACHED_DEV_JIG_UART_ON_VB_MUIC:
+		return sprintf(buf, "JIG UART ON/VB\n");
 	case ATTACHED_DEV_JIG_USB_OFF_MUIC:
 		return sprintf(buf, "JIG USB OFF\n");
 	case ATTACHED_DEV_JIG_USB_ON_MUIC:
@@ -795,6 +797,7 @@ static ssize_t is_jig_powered_show(struct device *dev,
 
 	switch (muic_data->attached_dev) {
 	case ATTACHED_DEV_JIG_UART_ON_MUIC:
+	case ATTACHED_DEV_JIG_UART_ON_VB_MUIC:
 	case ATTACHED_DEV_JIG_USB_ON_MUIC:
 		return sprintf(buf, "1");
 	case ATTACHED_DEV_NONE_MUIC:
@@ -1265,9 +1268,13 @@ static void s2mu005_muic_handle_attach(struct s2mu005_muic_data *muic_data,
 	case ATTACHED_DEV_TIMEOUT_OPEN_MUIC:
 	case ATTACHED_DEV_JIG_UART_OFF_VB_MUIC:
 	case ATTACHED_DEV_JIG_UART_OFF_MUIC:
+	case ATTACHED_DEV_JIG_UART_ON_VB_MUIC:
 	case ATTACHED_DEV_JIG_UART_ON_MUIC:
 	case ATTACHED_DEV_VZW_INCOMPATIBLE_MUIC:
 	case ATTACHED_DEV_FACTORY_UART_MUIC:
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+	case ATTACHED_DEV_UNDEFINED_RANGE_MUIC:
+#endif
 #if IS_ENABLED(CONFIG_MUIC_S2MU005_SUPPORT_HMT)
 	case ATTACHED_DEV_HMT_MUIC:
 #endif
@@ -1330,6 +1337,9 @@ static void s2mu005_muic_handle_attach(struct s2mu005_muic_data *muic_data,
 	case ATTACHED_DEV_UNDEFINED_CHARGING_MUIC:
 	case ATTACHED_DEV_TIMEOUT_OPEN_MUIC:
 	case ATTACHED_DEV_UNKNOWN_MUIC:
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+	case ATTACHED_DEV_UNDEFINED_RANGE_MUIC:
+#endif
 		com_to_open(muic_data);
 		break;
 	case ATTACHED_DEV_JIG_UART_OFF_VB_MUIC:
@@ -1348,6 +1358,7 @@ static void s2mu005_muic_handle_attach(struct s2mu005_muic_data *muic_data,
 		muic_data->jigonb_enable = false;
 		ret = attach_uart(muic_data);
 		break;
+	case ATTACHED_DEV_JIG_UART_ON_VB_MUIC:
 	case ATTACHED_DEV_JIG_UART_ON_MUIC:
 		if (pdata->is_new_factory)
 			muic_data->jigonb_enable = false;
@@ -1506,8 +1517,10 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 		break;
 	case DEV_TYPE1_T1_T2_CHG:
 		if (vbvolt) {
-			/* 200K, 442K should be checkef */
-#if IS_ENABLED(CONFIG_SEC_FACTORY) && IS_ENABLED(CONFIG_MUIC_S2MU005_DISCHARGING_WA)
+			/* 200K, 442K should be checked */
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+			new_dev = ATTACHED_DEV_UNDEFINED_RANGE_MUIC;
+#elif IS_ENABLED(CONFIG_SEC_FACTORY) && IS_ENABLED(CONFIG_MUIC_S2MU005_DISCHARGING_WA)
 			new_dev = ATTACHED_DEV_CARKIT_MUIC;
 #else
 			if (adc == ADC_CEA936ATYPE2_CHG)
@@ -1558,7 +1571,16 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 		}
 		break;
 	case DEV_TYPE2_JIG_UART_ON:
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+		if (vbvolt) {
+			new_dev = ATTACHED_DEV_JIG_UART_ON_VB_MUIC;
+		}
+		else {
+			new_dev = ATTACHED_DEV_JIG_UART_ON_MUIC;
+		}
+#else
 		new_dev = ATTACHED_DEV_JIG_UART_ON_MUIC;
+#endif
 		break;
 	case DEV_TYPE2_JIG_USB_OFF:
 		if (!vbvolt)
@@ -1576,8 +1598,14 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 
 	switch (devt3) {
 	case DEV_TYPE3_MHL:
+		pr_info("%s: MHL DETECTED\n", __func__);
 		if (muic_data->pdata->is_factory_uart)
 			new_dev = ATTACHED_DEV_FACTORY_UART_MUIC;
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+		else if (vbvolt) {
+			new_dev = ATTACHED_DEV_UNDEFINED_RANGE_MUIC;
+		}
+#endif
 		break;
 	default:
 		break;
@@ -1589,6 +1617,7 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 		pr_info("%s: APPLE_CHG DETECTED\n", __func__);
 	}
 
+#if !defined(CONFIG_TYPEB_WATERPROOF_MODEL)
 	if ((chgt & DEV_TYPE_CHG_TYPE) &&
 		(new_dev == ATTACHED_DEV_UNKNOWN_MUIC)) {
 		/* This is workaround for LG USB cable which has 219k ohm ID */
@@ -1600,7 +1629,8 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 			pr_info("[muic] TYPE3_CHARGER DETECTED\n");
 		}
 	}
-	
+#endif
+
 	if (devt2 & DEV_TYPE2_AV || devt3 & DEV_TYPE3_AV_WITH_VBUS) {
 		if (vbvolt)
 			new_dev = ATTACHED_DEV_DESKDOCK_VB_MUIC;
@@ -1623,18 +1653,25 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 		case ADC_CEA936ATYPE1_CHG: /*200k ohm */
 			/* This is workaround for LG USB cable which has 219k ohm ID */
 			if (vbvolt) {
-#if defined(CONFIG_SEC_FACTORY) && defined(CONFIG_MUIC_S2MU005_DISCHARGING_WA)
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+				new_dev = ATTACHED_DEV_UNDEFINED_RANGE_MUIC;
+#elif defined(CONFIG_SEC_FACTORY) && defined(CONFIG_MUIC_S2MU005_DISCHARGING_WA)
 				new_dev = ATTACHED_DEV_CARKIT_MUIC;
 #else
 				new_dev = ATTACHED_DEV_USB_MUIC;
-				pr_info("%s: ADC TYPE1 CHARGER DETECTED(USB)\n", __func__);
 #endif
+				pr_info("%s: ADC TYPE1 CHARGER DETECTED\n", __func__);
+
 			}
 			break;
 		case ADC_CEA936ATYPE2_CHG:
 			if (vbvolt) {
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+				new_dev = ATTACHED_DEV_UNDEFINED_RANGE_MUIC;
+#else
 				new_dev = ATTACHED_DEV_TA_MUIC;
-				pr_info("%s: ADC TYPE2 CHARGER DETECTED(TA)\n", __func__);
+#endif
+				pr_info("%s: ADC TYPE2 CHARGER DETECTED\n", __func__);
 			}
 			break;
 		case ADC_JIG_USB_OFF: /* 255k */
@@ -1666,7 +1703,16 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 			}
 			break;
 		case ADC_JIG_UART_ON:
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+			if (vbvolt) {
+				new_dev = ATTACHED_DEV_JIG_UART_ON_VB_MUIC;
+			}
+			else {
+				new_dev = ATTACHED_DEV_JIG_UART_ON_MUIC;
+			}
+#else
 			new_dev = ATTACHED_DEV_JIG_UART_ON_MUIC;
+#endif
 			break;
 		case ADC_DESKDOCK:
 			if (vbvolt)
@@ -1674,6 +1720,13 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 			else
 				new_dev = ATTACHED_DEV_DESKDOCK_MUIC;
 			break;
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+		case ADC_SMARTDOCK:
+			if(vbvolt) {
+				new_dev = ATTACHED_DEV_UNDEFINED_CHARGING_MUIC;
+			}
+			break;
+#endif
 #if IS_ENABLED(CONFIG_MUIC_S2MU005_SUPPORT_HMT)
 		case ADC_HMT:
 			new_dev = ATTACHED_DEV_HMT_MUIC;
@@ -1689,8 +1742,13 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 
 	if ((new_dev == ATTACHED_DEV_UNKNOWN_MUIC) && (adc != ADC_OPEN)) {
 		if (vbvolt) {
+#if defined(CONFIG_TYPEB_WATERPROOF_MODEL)
+			new_dev = ATTACHED_DEV_UNDEFINED_RANGE_MUIC;
+			pr_info("%s: UNDEFINED RANGE DETECTED\n", __func__);
+#else
 			new_dev = ATTACHED_DEV_UNDEFINED_CHARGING_MUIC;
-			pr_info("UNDEFINED VB DETECTED\n");
+			pr_info("%s: UNDEFINED VB DETECTED\n", __func__);
+#endif
 		}
 	}
 

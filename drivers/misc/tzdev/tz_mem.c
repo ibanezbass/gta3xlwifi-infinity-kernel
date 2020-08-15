@@ -39,6 +39,18 @@ static DEFINE_MUTEX(tzdev_mem_mutex);
 
 int isolate_lru_page(struct page *page);
 
+static __maybe_unused unsigned int gup_flags(int write, int force)
+{
+	unsigned int flags = 0;
+
+	if (write)
+		flags |= FOLL_WRITE;
+	if (force)
+		flags |= FOLL_FORCE;
+
+	return flags;
+}
+
 static unsigned long __tzdev_get_user_pages(struct task_struct *task,
 		struct mm_struct *mm, unsigned long start, unsigned long nr_pages,
 		int write, int force, struct page **pages,
@@ -49,8 +61,13 @@ static unsigned long __tzdev_get_user_pages(struct task_struct *task,
 	int res;
 
 	while (nr_pinned < nr_pages) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 168)
+		res = get_user_pages(task, mm, start, nr_pages - nr_pinned,
+				gup_flags(write, force), cur_pages, vmas);
+#else
 		res = get_user_pages(task, mm, start, nr_pages - nr_pinned, write,
 				force, cur_pages, vmas);
+#endif
 		if (res < 0)
 			return nr_pinned;
 

@@ -159,6 +159,7 @@ int mmc_of_parse(struct mmc_host *host)
 	int ret;
 	bool cd_cap_invert, cd_gpio_invert = false;
 	bool ro_cap_invert, ro_gpio_invert = false;
+	u32 device_strength;
 
 	if (!host->parent || !host->parent->of_node)
 		return 0;
@@ -299,6 +300,11 @@ int mmc_of_parse(struct mmc_host *host)
 			host->dsr);
 		host->dsr_req = 0;
 	}
+
+	if (!of_property_read_u32(np, "device_drv", &device_strength))
+		host->device_drv = device_strength << 4;
+	else
+		host->device_drv = MMC_DRIVER_TYPE_0;
 
 	return mmc_pwrseq_alloc(host);
 }

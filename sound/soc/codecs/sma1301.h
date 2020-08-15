@@ -1,7 +1,7 @@
 /*
  * sma1301.h -- sma1301 ALSA SoC Audio driver
  *
- * r008_TEST, 2019.01.11
+ * r011, 2019.05.29
  *
  * Copyright 2018 Silicon Mitus Corporation / Iron Device Corporation
  *
@@ -466,6 +466,10 @@
 #define THERMAL_160_120 (1<<5)
 #define THERMAL_140_100 (2<<5)
 
+#define FAST_OFF_DRIVE_SPK_MASK (1<<0)
+#define FAST_OFF_DRIVE_SPK_DISABLE (0<<0)
+#define FAST_OFF_DRIVE_SPK_ENABLE (1<<0)
+
 /* PLL_LDO_CTRL,PLL_POST_N : 0x8B */
 #define PLL_EN_MASK (1<<5)
 #define PLL_EN_DISABLE (0<<5)
@@ -473,10 +477,37 @@
 
 /* FDPEC CONTROL : 0x92 */
 #define FLT_VDD_GAIN_MASK (15<<4)
+#define FLT_VDD_GAIN_2P40 (0<<4)
+#define FLT_VDD_GAIN_2P45 (1<<4)
+#define FLT_VDD_GAIN_2P50 (2<<4)
+#define FLT_VDD_GAIN_2P55 (3<<4)
+#define FLT_VDD_GAIN_2P60 (4<<4)
+#define FLT_VDD_GAIN_2P65 (5<<4)
+#define FLT_VDD_GAIN_2P70 (6<<4)
+#define FLT_VDD_GAIN_2P75 (7<<4)
+#define FLT_VDD_GAIN_2P80 (8<<4)
+#define FLT_VDD_GAIN_2P85 (9<<4)
+#define FLT_VDD_GAIN_2P90 (10<<4)
+#define FLT_VDD_GAIN_2P95 (11<<4)
+#define FLT_VDD_GAIN_3P00 (12<<4)
+#define FLT_VDD_GAIN_3P05 (13<<4)
+#define FLT_VDD_GAIN_3P10 (14<<4)
+#define FLT_VDD_GAIN_3P15 (15<<4)
 
 #define DIS_FCHG_MASK (1<<2)
 #define EN_FAST_CHARGE (0<<2)
 #define DIS_FAST_CHARGE (1<<2)
+
+/* BOOST_CONTROL4 : 0x92 */
+#define TRM_VBST_MASK (7<<2)
+#define TRM_VBST_5P5 (0<<2)
+#define TRM_VBST_5P6 (1<<2)
+#define TRM_VBST_5P7 (2<<2)
+#define TRM_VBST_5P8 (3<<2)
+#define TRM_VBST_5P9 (4<<2)
+#define TRM_VBST_6P0 (5<<2)
+#define TRM_VBST_6P1 (6<<2)
+#define TRM_VBST_6P2 (7<<2)
 
 /* TOP_MAN1 : 0xA2 */
 #define PLL_LOCK_SKIP_MASK (1<<7)
@@ -564,6 +595,9 @@
 /* STATUS1 : 0xFA */
 #define OT1_OK_STATUS (1<<7)
 #define OT2_OK_STATUS (1<<6)
+#define REV_NUM_STATUS (7<<3)
+#define REV_NUM_ES0 (4<<3)
+#define REV_NUM_ES1 (5<<3)
 
 /* STATUS2 : 0xFB */
 #define OCP_SPK_STATUS (1<<5)

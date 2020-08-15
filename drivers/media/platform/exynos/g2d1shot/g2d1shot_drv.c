@@ -323,11 +323,16 @@ static int m2m1shot2_g2d_free_context(struct m2m1shot2_context *ctx)
 
 	g2d_dbg_begin();
 
+	del_timer_sync(&g2d_ctx->perf_timer);
+
 	g2d1shot_request_bts_performance(g2d_dev, g2d_ctx, NULL);
 	g2d_pm_qos_remove_all(g2d_ctx);
 
 	clk_unprepare(g2d_dev->clock);
+	/*block until a bh_work callback has terminated */
+	cancel_work_sync(&g2d_ctx->bh_work);
 	kfree(g2d_ctx);
+	ctx->priv = NULL;
 
 	g2d_dbg_end();
 

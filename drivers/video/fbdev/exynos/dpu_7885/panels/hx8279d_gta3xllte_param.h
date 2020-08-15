@@ -13,10 +13,6 @@
 
 #define HX8279D_ID_LEN				3 /* 1 */
 
-#define PANEL_STATE_SUSPENED	0
-#define PANEL_STATE_RESUMED		1
-#define PANEL_STATE_SUSPENDING	2
-
 struct mipi_cmd {
 	u8 cmd[2];
 };
@@ -626,7 +622,7 @@ static unsigned char SEQ_BL_00[] = {
 /* platform brightness <-> bl reg */
 static unsigned int brightness_table[EXTEND_BRIGHTNESS + 1] = {
 	0,
-	0, 1, 1, 2, 2, 3, 4, 4, 5, 6, /* 2: 1 */
+	0, 1, 1, 2, 2, 3, 4, 4, 5, 6, /* 3: 1 */
 	6, 7, 7, 8, 9, 9, 10, 11, 11, 12,
 	13, 13, 14, 14, 15, 16, 16, 17, 18, 18,
 	19, 20, 20, 21, 21, 22, 23, 23, 24, 25,
@@ -661,7 +657,7 @@ static unsigned int brightness_table[EXTEND_BRIGHTNESS + 1] = {
 
 static unsigned int brightness_table_VE[EXTEND_BRIGHTNESS + 1] = {
 	0,
-	0, 1, 1, 2, 3, 3, 4, 5, 5, 6, /* 2: 1 */
+	0, 1, 1, 2, 3, 3, 4, 5, 5, 6, /* 3: 1 */
 	7, 7, 8, 9, 10, 10, 11, 12, 12, 13,
 	14, 14, 15, 16, 17, 17, 18, 19, 19, 20,
 	21, 21, 22, 23, 23, 24, 25, 26, 26, 27,
@@ -693,5 +689,6 @@ static unsigned int brightness_table_VE[EXTEND_BRIGHTNESS + 1] = {
 	174, 174, 174, 174, 174, 174, 174, 174, 174, 174,
 	174, 174, 174, 174, 174, 225,
 };
+
 #endif /* __HX8279D_GTA3XLLTE_PARAM_H__ */
 

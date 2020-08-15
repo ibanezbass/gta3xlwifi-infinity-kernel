@@ -132,8 +132,6 @@ struct s3c24xx_i2c {
 	enum s3c24xx_i2c_state	state;
 	unsigned long		clkrate;
 
-	int scl_recover_flag;
-	int sda_recover_flag;
 	void __iomem		*regs;
 	struct clk		*rate_clk;
 	struct clk		*clk;
@@ -224,11 +222,8 @@ static void recover_i2c_gpio(struct s3c24xx_i2c *i2c)
 			}
 			msleep(10);
 		}
-		if (timeout) {
-			i2c->scl_recover_flag = 1;
+		if (timeout)
 			dev_err(i2c->dev, "SCL line is still LOW!!!\n");
-		} else
-			i2c->scl_recover_flag = 0;
 	}
 
 	sda_val = gpio_get_value(gpio_sda);
@@ -244,15 +239,12 @@ static void recover_i2c_gpio(struct s3c24xx_i2c *i2c)
 			gpio_set_value(gpio_scl, 1);
 			udelay(5);
 			if (gpio_get_value(gpio_sda) == 1) {
-				i2c->sda_recover_flag = 0;
 				dev_err(i2c->dev, "SDA line is recovered.\n");
 				break;
 			}
 		}
-		if (clk_cnt == 100) {
-			i2c->sda_recover_flag = 1;
+		if (clk_cnt == 100)
 			dev_err(i2c->dev, "SDA line is not recovered!!!\n");
-		}
 	}
 
 	default_i2c_pinctrl = devm_pinctrl_get(i2c->dev);
@@ -873,12 +865,6 @@ static int s3c24xx_i2c_doxfer(struct s3c24xx_i2c *i2c,
 
 	if (i2c->suspended)
 		return -EIO;
-
-	if ((i2c->scl_recover_flag == 1) || (i2c->sda_recover_flag == 1)) {
-		dev_err(i2c->dev, "SCL & SDA line recover failed\n");
-		recover_i2c_gpio(i2c);
-		return -EIO;
-	}
 
 	ret = s3c24xx_i2c_set_master(i2c);
 	if (ret != 0) {

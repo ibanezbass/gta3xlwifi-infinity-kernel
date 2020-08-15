@@ -15,28 +15,40 @@
 
 #include "fimc-is-vender-specific.h"
 
-#if defined(CONFIG_CAMERA_A7Y18)
-#include "fimc-is-vender-rom-config_a7y18.h"
-#elif defined(CONFIG_CAMERA_WISDOM)
-#include "fimc-is-vender-rom-config_wisdom.h"
-#elif defined(CONFIG_CAMERA_GTA3XL)
-#include "fimc-is-vender-rom-config_gta3xl.h"
-#elif defined(CONFIG_CAMERA_A30)
-#include "fimc-is-vender-rom-config_a30.h"
-#elif defined(CONFIG_CAMERA_A30JPN)
-#include "fimc-is-vender-rom-config_a30jpn.h"
-#elif defined(CONFIG_CAMERA_A40)
-#include "fimc-is-vender-rom-config_a40.h"
-#elif defined(CONFIG_CAMERA_A20)
-#include "fimc-is-vender-rom-config_a20.h"
-#elif defined(CONFIG_CAMERA_A30CHN)
-#include "fimc-is-vender-rom-config_a30chn.h"
-#elif defined(CONFIG_CAMERA_A10)
-#include "fimc-is-vender-rom-config_a10.h"
-#elif defined(CONFIG_CAMERA_A20E)
-#include "fimc-is-vender-rom-config_a20e.h"
-#elif defined(CONFIG_CAMERA_A10E)
-#include "fimc-is-vender-rom-config_a10e.h"
+#if defined(CONFIG_CAMERA_WXS_V00)
+#include "fimc-is-vender-rom-config_wxs_v00.h"
+#elif defined(CONFIG_CAMERA_ATS_V03)
+#include "fimc-is-vender-rom-config_ats_v03.h"
+#elif defined(CONFIG_CAMERA_ATS_V04)
+#include "fimc-is-vender-rom-config_ats_v04.h"
+#elif defined(CONFIG_CAMERA_AAS_V30)
+#include "fimc-is-vender-rom-config_aas_v30.h"
+#elif defined(CONFIG_CAMERA_AAS_V30J)
+#include "fimc-is-vender-rom-config_aas_v30j.h"
+#elif defined(CONFIG_CAMERA_AAS_V40)
+#include "fimc-is-vender-rom-config_aas_v40.h"
+#elif defined(CONFIG_CAMERA_AAS_V20)
+#include "fimc-is-vender-rom-config_aas_v20.h"
+#elif defined(CONFIG_CAMERA_AAS_V30C)
+#include "fimc-is-vender-rom-config_aas_v30c.h"
+#elif defined(CONFIG_CAMERA_AAS_V30S)
+#include "fimc-is-vender-rom-config_aas_v30s.h"
+#elif defined(CONFIG_CAMERA_AAS_V10)
+#include "fimc-is-vender-rom-config_aas_v10.h"
+#elif defined(CONFIG_CAMERA_AAS_V20E)
+#include "fimc-is-vender-rom-config_aas_v20e.h"
+#elif defined(CONFIG_CAMERA_AAS_V10E)
+#include "fimc-is-vender-rom-config_aas_v10e.h"
+#elif defined(CONFIG_CAMERA_AAS_V10EKX)
+#include "fimc-is-vender-rom-config_aas_v10ekx.h"
+#elif defined(CONFIG_CAMERA_XXS_V04S)
+#include "fimc-is-vender-rom-config_xxs_v04s.h"
+#elif defined(CONFIG_CAMERA_AAS_V07J)
+#include "fimc-is-vender-rom-config_aas_v07j.h"
+#elif defined(CONFIG_CAMERA_MMS_V20)
+#include "fimc-is-vender-rom-config_mms_v20.h"
+#elif defined(CONFIG_CAMERA_MMS_V10S)
+#include "fimc-is-vender-rom-config_mms_v10s.h"
 #else
 
 const struct fimc_is_vender_rom_addr *vender_rom_addr[SENSOR_POSITION_MAX] = {

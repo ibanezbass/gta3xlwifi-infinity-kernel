@@ -11,4 +11,5 @@ obj-$(CONFIG_SENSORS_VFS7XXX)			+= vfs7xxx.o
 obj-$(CONFIG_SENSORS_ET320)			+= et320-spi.o et320-spi_data_transfer.o
 obj-$(CONFIG_SENSORS_ET510)			+= et510-spi.o et510-spi_data_transfer.o
 obj-$(CONFIG_SENSORS_ET5XX)			+= et5xx-spi.o et5xx-spi_data_transfer.o
+obj-$(CONFIG_SENSORS_ET7XX)			+= et7xx-spi.o et7xx-spi_data_transfer.o
 obj-$(CONFIG_SENSORS_GW32X)			+= gf_common.o gf_platform.o

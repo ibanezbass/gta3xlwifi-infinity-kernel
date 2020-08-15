@@ -50,6 +50,14 @@ static bool last_version = false;
 #endif
 static bool cal_done = false;
 
+#if SENSOR_2X5_CAL_BURST_WRITE
+static u32 burst_cal_buf[BURST_BUF_SIZE];
+#ifdef DEBUG_BURSTBUF_MEM
+static u32 burst_index;
+static u32 *end_addr;
+#endif /* DEBUG_BURSTBUF_MEM */
+#endif /* SENSOR_2X5_CAL_BURST_WRITE */
+
 #define SENSOR_NAME "S5K2X5"
 /* #define DEBUG_2X5_PLL */
 
@@ -139,6 +147,7 @@ static void sensor_2x5_cis_data_calculation(const struct sensor_pll_info_compact
 	cis_data->min_fine_integration_time = SENSOR_2X5_FINE_INTEGRATION_TIME_MIN;
 	cis_data->max_fine_integration_time = SENSOR_2X5_FINE_INTEGRATION_TIME_MAX;
 	cis_data->min_coarse_integration_time = SENSOR_2X5_COARSE_INTEGRATION_TIME_MIN;
+	cis_data->max_margin_coarse_integration_time = SENSOR_2X5_COARSE_INTEGRATION_TIME_MAX_MARGIN;
 }
 
 #if 0
@@ -169,6 +178,217 @@ static int sensor_2x5_wait_stream_off_status(cis_shared_data *cis_data)
 #endif
 
 #ifdef SENSOR_2X5_CAL_UPLOAD
+#if SENSOR_2X5_CAL_BURST_WRITE
+void sensor_2x5_cis_print_burst_calbuf(u32 *burst_buf, size_t sz)
+{
+	u32 nr = sz / 3;
+	int i, line;
+
+	info("%s: buf-size %d, line %d\n", __func__, (int)sz, nr);
+
+	for (i = 0, line = 0; i < sz; line++) {
+		switch(burst_buf[i]) {
+		case I2C_MODE_BURST_ADDR:
+			info("[cal] %03d: ADDR, 0x%04X, 0x%04X\n", line, burst_buf[i + 1], burst_buf[i + 2]);
+			break;
+		case I2C_MODE_BURST_DATA:
+			info("[cal] %03d: DATA, 0x%04X, 0x%04X\n", line, burst_buf[i + 1], burst_buf[i + 2]);
+			break;
+		default:
+			info("[cal] %03d: 0x%04X, 0x%04X, 0x%04X\n", line, burst_buf[i], burst_buf[i + 1], burst_buf[i + 2]);
+			break;
+		}
+
+		i += 3;
+	}
+}
+
+/**
+* sensor_2x5_cis_copy_to_burstbuf:
+*
+* - nr: the number of raw (or line)
+**/
+void sensor_2x5_cis_copy_burstdata(const u16 *src, u32 *dest, u32 *index, size_t nr)
+{
+	u32 (*burst_buf)[3] = (u32 (*)[3])&dest[*index];
+	int i;
+
+	for (i = 0; i < nr; i++) {
+		burst_buf[i][I2C_ADDR] = I2C_MODE_BURST_DATA;
+		burst_buf[i][I2C_DATA] = cpu_to_be16(src[i]);
+		burst_buf[i][I2C_BYTE] = 0x02;
+		*index += 3;
+#ifdef DEBUG_BURSTBUF_MEM
+		burst_index++;
+		end_addr += 3;
+#endif
+	}
+}
+
+void sensor_2x5_cis_copy_ctrldata(const u32 *src, u32 *dest, u32 *index, size_t nr)
+{
+	u32 (*burst_buf)[3] = (u32 (*)[3])&dest[*index];
+	u32 (*ctrl_data)[3] = (u32 (*)[3])src;
+	int i;
+
+	for (i = 0; i < nr; i++) {
+		burst_buf[i][I2C_ADDR] = ctrl_data[i][I2C_ADDR];
+		burst_buf[i][I2C_DATA] = ctrl_data[i][I2C_DATA];
+		burst_buf[i][I2C_BYTE] = ctrl_data[i][I2C_BYTE];
+		*index += 3;
+#ifdef DEBUG_BURSTBUF_MEM
+		burst_index++;
+		end_addr += 3;
+#endif
+	}
+}
+
+void sensor_2x5_cis_copy_to_burstbuf(const u16 *src, u32 *dest, u32 *index, size_t nr, bool is_cal)
+{
+	u32 (*burst_buf)[3] = (u32 (*)[3])&dest[*index];
+	u16 (*ctrl_data)[3] = (u16 (*)[3])src;
+	int i;
+
+	if (is_cal) {
+		for (i = 0; i < nr; i++) {
+			burst_buf[i][I2C_ADDR] = I2C_MODE_BURST_DATA;
+			burst_buf[i][I2C_DATA] = cpu_to_be16(src[i]);
+			burst_buf[i][I2C_BYTE] = 0x02;
+			*index += 3;
+#ifdef DEBUG_BURSTBUF_MEM
+			burst_index++;
+			end_addr += 3;
+#endif
+		}
+	} else {
+		for (i = 0; i < nr; i++) {
+			burst_buf[i][I2C_ADDR] = ctrl_data[i][I2C_ADDR];
+			burst_buf[i][I2C_DATA] = ctrl_data[i][I2C_DATA];
+			burst_buf[i][I2C_BYTE] = ctrl_data[i][I2C_BYTE];
+			*index += 3;
+#ifdef DEBUG_BURSTBUF_MEM
+			burst_index++;
+			end_addr += 3;
+#endif
+		}
+	}
+
+}
+
+int sensor_2x5_cis_create_burst_cal(u32 *burst_buf)
+{
+	const int position = SENSOR_POSITION_FRONT;
+	const u16 *src_xtalk = NULL, *src_lsc = NULL;
+	const int sz_lsc = SENSOR_2X5_CAL_LSC_SIZE / 2;
+	const int sz_xtalk = SENSOR_2X5_CAL_XTALK_SIZE /2;
+	const u32 src_head[][3] = {
+		{0xFCFC, 0x4000, 0x02},
+		{0x6004, 0x0001, 0x02},
+		{0x6028, 0x2001, 0x02},
+		{0x602A, 0x14D8, 0x02},
+		{I2C_MODE_BURST_ADDR, 0x6F12, 0x02}
+	};
+	const u32 src_xtalkaddr[][3] = {
+		{0x602A, 0x2188, 0x02},
+		{I2C_MODE_BURST_ADDR, 0x6F12, 0x02}
+	};
+	const u32 src_tail[][3] = {
+		{0xFCFC, 0x4000, 0x02},
+		{0x6004, 0x0000, 0x02}
+	};
+	char *cal_buf = NULL;
+	u32 index = 0;
+#ifdef CONFIG_VENDER_MCD_V2
+	static struct fimc_is_rom_info *finfo = NULL;
+#else
+	err("write burst cal not implemented!");
+	return -ENOSYS;
+#endif
+
+#ifdef DEBUG_BURSTBUF_MEM
+	burst_index = 0;
+	end_addr = burst_buf;
+#endif
+
+#ifdef CONFIG_VENDER_MCD_V2
+	fimc_is_sec_get_sysfs_finfo_by_position(position, &finfo);
+	fimc_is_sec_get_cal_buf(position, &cal_buf);
+	dbg_sensor(1, "%s: sensor cal start addr1 0x%X, end addr1 0x%X, addr2 0x%X, end addr2 0x%X\n",
+		__func__, finfo->sensor_cal_data_start_addr, finfo->sensor_cal_data_end_addr,
+		*((u32 *)&cal_buf[0x18]), *((u32 *)&cal_buf[0x1C]));
+#endif
+	src_xtalk = (u16 *)&cal_buf[finfo->sensor_cal_data_start_addr];
+	src_lsc = (u16 *)&cal_buf[finfo->sensor_cal_data_start_addr + SENSOR_2X5_CAL_XTALK_SIZE];
+
+	index = 0;
+	sensor_2x5_cis_copy_ctrldata(src_head[0], burst_buf, &index, ARRAY_SIZE(src_head));
+	dbg_sensor(2, "%s: copy head (nr %d). index %d\n", __func__, (int)ARRAY_SIZE(src_head), index);
+
+	/* LSC */
+	sensor_2x5_cis_copy_burstdata(src_lsc, burst_buf, &index, sz_lsc);
+	dbg_sensor(2, "%s: copy lsc (nr %d). index %d\n", __func__, sz_lsc, index);
+
+	sensor_2x5_cis_copy_ctrldata(src_xtalkaddr[0], burst_buf, &index, ARRAY_SIZE(src_xtalkaddr));
+	dbg_sensor(2, "%s: copy xtalk addr (nr %d). index %d\n", __func__, (int)ARRAY_SIZE(src_xtalkaddr), index);
+
+	/* XTALK */
+	sensor_2x5_cis_copy_burstdata(src_xtalk, burst_buf, &index, sz_xtalk);
+	dbg_sensor(2, "%s: copy xtalk (nr %d). index %d\n", __func__, sz_xtalk, index);
+
+	sensor_2x5_cis_copy_ctrldata(src_tail[0], burst_buf, &index, ARRAY_SIZE(src_tail));
+	dbg_sensor(2, "%s: copy tail (nr %d). index %d\n", __func__, (int)ARRAY_SIZE(src_tail), index);
+
+#ifdef DEBUG_BURSTBUF_MEM
+	info("%s: Last index %d, Addr 0x%p\n", __func__, burst_index, end_addr);
+	if (index != (burst_index * 3) || burst_index != SENSOR_2X5_BURST_CAL_NR_RAW
+	  || &burst_cal_buf[BURST_BUF_SIZE] != end_addr) {
+		err("check Burst Cal. Buf-Sz=%d, index=%d, burst_index=%d end addr 0x%p, 0x%p",
+			BURST_BUF_SIZE, index, burst_index, &burst_cal_buf[BURST_BUF_SIZE], end_addr);
+	}
+
+	/*sensor_2x5_cis_print_burst_calbuf(burst_cal_buf, BURST_BUF_SIZE);*/
+#endif
+	info("%s: Complete!\n", __func__);
+
+	return 0;
+}
+
+int sensor_2x5_cis_write_cal_burst(struct v4l2_subdev *subdev)
+{
+	int ret = 0;
+	struct fimc_is_cis *cis = NULL;
+
+	BUG_ON(!subdev);
+
+	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
+	BUG_ON(!cis);
+	BUG_ON(!cis->cis_data);
+
+	/* Create cal buffer for burst */
+	sensor_2x5_cis_create_burst_cal(burst_cal_buf);
+
+	ret = sensor_cis_set_registers(subdev, sensor_2x5_precal, sensor_2x5_precal_size);
+	CHECK_ERR_GOTO(ret < 0, p_err, "set_registers(precal) fail!");
+	dbg_sensor(1, "[set_setfile]: sensor_2x5_precal\n");
+
+	/* Write burst cal */
+	ret = sensor_cis_set_registers(subdev, burst_cal_buf, BURST_BUF_SIZE);
+	CHECK_ERR_GOTO(ret < 0, p_err, "set_registers(burstcal) fail!");
+
+	ret = sensor_cis_set_registers(subdev, sensor_2x5_postcal, sensor_2x5_postcal_size);
+	CHECK_ERR_GOTO(ret < 0, p_err, "set_registers(postcal) fail!");
+	dbg_sensor(1, "[set_setfile]: sensor_2x5_postcal\n");
+
+	cal_done = true;
+
+	info("[2x5] sensor cal done (burst)!\n");
+	return 0;
+
+p_err:
+	return ret;
+}
+#endif /* SENSOR_2X5_CAL_BURST_WRITE*/
+
 int sensor_2x5_cis_write_cal(struct v4l2_subdev *subdev)
 {
 	int i, ret = 0;
@@ -207,13 +427,8 @@ int sensor_2x5_cis_write_cal(struct v4l2_subdev *subdev)
 	xtalk_buf = (u16 *)&cal_buf[finfo->sensor_cal_data_start_addr];
 	lsc_buf = (u16 *)&cal_buf[finfo->sensor_cal_data_start_addr + SENSOR_2X5_CAL_XTALK_SIZE];
 
-	I2C_MUTEX_LOCK(cis->i2c_lock);
-
 	ret = sensor_cis_set_registers(subdev, sensor_2x5_precal, sensor_2x5_precal_size);
-	if (ret < 0) {
-		err("set_registers(precal) fail!!");
-		goto p_err;
-	}
+	CHECK_ERR_GOTO(ret < 0, p_err, "set_registers(precal) fail!");
 	dbg_sensor(1, "[set_setfile]: sensor_2x5_precal\n");
 
 #ifdef SUPPORT_2X5_SENSOR_VARIATION
@@ -235,18 +450,13 @@ int sensor_2x5_cis_write_cal(struct v4l2_subdev *subdev)
 	dbg_sensor(1, "%s: Write Cal LSC\n", __func__);
 	ret = fimc_is_sensor_write16(client, SENSOR_2X5_W_DIR_PAGE, cal_page_lsc);
 	/*dbg_sensor(1, "[   lsc] 0x%X, 0x%X\n", SENSOR_2X5_W_DIR_PAGE, cal_page_lsc); */
-	if (ret < 0) {
-		err("[lsc] i2c fail addr(%x, %x) ,ret = %d\n", SENSOR_2X5_W_DIR_PAGE, cal_page_lsc, ret);
-		goto p_err;
-	}
+	CHECK_ERR_GOTO(ret < 0, p_err, "[lsc] i2c fail addr(%x, %x) ret = %d", SENSOR_2X5_W_DIR_PAGE, cal_page_lsc, ret);
+
 	for (i = 0; i < SENSOR_2X5_CAL_LSC_SIZE / 2; i++) {
 		ret = fimc_is_sensor_write16(client, cal_offset_lsc + (i * 2), cpu_to_be16(lsc_buf[i]));
 		/*dbg_sensor(2, "[   lsc] %4d: 0x%X, 0x%04X\n", i, cal_offset_lsc + (i * 2), cpu_to_be16(lsc_buf[i])); */
-		if (ret < 0) {
-			err("[lsc] i2c fail addr(%x), val(%04x), ret = %d\n",
+		CHECK_ERR_GOTO(ret < 0, p_err, "[lsc] i2c fail addr(%x), val(%04x), ret = %d",
 				cal_offset_lsc + (i * 2), cpu_to_be16(lsc_buf[i]), ret);
-			goto p_err;
-		}
 	}
 
 	/* Write X-talk */
@@ -254,30 +464,67 @@ int sensor_2x5_cis_write_cal(struct v4l2_subdev *subdev)
 	for (i = 0; i < SENSOR_2X5_CAL_XTALK_SIZE / 2; i++) {
 		ret = fimc_is_sensor_write16(client, cal_offset_xtalk + (i * 2), cpu_to_be16(xtalk_buf[i]));
 		/*dbg_sensor(2, "[xtalk] %4d: 0x%X, 0x%04X\n", i, cal_offset_xtalk + (i * 2), cpu_to_be16(xtalk_buf[i])); */
-		if (ret < 0) {
-			err("[xtalk] i2c fail addr(%x), val(%04x), ret = %d\n",
+		CHECK_ERR_GOTO(ret < 0, p_err, "[xtalk] i2c fail addr(%x), val(%04x), ret = %d",
 				cal_offset_xtalk + (i * 2),cpu_to_be16(xtalk_buf[i]), ret);
-			goto p_err;
-		}
 	}
 
 	ret = sensor_cis_set_registers(subdev, sensor_2x5_postcal, sensor_2x5_postcal_size);
-	if (ret < 0) {
-		err("set_registers(postcal) fail!!");
-		goto p_err;
-	}
+	CHECK_ERR_GOTO(ret < 0, p_err, "set_registers(postcal) fail!");
 	dbg_sensor(1, "[set_setfile]: sensor_2x5_postcal\n");
 
-	I2C_MUTEX_UNLOCK(cis->i2c_lock);
-	info("[2x5] sensor cal done!\n");
+	cal_done = true;
 
+	info("[2x5] sensor cal done!\n");
 	return 0;
 
 p_err:
-	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
-#endif
+#endif /* SENSOR_2X5_CAL_UPLOAD */
+
+int sensor_2x5_cis_set_i2c_datamode(struct v4l2_subdev *subdev, int mode)
+{
+	int ret = 0;
+	struct fimc_is_cis *cis = NULL;
+	struct i2c_client *client = NULL;
+
+	BUG_ON(!subdev);
+
+	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
+	BUG_ON(!cis);
+	BUG_ON(!cis->cis_data);
+
+	client = cis->client;
+	if (unlikely(!client)) {
+		err("client is NULL");
+		ret = -EINVAL;
+		goto p_err;
+	}
+
+	 if (mode >= DATAMODE_END) {
+		err("Invalid data mode %d", mode);
+		return -EINVAL;
+	}
+
+	if (mode == DATAMODE_1BYTE) {
+		/* 1 byte */
+		ret = fimc_is_sensor_write16(client, SENSOR_2X5_W_DIR_PAGE, 0x4000);
+		CHECK_ERR_GOTO(ret < 0, p_err, "i2c fail addr(%x 0x4000) ret = %d", SENSOR_2X5_W_DIR_PAGE, ret);
+
+		ret = fimc_is_sensor_write16(client, 0x6000, 0x0085);
+		CHECK_ERR_GOTO(ret < 0, p_err, "i2c fail addr(0x6000 0x0085) ret = %d", ret);
+	} else {
+		/* 2 byte */
+		ret = fimc_is_sensor_write16(client, SENSOR_2X5_W_DIR_PAGE, 0x4000);
+		CHECK_ERR_GOTO(ret < 0, p_err, "i2c fail addr(%x 0x4000) ,ret = %d", SENSOR_2X5_W_DIR_PAGE, ret);
+
+		ret = fimc_is_sensor_write16(client, 0x6000, 0x0005);
+		CHECK_ERR_GOTO(ret < 0, p_err, "i2c fail addr(0x6000 0x0005) ret = %d", ret);
+	}
+
+p_err:
+	return ret;
+}
 
 /* CIS OPS */
 int sensor_2x5_cis_init(struct v4l2_subdev *subdev)
@@ -292,6 +539,10 @@ int sensor_2x5_cis_init(struct v4l2_subdev *subdev)
 	u32 setfile_index = 0;
 	cis_setting_info setinfo = {NULL, 0};
 	int ret = 0;
+#ifdef USE_CAMERA_HW_BIG_DATA
+	struct cam_hw_param *hw_param = NULL;
+	struct fimc_is_device_sensor_peri *sensor_peri = NULL;
+#endif
 
 	BUG_ON(!subdev);
 
@@ -308,6 +559,13 @@ int sensor_2x5_cis_init(struct v4l2_subdev *subdev)
 
 	ret = sensor_cis_check_rev(cis);
 	if (ret < 0) {
+#ifdef USE_CAMERA_HW_BIG_DATA
+		sensor_peri = container_of(cis, struct fimc_is_device_sensor_peri, cis);
+		if (sensor_peri)
+			fimc_is_sec_get_hw_param(&hw_param, sensor_peri->module->position);
+		if (hw_param)
+			hw_param->i2c_sensor_err_cnt++;
+#endif
 		warn("sensor_2x5_check_rev is fail when cis init");
 		cis->rev_flag = true;
 		ret = 0;
@@ -324,7 +582,7 @@ int sensor_2x5_cis_init(struct v4l2_subdev *subdev)
 	fimc_is_sec_get_sysfs_finfo_by_position(SENSOR_POSITION_FRONT, &finfo);
 	version_id = finfo->rom_sensor_id[8];
 #endif
-	if (version_id == SENSOR_2X5_VER_SP13) {
+	if (version_id >= SENSOR_2X5_VER_SP13 && version_id <= SENSOR_2X5_VER_SP13_END) {
 		last_version = true;
 	} else if (version_id == SENSOR_2X5_VER_SP03) {
 		last_version = false;
@@ -336,7 +594,7 @@ int sensor_2x5_cis_init(struct v4l2_subdev *subdev)
 		/* We assume last version if we couldn't get sersor version info */
 		last_version = true;
 #ifdef SUPPORT_2X5_SENSOR_VARIATION
-		err("%s:invalid version ID 0x%02X. Check module!!\n", __func__, version_id);
+		err("invalid version ID 0x%02X. Check module!!\n", version_id);
 #endif
 	}
 
@@ -492,10 +750,7 @@ int sensor_2x5_cis_set_global_setting(struct v4l2_subdev *subdev)
 
 	/* setfile global setting is at camera entrance */
 	ret = sensor_cis_set_registers(subdev, sensor_2x5_global, sensor_2x5_global_size);
-	if (ret < 0) {
-		err("sensor_2x5_set_registers(global) fail!!");
-		goto p_err;
-	}
+	CHECK_ERR_GOTO(ret < 0, p_err, "sensor_2x5_set_registers(global) fail!");
 	dbg_sensor(1, "[set_setfile]: sensor_2x5_global\n");
 
 	dbg_sensor(1, "[%s] global setting done\n", __func__);
@@ -508,7 +763,7 @@ p_err:
 int sensor_2x5_cis_mode_change_evt0(struct v4l2_subdev *subdev, u32 mode)
 {
 	int ret = 0;
-	int isp_mode = TETRA_ISP_6MP; /* default 6MP, for SP03 version */
+	int isp_mode = TETRA_ISP_24MP; /* default 24MP, for SP03 version */
 	struct fimc_is_cis *cis = NULL;
 
 	BUG_ON(!subdev);
@@ -520,8 +775,8 @@ int sensor_2x5_cis_mode_change_evt0(struct v4l2_subdev *subdev, u32 mode)
 	if (mode > sensor_2x5_max_setfile_num) {
 		err("invalid mode(%d)!!", mode);
 		return -EINVAL;
-	} else if (mode >= SENSOR_2X5_MODE_REMOSAIC_START) {
-		isp_mode = TETRA_ISP_24MP;
+	} else if (mode < MODE_2X5_REMOSAIC_START) {
+		isp_mode = TETRA_ISP_6MP;
 	}
 
 	/* If check_rev fail when cis_init, one more check_rev in mode_change */
@@ -529,7 +784,7 @@ int sensor_2x5_cis_mode_change_evt0(struct v4l2_subdev *subdev, u32 mode)
 		cis->rev_flag = false;
 		ret = sensor_cis_check_rev(cis);
 		if (ret < 0) {
-			err("sensor_2x5_check_rev is fail");
+			err("sensor_2x5_check_rev is fail!");
 			return ret;
 		}
 	}
@@ -540,25 +795,18 @@ int sensor_2x5_cis_mode_change_evt0(struct v4l2_subdev *subdev, u32 mode)
 	I2C_MUTEX_LOCK(cis->i2c_lock);
 
 	ret = sensor_cis_set_registers(subdev, sensor_2x5_setfiles[mode], sensor_2x5_setfile_sizes[mode]);
-	if (ret < 0) {
-		err("sensor_2x5_set_registers fail!!");
-		goto p_err;
-	}
-	dbg_sensor(1, "[set_setfile]: sensor_2x5_setfiles mode:%d\n", mode);
+	CHECK_ERR_GOTO(ret < 0, p_err, "set_registers(mode) fail!");
+	dbg_sensor(1, "[set_setfile]: sensor_2x5_setfiles mode %d\n", mode);
 
 	/* Setting Tetra ISP in old revision */
 	info("%s: Tetra ISP mode %d (EVT0)\n", __func__, isp_mode);
 	ret = sensor_cis_set_registers(subdev, sensor_2x5_tetra_isp[isp_mode], sensor_2x5_tetra_isp_sizes[isp_mode]);
-	if (ret < 0) {
-		err("sensor_2x5_tetra_isp fail!!");
-		goto p_err;
-	}
+	CHECK_ERR_GOTO(ret < 0, p_err, "sensor_2x5_tetra_isp fail!");
 	dbg_sensor(1, "[set_setfile]: sensor_2x5_tetra_isp %d\n", isp_mode);
 
 	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 
 	info("%s: mode changed(%d) EVT0\n", __func__, mode);
-	/*dbg_sensor(1, "[%s] mode changed(%d)\n", __func__, mode);*/
 
 	return 0;
 
@@ -566,7 +814,6 @@ p_err:
 	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 	return ret;
 }
-
 
 int sensor_2x5_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 {
@@ -597,10 +844,7 @@ int sensor_2x5_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 	if (cis->rev_flag == true) {
 		cis->rev_flag = false;
 		ret = sensor_cis_check_rev(cis);
-		if (ret < 0) {
-			err("sensor_2x5_check_rev is fail");
-			return ret;
-		}
+		CHECK_ERR_RET(ret < 0, ret, "sensor_2x5_check_rev is fail!");
 	}
 
 	/* DSLIM: Check below */
@@ -608,52 +852,33 @@ int sensor_2x5_cis_mode_change(struct v4l2_subdev *subdev, u32 mode)
 
 	I2C_MUTEX_LOCK(cis->i2c_lock);
 
+#ifdef SENSOR_2X5_CAL_UPLOAD
 	if (cal_done == true) {
-		ret = fimc_is_sensor_write16(client, SENSOR_2X5_W_DIR_PAGE, 0x4000);
-		if (ret < 0) {
-			err("i2c fail addr(%x, 0x4000) ,ret = %d\n", SENSOR_2X5_W_DIR_PAGE, ret);
-			goto p_err_i2c;
-		}
-		ret = fimc_is_sensor_write16(client, 0x6000, 0x0005);
-		if (ret < 0) {
-			err("i2c fail addr(0x6000, 0x0005) ,ret = %d\n", ret);
-			goto p_err_i2c;
-		}
+		ret = sensor_2x5_cis_set_i2c_datamode(subdev, DATAMODE_2BYTE);
+		CHECK_ERR_GOTO(ret < 0, p_err_i2c, "set datamode2 fail!");
 	}
+#endif
 
 	ret = sensor_cis_set_registers(subdev, sensor_2x5_setfiles[mode], sensor_2x5_setfile_sizes[mode]);
-	if (ret < 0) {
-		err("sensor_2x5_set_registers fail!!");
-		goto p_err_i2c;
-	}
-	dbg_sensor(1, "[set_setfile]: sensor_2x5_setfiles mode: %d\n", mode);
-
-	I2C_MUTEX_UNLOCK(cis->i2c_lock);
+	CHECK_ERR_GOTO(ret < 0, p_err_i2c, "set_registers(mode) fail!");
+	dbg_sensor(1, "[set_setfile]: sensor_2x5_setfiles mode %d\n", mode);
 
 #ifdef SENSOR_2X5_CAL_UPLOAD
 	if (cal_done == true) {
-		I2C_MUTEX_LOCK(cis->i2c_lock);
-		ret = fimc_is_sensor_write16(client, SENSOR_2X5_W_DIR_PAGE, 0x4000);
-		if (ret < 0) {
-			err("i2c fail addr(%x, 0x4000) ,ret = %d\n", SENSOR_2X5_W_DIR_PAGE, ret);
-			goto p_err_i2c;
-		}
-		ret = fimc_is_sensor_write16(client, 0x6000, 0x0085);
-		if (ret < 0) {
-			err("i2c fail addr(0x6000, 0x0085) ,ret = %d\n", ret);
-			goto p_err_i2c;
-		}
-		I2C_MUTEX_UNLOCK(cis->i2c_lock);
+		ret = sensor_2x5_cis_set_i2c_datamode(subdev, DATAMODE_1BYTE);
+		CHECK_ERR_GOTO(ret < 0, p_err_i2c, "set datamode1 fail!");
 	} else {
 		/* Write Sensor cal */
+#if SENSOR_2X5_CAL_BURST_WRITE
+		ret = sensor_2x5_cis_write_cal_burst(subdev);
+#else
 		ret = sensor_2x5_cis_write_cal(subdev);
-		if (ret < 0) {
-			err("set_registers(cal) fail!!");
-			goto p_err;
-		}
-		cal_done = true;
+#endif
+		CHECK_ERR_GOTO(ret < 0, p_err_i2c, "set_registers(cal) fail!");
 	}
 #endif /* SENSOR_2X5_CAL_UPLOAD */
+
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 
 	info("%s: mode changed(%d)%s\n", __func__, mode, (cal != cal_done) ? " with CAL": "");
 	/*dbg_sensor(1, "[%s] mode changed(%d)\n", __func__, mode);*/
@@ -816,8 +1041,8 @@ int sensor_2x5_cis_set_size(struct v4l2_subdev *subdev, cis_shared_data *cis_dat
 	ret = fimc_is_sensor_write16(client, 0x0400, 0x0000);
 	if (ret < 0)
 		goto p_err;
-	/* down_scale_m: 1 to 16 upwards (scale_n: 16(fixed))
-	down scale factor = down_scale_m / down_scale_n */
+	/* down_scale_m: 1 to 16 upwards (scale_n: 16(fixed)) */
+	/* down scale factor = down_scale_m / down_scale_n */
 	ret = fimc_is_sensor_write16(client, 0x0404, 0x0010);
 	if (ret < 0)
 		goto p_err;
@@ -1415,11 +1640,10 @@ int sensor_2x5_cis_adjust_analog_gain(struct v4l2_subdev *subdev, u32 input_agai
 
 	again_code = sensor_cis_calc_again_code(input_again);
 
-	if (again_code > cis_data->max_analog_gain[0]) {
+	if (again_code > cis_data->max_analog_gain[0])
 		again_code = cis_data->max_analog_gain[0];
-	} else if (again_code < cis_data->min_analog_gain[0]) {
+	else if (again_code < cis_data->min_analog_gain[0])
 		again_code = cis_data->min_analog_gain[0];
-	}
 
 	again_permile = sensor_cis_calc_again_permile(again_code);
 
@@ -1465,13 +1689,11 @@ int sensor_2x5_cis_set_analog_gain(struct v4l2_subdev *subdev, struct ae_param *
 
 	analog_gain = (u16)sensor_cis_calc_again_code(again->val);
 
-	if (analog_gain < cis->cis_data->min_analog_gain[0]) {
+	if (analog_gain < cis->cis_data->min_analog_gain[0])
 		analog_gain = cis->cis_data->min_analog_gain[0];
-	}
 
-	if (analog_gain > cis->cis_data->max_analog_gain[0]) {
+	if (analog_gain > cis->cis_data->max_analog_gain[0])
 		analog_gain = cis->cis_data->max_analog_gain[0];
-	}
 
 	dbg_sensor(1, "[MOD:D:%d] %s(vsync cnt = %d), input_again = %d us, analog_gain(%#x)\n",
 		cis->id, __func__, cis->cis_data->sen_vsync_count, again->val, analog_gain);
@@ -1710,19 +1932,17 @@ int sensor_2x5_cis_set_digital_gain(struct v4l2_subdev *subdev, struct ae_param 
 	long_gain = (u16)sensor_cis_calc_dgain_code(dgain->long_val);
 	short_gain = (u16)sensor_cis_calc_dgain_code(dgain->short_val);
 
-	if (long_gain < cis->cis_data->min_digital_gain[0]) {
+	if (long_gain < cis->cis_data->min_digital_gain[0])
 		long_gain = cis->cis_data->min_digital_gain[0];
-	}
-	if (long_gain > cis->cis_data->max_digital_gain[0]) {
-		long_gain = cis->cis_data->max_digital_gain[0];
-	}
 
-	if (short_gain < cis->cis_data->min_digital_gain[0]) {
+	if (long_gain > cis->cis_data->max_digital_gain[0])
+		long_gain = cis->cis_data->max_digital_gain[0];
+
+	if (short_gain < cis->cis_data->min_digital_gain[0])
 		short_gain = cis->cis_data->min_digital_gain[0];
-	}
-	if (short_gain > cis->cis_data->max_digital_gain[0]) {
+
+	if (short_gain > cis->cis_data->max_digital_gain[0])
 		short_gain = cis->cis_data->max_digital_gain[0];
-	}
 
 	dbg_sensor(1, "[MOD:D:%d] %s(vsync cnt = %d), input_dgain = %d/%d us, long_gain(%#x), short_gain(%#x)\n",
 			cis->id, __func__, cis->cis_data->sen_vsync_count, dgain->long_val, dgain->short_val, long_gain, short_gain);
@@ -1938,14 +2158,14 @@ int sensor_2x5_cis_set_wb_gain(struct v4l2_subdev *subdev, struct wb_gains wb_ga
 
 	mode = cis->cis_data->sens_config_index_cur;
 
-	if (mode < SENSOR_2X5_MODE_REMOSAIC_START)
+	if (mode < MODE_2X5_REMOSAIC_START)
 		return 0;
 
 	if (wb_gains.gr != wb_gains.gb) {
 		err("gr, gb not euqal"); /* check DDK layer */
 		return -EINVAL;
 	}
-	
+
 	if (wb_gains.gr == 1024)
 		div = 4;
 	else if (wb_gains.gr == 2048)
@@ -1974,18 +2194,13 @@ int sensor_2x5_cis_set_wb_gain(struct v4l2_subdev *subdev, struct wb_gains wb_ga
 	}
 
 	ret = fimc_is_sensor_write16(client, SENSOR_2X5_W_DIR_PAGE, addr_page);
-	if (ret < 0) {
-		err("i2c fail addr(%x, %x) ,ret = %d\n", SENSOR_2X5_W_DIR_PAGE, addr_page, ret);
-		goto p_err;
-	}
+	CHECK_ERR_GOTO(ret < 0, p_err, "i2c fail addr(%x, %x) ,ret = %d", SENSOR_2X5_W_DIR_PAGE, addr_page, ret);
+
 	for (i = 0; i < ARRAY_SIZE(abs_gains); i++) {
 		ret = fimc_is_sensor_write16(client, addr_offset + (i * 2), abs_gains[i]);
 		dbg_sensor(2, "[wbgain] %d: 0x%04X, 0x%04X\n", i, addr_offset + (i * 2), abs_gains[i]);
-		if (ret < 0) {
-			err("i2c fail addr(%x), val(%04x), ret = %d\n",
+		CHECK_ERR_GOTO(ret < 0, p_err, "i2c fail addr(%x), val(%04x), ret = %d\n",
 				addr_offset + (i * 2), abs_gains[i], ret);
-			goto p_err;
-		}
 	}
 
 #ifdef DEBUG_SENSOR_TIME
@@ -2003,6 +2218,277 @@ p_err:
 	return ret;
 }
 
+#ifdef SUPPORT_SENSOR_3DHDR
+int sensor_2x5_cis_set_3hdr_roi(struct v4l2_subdev *subdev, struct roi_setting_t roi_control)
+{
+	int ret = 0;
+	int hold = 0;
+	struct fimc_is_cis *cis;
+	struct i2c_client *client;
+	u16 roi_val[4];
+#ifdef DEBUG_SENSOR_TIME
+	struct timeval st, end;
+
+	do_gettimeofday(&st);
+#endif
+
+	BUG_ON(!subdev);
+
+	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
+
+	BUG_ON(!cis);
+	BUG_ON(!cis->cis_data);
+
+	if (!IS_3DHDR_MODE(cis, NULL)) {
+		err("can not set roi in none-3dhdr");
+		return 0;
+	}
+
+	client = cis->client;
+	if (unlikely(!client)) {
+		err("client is NULL");
+		ret = -EINVAL;
+			goto p_err;
+		}
+
+	dbg_sensor(1, "%s: [MOD:%d] roi_control (start_x:%d, start_y:%d, end_x:%d, end_y:%d)\n",
+		__func__, cis->id,
+		roi_control.roi_start_x, roi_control.roi_start_y,
+		roi_control.roi_end_x, roi_control.roi_end_y);
+
+	I2C_MUTEX_LOCK(cis->i2c_lock);
+	hold = sensor_2x5_cis_group_param_hold_func(subdev, 0x01);
+	if (hold < 0) {
+		ret = hold;
+		goto p_err;
+	}
+
+	/* 0x2000_XXXX */
+	ret = fimc_is_sensor_write16(client, 0x6028, 0x2000);
+	if (ret < 0)
+		goto p_err;
+
+	/* t_isp_rgby_hist_mem_cfg_active_window_percent_14bit */
+	roi_val[0] = roi_control.roi_start_x; /* 0x20004AC4: top_left_x */
+	roi_val[1] = roi_control.roi_start_y; /* 0x20004AC6: top_left_y */
+	roi_val[2] = roi_control.roi_end_x; /* 0x20004AC8: bot_right_x */
+	roi_val[3] = roi_control.roi_end_y; /* 0x20004ACA: bot_right_y */
+
+	ret = fimc_is_sensor_write16_array(client, 0x4AC4, roi_val, 4);
+	if (ret < 0)
+		goto p_err;
+
+	/* t_isp_rgby_hist_grid_grid & thstat_grid_area */
+	roi_val[0] = roi_control.roi_end_x - roi_control.roi_start_x; /* 0x20004B8C & 0x20004DE0: width */
+	roi_val[1] = roi_control.roi_end_y - roi_control.roi_start_y; /* 0x20004B8E & 0x20004DE2: height */
+	roi_val[2] = (roi_control.roi_start_x + roi_control.roi_end_x) / 2; /* center_x */
+	roi_val[3] = (roi_control.roi_start_y + roi_control.roi_end_y) / 2; /* center_y */
+
+	ret = fimc_is_sensor_write16_array(client, 0x4B8C, roi_val, 4);
+	if (ret < 0)
+		goto p_err;
+
+	ret = fimc_is_sensor_write16_array(client, 0x4DE0, roi_val, 2);
+	if (ret < 0)
+		goto p_err;
+
+	/* t_isp_rgby_hist_mem_cfg_b_win_enable */
+	ret = fimc_is_sensor_write16(client, 0x4AC2, 0x0000);
+	if (ret < 0)
+		goto p_err;
+
+	/* restore 0x4000_XXXX */
+	ret = fimc_is_sensor_write16(client, 0x6028, 0x4000);
+	if (ret < 0)
+		goto p_err;
+
+#ifdef DEBUG_SENSOR_TIME
+	do_gettimeofday(&end);
+	dbg_sensor(1, "[%s] time %lu us\n", __func__, (end.tv_sec - st.tv_sec)*1000000 + (end.tv_usec - st.tv_usec));
+#endif
+
+p_err:
+	if (hold > 0) {
+		hold = sensor_2x5_cis_group_param_hold_func(subdev, 0x00);
+		if (hold < 0)
+			ret = hold;
+	}
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
+	return ret;
+}
+
+int sensor_2x5_cis_set_3hdr_stat(struct v4l2_subdev *subdev, bool streaming, void *data)
+{
+	int ret = 0;
+	int hold = 0;
+	struct fimc_is_cis *cis;
+	struct i2c_client *client;
+	u16 weight[3];
+	u16 low_gate_thr, high_gate_thr;
+	struct roi_setting_t y_sum_roi;
+	struct sensor_lsi_3hdr_stat_control_mode_change mode_change_stat;
+	struct sensor_lsi_3hdr_stat_control_per_frame per_frame_stat;
+#ifdef DEBUG_SENSOR_TIME
+	struct timeval st, end;
+
+	do_gettimeofday(&st);
+#endif
+
+	FIMC_BUG(!subdev);
+	FIMC_BUG(!data);
+
+	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
+
+	BUG_ON(!cis);
+	BUG_ON(!cis->cis_data);
+
+	if (!IS_3DHDR_MODE(cis, NULL)) {
+		err("can not set stat in none-3dhdr");
+		return 0;
+	}
+
+	client = cis->client;
+	if (unlikely(!client)) {
+		err("client is NULL");
+		ret = -EINVAL;
+		goto p_err;
+	}
+
+	I2C_MUTEX_LOCK(cis->i2c_lock);
+	hold = sensor_2x5_cis_group_param_hold_func(subdev, 0x01);
+	if (hold < 0) {
+		ret = hold;
+		goto p_err;
+	}
+
+	if (streaming) {
+		per_frame_stat = *(struct sensor_lsi_3hdr_stat_control_per_frame *)data;
+
+		weight[0] = per_frame_stat.r_weight;
+		weight[1] = per_frame_stat.g_weight;
+		weight[2] = per_frame_stat.b_weight;
+	} else {
+		mode_change_stat = *(struct sensor_lsi_3hdr_stat_control_mode_change *)data;
+
+		weight[0] = mode_change_stat.r_weight;
+		weight[1] = mode_change_stat.g_weight;
+		weight[2] = mode_change_stat.b_weight;
+
+		low_gate_thr = mode_change_stat.low_gate_thr;
+		high_gate_thr = mode_change_stat.high_gate_thr;
+
+		y_sum_roi = mode_change_stat.y_sum_roi;
+	}
+
+	ret = fimc_is_sensor_write16(client, 0x6028, 0x2000);
+	if (ret < 0)
+		goto p_err;
+
+	/* t_isp_rgby_hist_short_exp_weight */
+	ret = fimc_is_sensor_write16_array(client, 0x4B5A, weight, 3);
+	if (ret < 0)
+		goto p_err;
+
+	/* t_isp_rgby_hist_long_exp_weight */
+	ret = fimc_is_sensor_write16_array(client, 0x4B68, weight, 3);
+	if (ret < 0)
+		goto p_err;
+
+	/* t_isp_rgby_hist_medium_exp_weight */
+	ret = fimc_is_sensor_write16_array(client, 0x4B76, weight, 3);
+	if (ret < 0)
+		goto p_err;
+
+	/* t_isp_rgby_hist_mixed_exp_weight */
+	ret = fimc_is_sensor_write16_array(client, 0x4B84, weight, 3);
+	if (ret < 0)
+		goto p_err;
+
+	/* t_isp_drc_thstat_rgb_weights */
+	ret = fimc_is_sensor_write16_array(client, 0x4DCA, weight, 3);
+	if (ret < 0)
+		goto p_err;
+
+	if (!streaming) {
+		/* t_isp_drc_thstat_u_low_tresh_red */
+		ret = fimc_is_sensor_write16(client, 0x4DB8, low_gate_thr);
+		if (ret < 0)
+			goto p_err;
+		/* t_isp_drc_thstat_u_high_tresh_red */
+		ret = fimc_is_sensor_write16(client, 0x4DBA, high_gate_thr);
+		if (ret < 0)
+			goto p_err;
+
+		/* t_isp_drc_thstat_u_low_tresh_green */
+		ret = fimc_is_sensor_write16(client, 0x4DBC, low_gate_thr);
+		if (ret < 0)
+			goto p_err;
+
+		/* t_isp_drc_thstat_u_high_tresh_green */
+		ret = fimc_is_sensor_write16(client, 0x4DBE, high_gate_thr);
+		if (ret < 0)
+			goto p_err;
+
+		/* t_isp_drc_thstat_u_low_tresh_blue */
+		ret = fimc_is_sensor_write16(client, 0x4DC0, low_gate_thr);
+		if (ret < 0)
+			goto p_err;
+
+		/* t_isp_drc_thstat_u_high_tresh_blue */
+		ret = fimc_is_sensor_write16(client, 0x4DC2, high_gate_thr);
+		if (ret < 0)
+			goto p_err;
+
+		/* t_isp_y_sum_top_left_x */
+		ret = fimc_is_sensor_write16(client, 0x4DA4, y_sum_roi.roi_start_x);
+		if (ret < 0)
+			goto p_err;
+		ret = fimc_is_sensor_write16(client, 0x4DA6, y_sum_roi.roi_start_y);
+		if (ret < 0)
+			goto p_err;
+	}
+
+	/* restore 0x4000_XXXX */
+	ret = fimc_is_sensor_write16(client, 0x6028, 0x4000);
+	if (ret < 0)
+		goto p_err;
+
+#ifdef DEBUG_SENSOR_TIME
+	do_gettimeofday(&end);
+	dbg_sensor(1, "[%s] time %lu us\n", __func__, (end.tv_sec - st.tv_sec)*1000000 + (end.tv_usec - st.tv_usec));
+#endif
+
+p_err:
+	if (hold > 0) {
+		hold = sensor_2x5_cis_group_param_hold_func(subdev, 0x00);
+		if (hold < 0)
+			ret = hold;
+	}
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
+	return ret;
+}
+
+void sensor_2x5_cis_check_wdr_mode(struct v4l2_subdev *subdev, u32 mode_idx)
+{
+	struct fimc_is_cis *cis;
+
+	FIMC_BUG_VOID(!subdev);
+
+	cis = (struct fimc_is_cis *)v4l2_get_subdevdata(subdev);
+
+	FIMC_BUG_VOID(!cis);
+	FIMC_BUG_VOID(!cis->cis_data);
+
+	/* check wdr mode */
+	if (IS_3DHDR_MODE(cis, &mode_idx))
+		cis->cis_data->is_data.wdr_enable = true;
+	else
+		cis->cis_data->is_data.wdr_enable = false;
+
+	dbg_sensor(1, "[%s] wdr_enable: %d\n", __func__,
+				cis->cis_data->is_data.wdr_enable);
+}
+#endif /* SUPPORT_SENSOR_3DHDR */
 
 static struct fimc_is_cis_ops cis_ops = {
 	.cis_init = sensor_2x5_cis_init,
@@ -2033,6 +2519,11 @@ static struct fimc_is_cis_ops cis_ops = {
 	.cis_wait_streamon = sensor_cis_wait_streamon,
 	.cis_set_wb_gains = sensor_2x5_cis_set_wb_gain,
 	.cis_set_initial_exposure = sensor_cis_set_initial_exposure,
+#ifdef SUPPORT_SENSOR_3DHDR
+	.cis_set_roi_stat = sensor_2x5_cis_set_3hdr_roi,
+	.cis_set_3hdr_stat = sensor_2x5_cis_set_3hdr_stat,
+	.cis_check_wdr_mode = sensor_2x5_cis_check_wdr_mode,
+#endif
 };
 
 int cis_2x5_probe(struct i2c_client *client,
@@ -2063,9 +2554,8 @@ int cis_2x5_probe(struct i2c_client *client,
 	dev = &client->dev;
 	dnode = dev->of_node;
 
-	if (of_property_read_bool(dnode, "use_pdaf")) {
+	if (of_property_read_bool(dnode, "use_pdaf"))
 		use_pdaf = true;
-	}
 
 	ret = of_property_read_u32(dnode, "id", &sensor_id);
 	if (ret) {
@@ -2129,13 +2619,12 @@ int cis_2x5_probe(struct i2c_client *client,
 
 	cis->use_dgain = true;
 	cis->hdr_ctrl_by_again = false;
-
-	cis->use_initial_ae = of_property_read_bool(dnode, "use_initial_ae"); 
-	probe_info("%s use_initial_ae(%d)\n", __func__, cis->use_initial_ae); 
-
 	cis->use_wb_gain = true;
-
+	//cis->use_3hdr = false;
 	cis->use_pdaf = false; /* cis->use_pdaf =  use_pdaf */
+
+	cis->use_initial_ae = of_property_read_bool(dnode, "use_initial_ae");
+	probe_info("%s use initial_ae(%d)\n", __func__, cis->use_initial_ae);
 
 	ret = of_property_read_string(dnode, "setfile", &setfile);
 	if (ret) {
@@ -2157,8 +2646,16 @@ int cis_2x5_probe(struct i2c_client *client,
 		sensor_2x5_pllinfos = sensor_2x5_pllinfos_A;
 	} else if (strcmp(setfile, "setB") == 0) {
 		info("%s : EVT1 setfile_B for 3DHDR\n", __func__);
+#ifdef SUPPORT_SENSOR_3DHDR
+		cis->use_3hdr = of_property_read_bool(dnode, "use_3dhdr");
+#endif
+#if SENSOR_2X5_BURST_WRITE
+		sensor_2x5_global = sensor_2x5_setfile_B_GlobalBurst;
+		sensor_2x5_global_size = ARRAY_SIZE(sensor_2x5_setfile_B_GlobalBurst);
+#else
 		sensor_2x5_global = sensor_2x5_setfile_B_Global;
 		sensor_2x5_global_size = ARRAY_SIZE(sensor_2x5_setfile_B_Global);
+#endif
 		sensor_2x5_setfiles = sensor_2x5_setfiles_B;
 		sensor_2x5_setfile_sizes = sensor_2x5_setfile_B_sizes;
 		sensor_2x5_max_setfile_num = ARRAY_SIZE(sensor_2x5_setfiles_B);

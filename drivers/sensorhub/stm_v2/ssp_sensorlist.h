@@ -78,7 +78,6 @@
 #define SENSOR_INFO_GEOMAGNETIC_FIELD                           {"geomagnetic_sensor", MAGNETIC_ENABLED, REPORT_MODE_CONTINUOUS, 7, 7}
 #define SENSOR_INFO_GYRO                                        {"gyro_sensor", GYROSCOPE_ENABLED, REPORT_MODE_CONTINUOUS, 6, 6}
 #define SENSOR_INFO_PRESSURE                                    {"pressure_sensor", PRESSURE_ENABLED, REPORT_MODE_CONTINUOUS, 6, 14}
-#define SENSOR_INFO_PROXIMITY                                   {"proximity_sensor", PROXIMITY_ENABLED, REPORT_MODE_ON_CHANGE, 2, 2}
 #define SENSOR_INFO_ROTATION_VECTOR                             {"rotation_vector_sensor", RV_ENABLED, REPORT_MODE_CONTINUOUS, 17, 17}
 #define SENSOR_INFO_MAGNETIC_FIELD_UNCALIBRATED                 {"uncal_geomagnetic_sensor", MAGNETIC_ENABLED, REPORT_MODE_CONTINUOUS, 12, 12}
 #define SENSOR_INFO_GYRO_UNCALIBRATED                           {"uncal_gyro_sensor", GYROSCOPE_ENABLED, REPORT_MODE_CONTINUOUS, 12, 12}
@@ -97,8 +96,10 @@
 #if ANDROID_VERSION >= 90000
 #define SENSOR_INFO_LIGHT                                       {"light_sensor", LIGHT_ENABLED, REPORT_MODE_ON_CHANGE, 18, 4}
 #define SENSOR_INFO_LIGHT_CCT                                   {"light_cct_sensor", LIGHT_ENABLED, REPORT_MODE_ON_CHANGE, 18, 8}
+#define SENSOR_INFO_PROXIMITY                                   {"proximity_sensor", PROXIMITY_ENABLED, REPORT_MODE_ON_CHANGE, 2, 1}
 #else
 #define SENSOR_INFO_LIGHT                                       {"light_sensor", LIGHT_ENABLED, REPORT_MODE_ON_CHANGE, 18, 18}
 #define SENSOR_INFO_LIGHT_CCT                                   {"light_cct_sensor", LIGHT_ENABLED, REPORT_MODE_ON_CHANGE, 18, 18}
+#define SENSOR_INFO_PROXIMITY                                   {"proximity_sensor", PROXIMITY_ENABLED, REPORT_MODE_ON_CHANGE, 2, 2}
 #endif
 #endif

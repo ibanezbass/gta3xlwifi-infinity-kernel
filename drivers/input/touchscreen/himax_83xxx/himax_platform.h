@@ -107,6 +107,7 @@ struct himax_i2c_platform_data {
 	struct kobj_attribute *vk2Use;
 
 	const char *i_CTPM_firmware_name;
+	const char *proj_name;
 	int hx_config_size;
 	int item_version;
 

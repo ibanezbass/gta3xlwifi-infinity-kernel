@@ -173,6 +173,20 @@ void usbpd_manager_start_discover_msg_cancel(struct device *dev)
 	cancel_delayed_work_sync(&manager->start_discover_msg_handler);
 }
 
+void usbpd_manager_send_pr_swap(struct device *dev)
+{
+	pr_info("%s: call send pr swap msg\n", __func__);
+
+	usbpd_manager_inform_event(pd_noti.pd_data, MANAGER_SEND_PR_SWAP);
+}
+
+void usbpd_manager_send_dr_swap(struct device *dev)
+{
+	pr_info("%s: call send pr swap msg\n", __func__);
+
+	usbpd_manager_inform_event(pd_noti.pd_data, MANAGER_SEND_DR_SWAP);
+}
+
 static void init_source_cap_data(struct usbpd_manager_data *_data)
 {
 /*	struct usbpd_data *pd_data = manager_to_usbpd(_data);
@@ -183,7 +197,6 @@ static void init_source_cap_data(struct usbpd_manager_data *_data)
 	msg_header->msg_type = USBPD_Source_Capabilities;
 /*	pd_data->phy_ops.get_power_role(pd_data, &val);		*/
 	msg_header->port_data_role = USBPD_DFP;
-	msg_header->spec_revision = 1;
 	msg_header->port_power_role = USBPD_SOURCE;
 	msg_header->num_data_objs = 1;
 
@@ -207,7 +220,6 @@ static void init_sink_cap_data(struct usbpd_manager_data *_data)
 	msg_header->msg_type = USBPD_Sink_Capabilities;
 /*	pd_data->phy_ops.get_power_role(pd_data, &val);		*/
 	msg_header->port_data_role = USBPD_UFP;
-	msg_header->spec_revision = 1;
 	msg_header->port_power_role = USBPD_SINK;
 	msg_header->num_data_objs = 2;
 
@@ -218,12 +230,11 @@ static void init_sink_cap_data(struct usbpd_manager_data *_data)
 	data_obj->power_data_obj_sink.usb_comm_capable = 1;
 	data_obj->power_data_obj_sink.data_role_swap = 1;
 	data_obj->power_data_obj_sink.voltage = 5000/50;
-	data_obj->power_data_obj_sink.op_current = 500/10;
+	data_obj->power_data_obj_sink.op_current = 3000/10;
 
-	(data_obj + 1)->power_data_obj_variable.supply_type = POWER_TYPE_VARIABLE;
-	(data_obj + 1)->power_data_obj_variable.max_voltage = _data->sink_cap_max_volt / 50;
-	(data_obj + 1)->power_data_obj_variable.min_voltage = 5000 / 50;
-	(data_obj + 1)->power_data_obj_variable.max_current = 500 / 10;
+	(data_obj + 1)->power_data_obj_sink.supply_type = POWER_TYPE_FIXED;
+	(data_obj + 1)->power_data_obj_sink.voltage = 9000/50;
+	(data_obj + 1)->power_data_obj_sink.op_current = 2000/10;
 }
 
 int samsung_uvdm_ready(void)
@@ -303,7 +314,7 @@ void samsung_uvdm_close(void)
 		pr_info("manager is null\n");
 		return;
 	}
-	
+
 	complete(&manager->uvdm_out_wait);
 	complete(&manager->uvdm_in_wait);
 
@@ -332,7 +343,7 @@ int get_checksum(char *data, int start_addr, int size)
 	int checksum = 0;
 	int i;
 
-	for (i = 0; i < size; i++) 
+	for (i = 0; i < size; i++)
 		checksum += data[start_addr+i];
 
 	return checksum;
@@ -376,7 +387,7 @@ void set_uvdm_header(void *data, int vid, int vdm_type)
 	uvdm_hdr->vendor_id = SAMSUNG_VENDOR_ID;
 	uvdm_hdr->vdm_type = vdm_type;
 	uvdm_hdr->vendor_defined = SEC_UVDM_UNSTRUCTURED_VDM;
-	return; 	
+	return;
 }
 
 void set_sec_uvdm_header(void *data, int pid, bool data_type, int cmd_type,
@@ -512,7 +523,7 @@ int usbpd_manager_send_samsung_uvdm_message(void *data, const char *buf, size_t 
 	usbpd_manager_inform_event(pd_data, MANAGER_UVDM_SEND_MESSAGE);
 	return 0;
 }
-				
+
 ssize_t samsung_uvdm_out_request_message(void *data, size_t size)
 {
 #if defined CONFIG_CCIC_S2MU004
@@ -540,13 +551,13 @@ ssize_t samsung_uvdm_out_request_message(void *data, size_t size)
 		pr_err("ccic_dev is null\n");
 		return -ENXIO;
 	}
-	
+
 	pdic_data = dev_get_drvdata(ccic_device);
 	if (!pdic_data) {
 		pr_err("pdic_data is null\n");
 		return -ENXIO;
 	}
-	
+
 	pd_data = dev_get_drvdata(pdic_data->dev);
 	if (!pd_data) {
 		pr_err("pd_data is null\n");
@@ -582,10 +593,10 @@ ssize_t samsung_uvdm_out_request_message(void *data, size_t size)
 		need_set_cnt = set_uvdmset_count(size);
 		manager->uvdm_first_req = true;
 		manager->uvdm_dir =  DIR_OUT;
-		cur_set_num = 1; 
+		cur_set_num = 1;
 		accumulated_data_size = 0;
 		remained_data_size = size;
-		
+
 		if (manager->uvdm_first_req)
 			set_sec_uvdm_header(&manager->uvdm_data_obj[0], manager->Product_ID,
 					SEC_UVDM_LONG_DATA,SEC_UVDM_ININIATOR, DIR_OUT,
@@ -595,22 +606,22 @@ ssize_t samsung_uvdm_out_request_message(void *data, size_t size)
 			time_left = 0;
 			set_sec_uvdm_tx_header(&manager->uvdm_data_obj[0], manager->uvdm_first_req,
 					cur_set_num, size, remained_data_size);
-			cur_set_data = get_data_size(manager->uvdm_first_req,remained_data_size); 
+			cur_set_data = get_data_size(manager->uvdm_first_req,remained_data_size);
 
 			pr_info("%s current set data size: %d, total data size %ld, current uvdm set num %d\n", __func__, cur_set_data, size, cur_set_num);
 
 			if (manager->uvdm_first_req) {
 				SEC_DATA = (uint8_t *)&manager->uvdm_data_obj[3];
-				for ( i = 0; i < SEC_UVDM_MAXDATA_FIRST; i++) 
+				for ( i = 0; i < SEC_UVDM_MAXDATA_FIRST; i++)
 					SEC_DATA[i] = rcv_data[received_data_index++];
-			} else { 
+			} else {
 				SEC_DATA = (uint8_t *)&manager->uvdm_data_obj[2];
 				for ( i = 0; i < SEC_UVDM_MAXDATA_NORMAL; i++)
 					SEC_DATA[i] = rcv_data[received_data_index++];
 			}
 
 			set_sec_uvdm_tx_tailer(&manager->uvdm_data_obj[0]);
-			
+
 			reinit_completion(&manager->uvdm_out_wait);
 			usbpd_manager_inform_event(pd_data, MANAGER_UVDM_SEND_MESSAGE);
 
@@ -663,20 +674,20 @@ int samsung_uvdm_in_request_message(void *data)
 	int cal_checksum = 0;
 
 	pr_info("%s\n", __func__);
-	
+
 	if(!ccic_device)
 		return -ENXIO;
-	
+
 	pdic_data = dev_get_drvdata(ccic_device);
 	if (!pdic_data) {
 		pr_err("pdic_data is null\n");
 		return -ENXIO;
 	}
-	
+
 	pd_data = dev_get_drvdata(pdic_data->dev);
 	if (!pd_data)
 		return -ENXIO;
-	
+
 	manager = &pd_data->manager;
 	if (!manager)
 		return -ENXIO;
@@ -685,7 +696,7 @@ int samsung_uvdm_in_request_message(void *data)
 		return -ENXIO;
 
 	manager->uvdm_dir = DIR_IN;
-	manager->uvdm_first_req = true; 
+	manager->uvdm_first_req = true;
 	uvdm_msg_header.word = policy->rx_msg_header.word;
 
 	/* 2. Common : Fill the MSGHeader */
@@ -716,7 +727,7 @@ int samsung_uvdm_in_request_message(void *data)
 
 		/* read data */
 		uvdm_msg_header.word = policy->rx_msg_header.word;
-		for (i = 0; i < uvdm_msg_header.num_data_objs; i++) 
+		for (i = 0; i < uvdm_msg_header.num_data_objs; i++)
 			uvdm_data_obj[i].object = policy->rx_data_obj[i].object;
 
 		if (manager->uvdm_first_req) {
@@ -733,7 +744,7 @@ int samsung_uvdm_in_request_message(void *data)
 				cur_set_num = SEC_TX_HEADER.order_cur_set;
 				total_set_num = SEC_RES_HEADER.total_set_num;
 
-				manager->uvdm_first_req = false; 
+				manager->uvdm_first_req = false;
 				/* 2. copy data to buffer */
 				for (i = 0; i < SEC_UVDM_MAXDATA_FIRST; i++) {
 					in_data[rcv_data_size++] =uvdm_data_obj[3+i/SEC_UVDM_ALIGN].byte[i%SEC_UVDM_ALIGN];
@@ -746,7 +757,7 @@ int samsung_uvdm_in_request_message(void *data)
 			cur_set_data = SEC_TX_HEADER.cur_size;
 			cur_set_num = SEC_TX_HEADER.order_cur_set;
 			/* 2. copy data to buffer */
-			for (i = 0 ; i < SEC_UVDM_MAXDATA_NORMAL; i++) 
+			for (i = 0 ; i < SEC_UVDM_MAXDATA_NORMAL; i++)
 				in_data[rcv_data_size++] = uvdm_data_obj[2+i/SEC_UVDM_ALIGN].byte[i%SEC_UVDM_ALIGN];
 			total_rcv_size += cur_set_data;
 		}
@@ -760,7 +771,7 @@ int samsung_uvdm_in_request_message(void *data)
 		/* 5.1. Common : Fill the UVDMHeader*/
 		set_uvdm_header(&manager->uvdm_data_obj[0], SAMSUNG_VENDOR_ID, 0);
 		/* 5.2. Common : Fill the First SEC_VDMHeader*/
-		
+
 		set_sec_uvdm_rx_header(&manager->uvdm_data_obj[0], cur_set_num, cur_set_data, ack);
 		reinit_completion(&manager->uvdm_in_wait);
 		usbpd_manager_inform_event(pd_data, MANAGER_UVDM_SEND_MESSAGE);
@@ -783,7 +794,7 @@ void usbpd_manager_receive_samsung_uvdm_message(struct usbpd_data *pd_data)
 	//s_uvdm_header SEC_UVDM_HEADER;
 	s_rx_header SEC_UVDM_RX_HEADER;
 	uvdm_msg_header.word = policy->rx_msg_header.word;
-	
+
 
 	for (i = 0; i < uvdm_msg_header.num_data_objs; i++)
 		uvdm_data_obj[i].object = policy->rx_data_obj[i].object;
@@ -799,7 +810,7 @@ void usbpd_manager_receive_samsung_uvdm_message(struct usbpd_data *pd_data)
 					SEC_UVDM_RX_HEADER.object = uvdm_data_obj[2].object;
 					if (SEC_UVDM_RX_HEADER.result_value != RX_ACK)
 						pr_err("%s Busy or Nak received.\n", __func__);
-				} else 
+				} else
 					pr_err("%s Response type is wrong.\n", __func__);
 			} else {
 				if ( SEC_UVDM_RES_HEADER.cmd_type == RES_ACK)
@@ -883,7 +894,7 @@ void usbpd_manager_plug_detach(struct device *dev, bool notify)
 }
 
 void usbpd_manager_acc_detach(struct device *dev)
-{	
+{
 	struct usbpd_data *pd_data = dev_get_drvdata(dev);
 	struct usbpd_manager_data *manager = &pd_data->manager;
 
@@ -894,8 +905,33 @@ void usbpd_manager_acc_detach(struct device *dev)
 			schedule_delayed_work(&manager->acc_detach_handler, msecs_to_jiffies(1000));
 		else
 			schedule_delayed_work(&manager->acc_detach_handler, msecs_to_jiffies(0));
-	}	
+	}
 }
+static int usbpd_manager_support_vdm(struct usbpd_data *pd_data,
+		usbpd_manager_command_type command)
+{
+	struct usbpd_manager_data *manager = &pd_data->manager;
+
+	switch (command) {
+	case MANAGER_REQ_VDM_DISCOVER_SVID:
+	case MANAGER_REQ_VDM_DISCOVER_MODE:
+	case MANAGER_REQ_VDM_ENTER_MODE:
+	case MANAGER_REQ_VDM_STATUS_UPDATE:
+	case MANAGER_REQ_VDM_DisplayPort_Configure:
+		if (manager->Vendor_ID == SAMSUNG_VENDOR_ID) {
+			pr_info("%s, Discover ID, VendorID == SAMSUNG \n", __func__);
+			return 1;
+		}
+#if defined(CONFIG_CCIC_ALTERNATE_MODE)
+		return 1;
+#else
+		return 0;
+#endif
+	default:
+		return 1;
+	}
+}
+
 
 int usbpd_manager_command_to_policy(struct device *dev,
 		usbpd_manager_command_type command)
@@ -903,9 +939,10 @@ int usbpd_manager_command_to_policy(struct device *dev,
 	struct usbpd_data *pd_data = dev_get_drvdata(dev);
 	struct usbpd_manager_data *manager = &pd_data->manager;
 
-	manager->cmd |= command;
-
-	usbpd_kick_policy_work(dev);
+	if (usbpd_manager_support_vdm(pd_data, command)) {
+		manager->cmd |= command;
+		usbpd_kick_policy_work(dev);
+	}
 
 	/* TODO: check result
 	if (manager->event) {
@@ -968,6 +1005,14 @@ void usbpd_manager_inform_event(struct usbpd_data *pd_data,
 		usbpd_manager_command_to_policy(pd_data->dev,
 					MANAGER_REQ_VDM_DISCOVER_IDENTITY);
 		break;
+	case MANAGER_SEND_PR_SWAP:
+		usbpd_manager_command_to_policy(pd_data->dev,
+					MANAGER_REQ_PR_SWAP);
+		break;
+	case MANAGER_SEND_DR_SWAP:
+		usbpd_manager_command_to_policy(pd_data->dev,
+					MANAGER_REQ_DR_SWAP);
+		break;
 	default:
 		pr_info("%s: not matched event(%d)\n", __func__, event);
 	}
@@ -988,9 +1033,15 @@ bool usbpd_manager_vdm_request_enabled(struct usbpd_data *pd_data)
 	*/
 
 	manager->vdm_en = 1;
-
-	schedule_delayed_work(&manager->start_discover_msg_handler,
-											msecs_to_jiffies(50));
+#if 1
+	if (manager->alt_sended == 0 && manager->vdm_en == 1) {
+		usbpd_manager_inform_event(pd_noti.pd_data,
+						MANAGER_START_DISCOVER_IDENTITY);
+		manager->alt_sended = 1;
+	}
+#else
+	schedule_delayed_work(&manager->start_discover_msg_handler, msecs_to_jiffies(30));
+#endif
 	return true;
 }
 
@@ -1194,10 +1245,10 @@ static int usbpd_manager_check_accessory(struct usbpd_manager_data *manager)
 			}
 		}
 		manager->acc_type = acc_type;
-	} else 
+	} else
 		acc_type = manager->acc_type;
 
-	if (acc_type != CCIC_DOCK_NEW) 
+	if (acc_type != CCIC_DOCK_NEW)
 		usbpd_manager_send_dock_intent(acc_type);
 
 	usbpd_manager_send_dock_uevent(vid, pid, acc_type);
@@ -1220,10 +1271,10 @@ int usbpd_manager_get_identity(struct usbpd_data *pd_data)
 	if (usbpd_manager_check_accessory(manager))
 		pr_info("%s, Samsung Accessory Connected.\n", __func__);
 
-	return 0;
+	return MANAGER_SUPPORT;
 }
 
-/* Ok : 0, NAK: -1 */
+/* Ok : 0 (SVID_0 is DP support(0xff01)), NAK: -1 */
 int usbpd_manager_get_svids(struct usbpd_data *pd_data)
 {
 	struct policy_data *policy = &pd_data->policy;
@@ -1232,14 +1283,18 @@ int usbpd_manager_get_svids(struct usbpd_data *pd_data)
 	manager->SVID_0 = policy->rx_data_obj[1].vdm_svid.svid_0;
 	manager->SVID_1 = policy->rx_data_obj[1].vdm_svid.svid_1;
 
-
 	pr_info("%s, SVID_0 : 0x%x, SVID_1 : 0x%x\n", __func__,
 				manager->SVID_0, manager->SVID_1);
 
-	return 0;
+#if defined(CONFIG_CCIC_ALTERNATE_MODE)
+	if (manager->SVID_0 == TypeC_DP_SUPPORT)
+		return MANAGER_SUPPORT;
+#endif
+
+	return MANAGER_NOT_SUPPORT;
 }
 
-/* Ok : 0, NAK: -1 */
+/* Ok : 0 (SVID_0 is DP support(0xff01)), NAK: -1 */
 int usbpd_manager_get_modes(struct usbpd_data *pd_data)
 {
 	struct policy_data *policy = &pd_data->policy;
@@ -1249,8 +1304,11 @@ int usbpd_manager_get_modes(struct usbpd_data *pd_data)
 
 	pr_info("%s, Standard_Vendor_ID = 0x%x\n", __func__,
 				manager->Standard_Vendor_ID);
-
-	return 0;
+#if defined(CONFIG_CCIC_ALTERNATE_MODE)
+	return MANAGER_SUPPORT;
+#else
+	return MANAGER_NOT_SUPPORT;
+#endif
 }
 
 int usbpd_manager_enter_mode(struct usbpd_data *pd_data)
@@ -1264,7 +1322,11 @@ int usbpd_manager_enter_mode(struct usbpd_data *pd_data)
 
 int usbpd_manager_exit_mode(struct usbpd_data *pd_data, unsigned mode)
 {
-	return 0;
+#if defined(CONFIG_CCIC_ALTERNATE_MODE)
+	return MANAGER_SUPPORT;
+#else
+	return MANAGER_NOT_SUPPORT;
+#endif
 }
 
 data_obj_type usbpd_manager_select_capability(struct usbpd_data *pd_data)
@@ -1291,6 +1353,21 @@ data_obj_type usbpd_manager_select_capability(struct usbpd_data *pd_data)
 	obj.request_data_object.op_current = 10;
 	obj.request_data_object.object_position = 1;
 #endif
+#endif
+
+#if 0
+	if(obj.request_data_object.object_position == 0){
+		if(pd_data->protocol_rx.data_obj[0].power_data_obj.max_current >= (500/USBPD_CURRENT_UNIT)){
+			obj.request_data_object.min_current = 500 / USBPD_CURRENT_UNIT;
+			obj.request_data_object.op_current = 500 / USBPD_CURRENT_UNIT;
+		}
+		obj.request_data_object.object_position = 1;
+	}
+
+	dev_info(pd_data->dev, "Request [%d] FIXED min_current = %dmA, op_current = %dmA\n",
+						obj.request_data_object.object_position,
+						obj.request_data_object.min_current * USBPD_CURRENT_UNIT,
+						obj.request_data_object.op_current * USBPD_CURRENT_UNIT);
 #endif
 
 	return obj;
@@ -1346,6 +1423,12 @@ int usbpd_manager_evaluate_capability(struct usbpd_data *pd_data)
 			dev_info(pd_data->dev, "[%d] VARIABLE volt(%d)mV\n",
 					i+1, pd_volt * USBPD_VOLT_UNIT);
 			break;
+		case POWER_TYPE_PPS:
+			dev_info(pd_data->dev, "[%d] PPS (%d)mV-(%d)mV / %dmA\n",
+					i+1, pd_obj->power_data_obj_pps.min_voltage * USBPD_VOLT_UNIT,
+					pd_obj->power_data_obj_pps.max_voltage * USBPD_VOLT_UNIT,
+					pd_obj->power_data_obj_pps.max_current * USBPD_CURRENT_UNIT);
+			break;
 		default:
 			dev_err(pd_data->dev, "[%d] Power Type Error\n", i+1);
 			break;
@@ -1367,39 +1450,42 @@ int usbpd_manager_evaluate_capability(struct usbpd_data *pd_data)
 int usbpd_manager_match_request(struct usbpd_data *pd_data)
 {
 	/* TODO: Evaluation of sink request */
-
 	unsigned supply_type
 	= pd_data->source_request_obj.power_data_obj_supply_type.supply_type;
-	unsigned mismatch, max_min, op, pos;
+	unsigned src_max_current,  mismatch, max_min, op, pos;
 
-	if (supply_type == POWER_TYPE_FIXED) {
+	if (supply_type == POWER_TYPE_FIXED)
 		pr_info("REQUEST: FIXED\n");
-		goto log_fixed_variable;
-	} else if (supply_type == POWER_TYPE_VARIABLE) {
+	else if (supply_type == POWER_TYPE_VARIABLE)
 		pr_info("REQUEST: VARIABLE\n");
-		goto log_fixed_variable;
-	} else if (supply_type == POWER_TYPE_BATTERY) {
+	else if (supply_type == POWER_TYPE_PPS)
+		pr_info("REQUEST: PPS\n");
+	else if (supply_type == POWER_TYPE_BATTERY) {
 		pr_info("REQUEST: BATTERY\n");
 		goto log_battery;
-	} else {
+	}else {
 		pr_info("REQUEST: UNKNOWN Supply type.\n");
 		return -1;
 	}
 
-log_fixed_variable:
+    /* Tx Source PDO */
+    src_max_current = pd_data->source_data_obj.power_data_obj.max_current;
+
+    /* Rx Request RDO */
 	mismatch = pd_data->source_request_obj.request_data_object.capability_mismatch;
 	max_min = pd_data->source_request_obj.request_data_object.min_current;
 	op = pd_data->source_request_obj.request_data_object.op_current;
 	pos = pd_data->source_request_obj.request_data_object.object_position;
-	pr_info("Obj position: %d\n", pos);
-	pr_info("Mismatch: %d\n", mismatch);
-	pr_info("Operating Current: %d mA\n", op*10);
-	if (pd_data->source_request_obj.request_data_object.give_back)
-		pr_info("Min current: %d mA\n", max_min*10);
-	else
-		pr_info("Max current: %d mA\n", max_min*10);
 
-	return 0;
+    /*src_max_current is already *10 value ex) src_max_current 500mA */
+	pr_info("Tx SourceCap Current : %dmA\n", src_max_current*10);
+	pr_info("Rx Request Current : %dmA\n", max_min*10);
+
+    /* Compare Pdo and Rdo */
+    if ((src_max_current >= op) && (pos == 1))
+		return 0;
+    else
+		return -1;
 
 log_battery:
 	mismatch = pd_data->source_request_obj.request_data_object_battery.capability_mismatch;
@@ -1464,6 +1550,14 @@ static int of_usbpd_manager_dt(struct usbpd_manager_data *_data)
 			pr_err("%s error reading sink_cap_max_volt %d\n",
 					__func__, _data->sink_cap_max_volt);
 		}
+
+		ret = of_property_read_u32(np, "pdic,vb_cc_short_max_input_current",
+				&_data->vb_cc_short_max_input_current);
+		if (ret < 0) {
+			_data->vb_cc_short_max_input_current = 1800;
+			pr_err("%s error reading vb_cc_short_max_input_current %d\n",
+					__func__, _data->vb_cc_short_max_input_current);
+		}
 	}
 
 	return ret;
@@ -1513,7 +1607,7 @@ int usbpd_init_manager(struct usbpd_data *pd_data)
 	manager->pd_data = pd_data;
 	manager->power_role_swap = true;
 	manager->data_role_swap = true;
-	manager->vconn_source_swap = true;
+	manager->vconn_source_swap = 0;
 	manager->alt_sended = 0;
 	manager->vdm_en = 0;
 	manager->acc_type = 0;

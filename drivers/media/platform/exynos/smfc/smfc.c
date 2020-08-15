@@ -20,6 +20,7 @@
 #include <linux/mutex.h>
 #include <linux/wait.h>
 #include <linux/exynos_iovmm.h>
+#include <linux/reboot.h>
 
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-ion.h>
@@ -29,6 +30,7 @@
 
 static atomic_t smfc_hwfc_state;
 static wait_queue_head_t smfc_hwfc_sync_wq;
+static wait_queue_head_t smfc_suspend_wq;
 
 enum {
 	SMFC_HWFC_STANDBY = 0,
@@ -119,6 +121,8 @@ static irqreturn_t exynos_smfc_irq_handler(int irq, void *priv)
 			spin_lock(&smfc->flag_lock);
 			smfc->flags &= ~SMFC_DEV_SUSPENDING;
 			spin_unlock(&smfc->flag_lock);
+
+			wake_up(&smfc_suspend_wq);
 		}
 	} else {
 		dev_err(smfc->dev, "Spurious interrupt on H/W JPEG occurred\n");
@@ -170,13 +174,16 @@ static void smfc_timedout_handler(unsigned long arg)
 			v4l2_m2m_job_finish(smfc->m2mdev, ctx->fh.m2m_ctx);
 		} else {
 			spin_lock(&smfc->flag_lock);
+			smfc->flags &= ~SMFC_DEV_SUSPENDING;
 			spin_unlock(&smfc->flag_lock);
+
+			wake_up(&smfc_suspend_wq);
 		}
 	}
 
 	spin_lock_irqsave(&smfc->flag_lock, flags);
-	/* finished timedout handling and suspend() can return */
-	smfc->flags &= ~(SMFC_DEV_TIMEDOUT | SMFC_DEV_SUSPENDING);
+	/* finished timedout handling */
+	smfc->flags &= ~SMFC_DEV_TIMEDOUT;
 	spin_unlock_irqrestore(&smfc->flag_lock, flags);
 }
 
@@ -863,6 +870,35 @@ static const struct of_device_id exynos_smfc_match[] = {
 };
 MODULE_DEVICE_TABLE(of, exynos_smfc_match);
 
+static int exynos_smfc_reboot_notifier(struct notifier_block *nb,
+				unsigned long l, void *p)
+{
+	struct smfc_dev *smfc_dev = container_of(nb,
+					struct smfc_dev, reboot_notifier);
+	unsigned long flags;
+	bool rpm_active = false;
+
+	spin_lock_irqsave(&smfc_dev->flag_lock, flags);
+	if (!!(smfc_dev->flags & SMFC_DEV_RUNNING))
+		smfc_dev->flags |= SMFC_DEV_SUSPENDING;
+	spin_unlock_irqrestore(&smfc_dev->flag_lock, flags);
+
+	wait_event(smfc_suspend_wq, !(smfc_dev->flags & SMFC_DEV_SUSPENDING));
+
+	pm_runtime_barrier(smfc_dev->dev);
+	if (pm_runtime_active(smfc_dev->dev)) {
+		pm_runtime_put_sync(smfc_dev->dev);
+		rpm_active = true;
+	}
+
+	iovmm_deactivate(smfc_dev->dev);
+
+	dev_info(smfc_dev->dev, "reboot notifier with RPM [%s] status\n",
+			rpm_active ? "Activated" : "Deactivated");
+
+	return 0;
+}
+
 static int exynos_smfc_probe(struct platform_device *pdev)
 {
 	struct smfc_dev *smfc;
@@ -872,6 +908,7 @@ static int exynos_smfc_probe(struct platform_device *pdev)
 
 	atomic_set(&smfc_hwfc_state, SMFC_HWFC_STANDBY);
 	init_waitqueue_head(&smfc_hwfc_sync_wq);
+	init_waitqueue_head(&smfc_suspend_wq);
 
 	smfc = devm_kzalloc(&pdev->dev, sizeof(*smfc), GFP_KERNEL);
 	if (!smfc) {
@@ -953,6 +990,9 @@ static int exynos_smfc_probe(struct platform_device *pdev)
 		goto err_hwver;
 
 	spin_lock_init(&smfc->flag_lock);
+	smfc->reboot_notifier.notifier_call = exynos_smfc_reboot_notifier;
+	register_reboot_notifier(&smfc->reboot_notifier);
+
 
 	dev_info(&pdev->dev, "Probed H/W Version: %02x.%02x.%04x\n",
 			(smfc->hwver >> 24) & 0xFF, (smfc->hwver >> 16) & 0xFF,
@@ -992,7 +1032,6 @@ static int exynos_smfc_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int smfc_suspend(struct device *dev)
 {
-	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(smfc_suspend_wq);
 	struct smfc_dev *smfc = dev_get_drvdata(dev);
 	unsigned long flags;
 
@@ -1052,17 +1091,10 @@ static int smfc_runtime_suspend(struct device *dev)
 
 static void exynos_smfc_shutdown(struct platform_device *pdev)
 {
-	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(smfc_suspend_wq);
 	struct smfc_dev *smfc = platform_get_drvdata(pdev);
-	unsigned long flags;
 
-	spin_lock_irqsave(&smfc->flag_lock, flags);
-	if (!!(smfc->flags & SMFC_DEV_RUNNING))
-		smfc->flags |= SMFC_DEV_SUSPENDING;
-	spin_unlock_irqrestore(&smfc->flag_lock, flags);
-	wait_event(smfc_suspend_wq, !(smfc->flags & SMFC_DEV_SUSPENDING));
-
-	iovmm_deactivate(&pdev->dev);
+	dev_info(smfc->dev, "shutdown with state %u\n",
+					smfc->flags);
 }
 
 static const struct dev_pm_ops exynos_smfc_pm_ops = {

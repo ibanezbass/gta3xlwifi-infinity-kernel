@@ -25,6 +25,11 @@
 #define VENDER_S_CTRL 0
 #define VENDER_G_CTRL 0
 
+#define SENSOR_RESET_LOW		"sen_rst low"
+#define SENSOR_RESET_HIGH		"sen_rst high"
+#define SENSOR_MCLK_PIN			"pin"
+#define SENSOR_SET_DELAY		"delay"
+
 struct fimc_is_vender {
 	char fw_path[FIMC_IS_PATH_LEN];
 	char request_fw_path[FIMC_IS_PATH_LEN];

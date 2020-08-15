@@ -213,8 +213,7 @@ static void mfc_save_logging_sfr(struct s5p_mfc_dev *dev)
 		/* READ PAGE FAULT at AxID 0 ~ 3: PX */
 		if ((dev->logging_data->cause & (1 << MFC_CAUSE_0READ_PAGE_FAULT)) ||
 				(dev->logging_data->cause & (1 << MFC_CAUSE_1READ_PAGE_FAULT))) {
-			if (((dev->logging_data->fault_trans_info & 0xff) >= 0) &&
-					((dev->logging_data->fault_trans_info & 0xff) <= 3)) {
+			if ((dev->logging_data->fault_trans_info & 0xff) <= 3) {
 				px_fault = true;
 				for (i = 0; i < MFC_SFR_LOGGING_COUNT_SET2; i++)
 					dev->logging_data->SFRs_set2[i] = MFC_READL(s5p_mfc_logging_sfr_set2[i]);
@@ -256,7 +255,7 @@ static void mfc_save_logging_sfr(struct s5p_mfc_dev *dev)
 	dev->logging_data->last_int_sec = dev->last_int_time.tv_sec;
 	dev->logging_data->last_int_usec = dev->last_int_time.tv_usec;
 	dev->logging_data->hwlock_dev = dev->hwlock.dev;
-	dev->logging_data->hwlock_ctx = dev->hwlock.bits;
+	dev->logging_data->hwlock_ctx = (u32)(dev->hwlock.bits);
 	dev->logging_data->num_inst = dev->num_inst;
 	dev->logging_data->num_drm_inst = dev->num_drm_inst;
 	dev->logging_data->power_cnt = s5p_mfc_pm_get_pwr_ref_cnt(dev);
@@ -403,12 +402,87 @@ void s5p_mfc_dump_buffer_info(struct s5p_mfc_dev *dev, unsigned long addr)
 	}
 }
 
+void s5p_mfc_dump_power_clk_status(void)
+{
+	void __iomem *va = NULL;
+	u32 mfcmscl_status = 0;
+	u32 index = 0;
+
+	/*
+	 * SFRs Address are for Exynos 7885
+	 * "MFCMSCL_STATUS", Phy Adrr:0x11C80000 Offset:0x4044
+	 */
+	index = 15;
+	va = pmucal_p2v_list[index].va;
+
+	/* mfcmscl_status = 15 (Power ON), mfcmscl_status = 0 (Power OFF) */
+	mfcmscl_status = readl(va + 0x4044) & 0xF;
+	mfc_info_dev("MFCMSCL Power Domain Status:%u\n", mfcmscl_status);
+
+	/* If Power is ON, Check the CLK Registers */
+	if (mfcmscl_status != 0) {
+		/*
+		 * "DBG_NFO_QCH_CON_LHS_AXI_D_MFCMSCL_QCH", Phy Adrr:0x12CB0000 Offset:0x700c
+		 * "DBG_NFO_QCH_CON_MFC_QCH", Phy Adrr:0x12CB0000 Offset:0x7014
+		 * "DBG_NFO_QCH_CON_SMMU_MFCMSCL_QCH", Phy Adrr:0x12CB0000 Offset:0x7020
+		 */
+		index = 11;
+		va = pmucal_p2v_list[index].va;
+
+		/* CLK ON = 0, CLK OFF = 4 */
+		mfc_info_dev("MFCMSCL CLK Status\n");
+		mfc_info_dev("qch_con_lhs_axi_d_mfcmscl_qch:%u\n", readl(va + 0x700c));
+		mfc_info_dev("qch_con_mfc_qch:%u\n", readl(va + 0x7014));
+		mfc_info_dev("qch_con_smmu_mfcmscl_qch:%u\n", readl(va + 0x7020));
+	}
+}
+
+void s5p_mfc_dump_dynamic_dpb_info(struct s5p_mfc_dev *dev)
+{
+	struct s5p_mfc_ctx *ctx = dev->ctx[dev->curr_ctx];
+	struct s5p_mfc_buf_queue *ref_queue = &ctx->ref_buf_queue;
+	struct s5p_mfc_buf_queue *dst_queue = &ctx->dst_buf_queue;
+	struct s5p_mfc_buf *ref_mb, *tmp_mb, *dst_mb;
+	int index;
+	int i;
+
+	mfc_info_dev("MFC Dynamic DPB Info\n");
+	mfc_info_dev("Dynamic DPB Flag:%d\n",
+			MFC_READL(S5P_FIMV_D_DYNAMIC_DPB_FLAG_LOWER));
+
+	mfc_info_dev("Reference Queue Info\n");
+	list_for_each_entry_safe(ref_mb, tmp_mb, &ref_queue->head, list) {
+		index = ref_mb->vb.vb2_buf.index;
+		mfc_info_dev("ref[%d]: Plane[0] fd:%d Addr:%#llx Plane[1] fd:%d Addr:%#llx\n",
+			index, ref_mb->vb.vb2_buf.planes[0].m.fd, ref_mb->planes.raw[0],
+			ref_mb->vb.vb2_buf.planes[1].m.fd, ref_mb->planes.raw[1]);
+	}
+
+	mfc_info_dev("Destination Queue Info\n");
+	list_for_each_entry_safe(dst_mb, tmp_mb, &dst_queue->head, list) {
+		index = dst_mb->vb.vb2_buf.index;
+		mfc_info_dev("dst[%d]: Plane[0] fd:%d Addr:%#llx Plane[1] fd:%d Addr:%#llx\n",
+			index, dst_mb->vb.vb2_buf.planes[0].m.fd, dst_mb->planes.raw[0],
+			dst_mb->vb.vb2_buf.planes[1].m.fd, dst_mb->planes.raw[1]);
+	}
+
+	mfc_info_dev("Assigned fd Info\n");
+	for (i = 0; i < MFC_MAX_DPBS; i++)
+		mfc_info_dev("fd[%d]: %d\n", i, ctx->dec_priv->assigned_fd[i]);
+
+}
+
 void s5p_mfc_dump_info(struct s5p_mfc_dev *dev)
 {
 	mfc_display_state(dev);
 	mfc_print_trace(dev);
 	mfc_save_logging_sfr(dev);
 	mfc_dump_regs(dev);
+	s5p_mfc_dump_power_clk_status();
+
+	if (dev->ctx[dev->curr_ctx]->type == MFCINST_DECODER)
+		s5p_mfc_dump_dynamic_dpb_info(dev);
+
 	exynos_sysmmu_show_status(dev->device);
 }
 

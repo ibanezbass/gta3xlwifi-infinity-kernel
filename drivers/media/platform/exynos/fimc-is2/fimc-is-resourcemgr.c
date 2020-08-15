@@ -983,9 +983,21 @@ exit:
 }
 
 #ifdef ENABLE_PANIC_HANDLER
+#ifdef VENDER_PATH
+extern int fimc_is_sec_print_debuginfo(struct fimc_is_core *core);
+#endif
+
 static int fimc_is_panic_handler(struct notifier_block *nb, ulong l,
 	void *buf)
 {
+#ifdef VENDER_PATH
+	struct fimc_is_core *core = NULL;
+
+	core = (struct fimc_is_core *)dev_get_drvdata(fimc_is_dev);
+	if (core)
+		fimc_is_sec_print_debuginfo(core);
+#endif
+
 #if !defined(ENABLE_IS_CORE)
 	fimc_is_resource_dump();
 #endif

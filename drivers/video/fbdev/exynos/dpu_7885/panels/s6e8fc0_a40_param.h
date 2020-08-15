@@ -21,10 +21,6 @@
 #define LDI_REG_DATE				LDI_REG_COORDINATE
 #define LDI_REG_MANUFACTURE_INFO		LDI_REG_COORDINATE
 #define LDI_REG_CHIP_ID				0xD6
-#define LDI_GPARA_ELVSS_NORMAL			5	/* BFh 6th Para */
-#define LDI_GPARA_ELVSS_HBM			6	/* BFh 7th Para */
-
-#define LDI_REG_ELVSS			0xBF
 
 /* len is read length */
 #define LDI_LEN_ID				3
@@ -35,12 +31,6 @@
 #define LDI_LEN_ELVSS				(ELVSS_CMD_CNT - 1)
 
 /* offset is position including addr, not only para */
-#define LDI_OFFSET_OPR_1	1	/* C1h 1st Para: 16 Frame Avg at ACL Off (HBM OPR Cal mode) */
-#define LDI_OFFSET_OPR_2	13	/* C1h 13th Para: ACL Percent */
-#define LDI_OFFSET_OPR_3	16	/* C1h 16th Para: ACL Start step*/
-
-#define LDI_OFFSET_ACL		1
-
 #define LDI_OFFSET_HBM		1
 #define LDI_OFFSET_ELVSS_1	4		/* BFh 4th para: ELVSS */
 #define LDI_OFFSET_ELVSS_2	1		/* BFh 1th para: TSET */
@@ -49,31 +39,75 @@
 #define LDI_GPARA_DATE				4	/* A1h 5th Para: [D7:D4]: Year */
 #define LDI_GPARA_MANUFACTURE_INFO		11	/* A1h 12th Para: [D7:D4]:Site */
 
-#define	LDI_REG_RDDPM		0x0A	/* Read Display Power Mode */
-#define	LDI_LEN_RDDPM		1
+struct bit_info {
+	unsigned int reg;
+	unsigned int len;
+	char **print;
+	unsigned int expect;
+	unsigned int offset;
+	unsigned int g_para;
+	unsigned int invert;
+	unsigned int mask;
+	unsigned int result;
+};
 
-#define	LDI_REG_RDDSM		0x0E	/* Read Display Signal Mode */
-#define	LDI_LEN_RDDSM		1
+enum {
+	LDI_BIT_ENUM_05,	LDI_BIT_ENUM_RDNUMED = LDI_BIT_ENUM_05,
+	LDI_BIT_ENUM_0A,	LDI_BIT_ENUM_RDDPM = LDI_BIT_ENUM_0A,
+	LDI_BIT_ENUM_0E,	LDI_BIT_ENUM_RDDSM = LDI_BIT_ENUM_0E,
+	LDI_BIT_ENUM_0F,	LDI_BIT_ENUM_RDDSDR = LDI_BIT_ENUM_0F,
+	LDI_BIT_ENUM_EE,	LDI_BIT_ENUM_ESDERR = LDI_BIT_ENUM_EE,
+	LDI_BIT_ENUM_MAX
+};
 
-#ifdef CONFIG_DISPLAY_USE_INFO
-#define	LDI_REG_RDNUMPE		0x05		/* DPUI_KEY_PNDSIE: Read Number of the Errors on DSI */
-#define	LDI_LEN_RDNUMPE		1
-#define LDI_PNDSIE_MASK		(GENMASK(6, 0))
+static char *LDI_BIT_DESC_05[BITS_PER_BYTE] = {
+	[0 ... 6] = "number of corrupted packets",
+	[7] = "overflow on number of corrupted packets",
+};
+
+static char *LDI_BIT_DESC_0A[BITS_PER_BYTE] = {
+	[2] = "Display is Off",
+	[7] = "Booster has a fault",
+};
+
+static char *LDI_BIT_DESC_0E[BITS_PER_BYTE] = {
+	[0] = "Error on DSI",
+};
+
+static char *LDI_BIT_DESC_0F[BITS_PER_BYTE] = {
+	[7] = "Register Loading Detection",
+};
+
+static char *LDI_BIT_DESC_EE[BITS_PER_BYTE] = {
+	[2] = "VLIN3 error",
+	[3] = "ELVDD error",
+	[6] = "VLIN1 error",
+};
+
+static struct bit_info ldi_bit_info_list[LDI_BIT_ENUM_MAX] = {
+	[LDI_BIT_ENUM_05] = {0x05, 1, LDI_BIT_DESC_05, 0x00, },
+	[LDI_BIT_ENUM_0A] = {0x0A, 1, LDI_BIT_DESC_0A, 0x9F, .invert = (BIT(2) | BIT(7)), },
+	[LDI_BIT_ENUM_0E] = {0x0E, 1, LDI_BIT_DESC_0E, 0x00, },
+	[LDI_BIT_ENUM_0F] = {0x0F, 1, LDI_BIT_DESC_0F, 0x80, .invert = (BIT(7)), },
+	[LDI_BIT_ENUM_EE] = {0xEE, 1, LDI_BIT_DESC_EE, 0x00, .offset = 1, },
+};
+
+#if defined(CONFIG_DISPLAY_USE_INFO)
+#define LDI_LEN_RDNUMED		1		/* DPUI_KEY_PNDSIE: Read Number of the Errors on DSI */
+#define LDI_PNDSIE_MASK		(GENMASK(7, 0))
 
 /*
- * ESD_ERROR[2] =  VLIN3 error is occurred by ESD.
- * ESD_ERROR[3] =  ELVDD error is occurred by ESD.
- * ESD_ERROR[6] =  VLIN1 error is occurred by ESD
+ * ESD_ERROR[2] = VLIN3 error is occurred by ESD.
+ * ESD_ERROR[3] = ELVDD error is occurred by ESD.
+ * ESD_ERROR[6] = VLIN1 error is occurred by ESD
  */
-#define LDI_REG_ESDERR		0xEE		/* DPUI_KEY_PNELVDE, DPUI_KEY_PNVLI1E, DPUI_KEY_PNVLO3E, DPUI_KEY_PNESDE */
-#define LDI_LEN_ESDERR		1
+#define LDI_LEN_ESDERR		1		/* DPUI_KEY_PNELVDE, DPUI_KEY_PNVLI1E, DPUI_KEY_PNVLO3E, DPUI_KEY_PNESDE */
 #define LDI_PNELVDE_MASK	(BIT(3))	/* ELVDD error */
 #define LDI_PNVLI1E_MASK	(BIT(6))	/* VLIN1 error */
 #define LDI_PNVLO3E_MASK	(BIT(2))	/* VLIN3 error */
 #define LDI_PNESDE_MASK		(BIT(2) | BIT(3) | BIT(6))
 
-#define LDI_REG_RDDSDR		0x0F		/* DPUI_KEY_PNSDRE: Read Display Self-Diagnostic Result */
-#define LDI_LEN_RDDSDR		1
+#define LDI_LEN_RDDSDR		1		/* DPUI_KEY_PNSDRE: Read Display Self-Diagnostic Result */
 #define LDI_PNSDRE_MASK		(BIT(7))	/* D7: REG_DET: Register Loading Detection */
 #endif
 
@@ -121,7 +155,7 @@ static unsigned char SEQ_TEST_KEY_OFF_FC[] = {
 
 static unsigned char SEQ_ERR_FG_SET[] = {
 	0xED,
-	0x00, 0x4C
+	0x00, 0x4C, 0x40
 };
 
 /* Table 3*/
@@ -178,37 +212,17 @@ static unsigned char SEQ_DIM_SPEED[] = {
 	0x04 /* 4 Frame */
 };
 
-#if 0
-static unsigned char SEQ_TE_ON[] = {
-	0x35,
-	0x00, 0x00
-};
-
-static unsigned char SEQ_TE_OFF[] = {
-	0x35,
-};
-
-static unsigned char SEQ_VSYNC_SET[] = {
-	0xE0,
-	0x01		/* Vsync Enable */
-};
-#endif
-
 static unsigned char SEQ_ELVSS_SET[] = {
 	0xBF,
 	0x19,		/* 1st para TSET */
 	0x0D, 0x80,
 	0xC4,		/* 4th para ELVSS */
 	0x04,		/* 5th para 4 frame dim speed */
-	0x00, 0x00,	/* 6th ~ 7th para */
-	0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x41, 0x41,
-	0x42, 0x42, 0x42, 0x42, 0x83, 0xC3, 0x83, 0xC3,
-	0x83, 0xC3
 };
 
 static unsigned char SEQ_HBM_ON[] = {
 	0x53,
-	0xE0,
+	0xE8,
 };
 
 static unsigned char SEQ_HBM_OFF[] = {
@@ -219,8 +233,8 @@ static unsigned char SEQ_HBM_OFF[] = {
 static unsigned char SEQ_ACL_OPR_OFF[] = {
 	0xC1,
 	0x41,		/* C1h 1st Para: 0x41 = 16 Frame Avg at ACL Off */
-	0x26, 0x68, 0x15, 0x55, 0x55, 0x55,
-	0x0F, 0x1B, 0x18, 0x47, 0x02,
+	0x26, 0x68, 0x15, 0x55, 0x55, 0x55, 0x0F, 0x1B, 0x18,
+	0x47, 0x02,
 	0x61, 0x28,	/* C1h 13th ~ 14th Para: 0x61,0x28 = ACL 15% */
 	0x4A,
 	0x42, 0x64,	/* C1h 16th ~ 17th Para: 0x42, 0x64 = ACL start step 60% */
@@ -230,8 +244,8 @@ static unsigned char SEQ_ACL_OPR_OFF[] = {
 static unsigned char SEQ_ACL_OPR_08P[] = {
 	0xC1,
 	0x51,		/* C1h 1st Para: 0x51 = 32 Frame Avg at ACL On */
-	0x26, 0x68, 0x15, 0x55, 0x55, 0x55,
-	0x0F, 0x1B, 0x18, 0x47, 0x02,
+	0x26, 0x68, 0x15, 0x55, 0x55, 0x55, 0x0F, 0x1B, 0x18,
+	0x47, 0x02,
 	0x60, 0x98,	/* C1h 13th ~ 14th Para: 0x60, 0x98 = ACL 8% */
 	0x4A,
 	0x41, 0xFC,	/* C1h 16th ~ 17th Para: 0x41,0xFC = ACL start step 50% */
@@ -241,8 +255,8 @@ static unsigned char SEQ_ACL_OPR_08P[] = {
 static unsigned char SEQ_ACL_OPR_15P[] = {
 	0xC1,
 	0x51,		/* C1h 1st Para: 0x51 = 32 Frame Avg at ACL On */
-	0x26, 0x68, 0x15, 0x55, 0x55, 0x55,
-	0x0F, 0x1B, 0x18, 0x47, 0x02,
+	0x26, 0x68, 0x15, 0x55, 0x55, 0x55, 0x0F, 0x1B, 0x18,
+	0x47, 0x02,
 	0x61, 0x28,	/* C1h 13th ~ 14th Para: 0x61,0x28 = ACL 15% */
 	0x4A,
 	0x41, 0xFC,	/* C1h 16th ~ 17th Para: 0x41,0xFC = ACL start step 50% */
@@ -301,46 +315,44 @@ static unsigned int brightness_opr_table[ACL_STATUS_MAX][EXTEND_BRIGHTNESS + 1] 
 
 /* platform brightness <-> gamma level */
 static unsigned int brightness_table[EXTEND_BRIGHTNESS + 1] = {
-	4,
-	6, 9, 14, 16, 19, 21, 26, 29, 31, 34,
-	39, 41, 44, 46, 48, 54, 59, 61, 66, 69,
-	71, 76, 79, 84, 86, 91, 94, 98, 101, 106,
-	108, 111, 116, 118, 123, 126, 131, 133, 138, 141,
-	146, 148, 151, 156, 158, 161, 166, 168, 173, 176,
-	181, 183, 188, 190, 195, 198, 200, 205, 208, 213,
-	215, 218, 223, 225, 230, 233, 238, 240, 245, 248,
-	253, 255, 258, 263, 265, 270, 273, 277, 280, 285,
-	287, 290, 295, 297, 302, 305, 307, 312, 315, 320,
-	322, 327, 330, 335, 337, 342, 345, 347, 352, 355,
-	360, 362, 364, 369, 372, 377, 379, 384, 387, 392,
-	394, 397, 402, 404, 409, 412, 417, 419, 424, 427,
-	432, 434, 437, 442, 444, 449, 452, 454, 459, 466,
-	468, 473, 478, 483, 488, 492, 497, 500, 504, 509,
-	514, 519, 524, 528, 531, 536, 540, 545, 550, 555,
-	557, 564, 569, 572, 576, 581, 586, 591, 596, 598,
-	603, 608, 612, 617, 622, 627, 629, 634, 639, 644,
-	648, 653, 658, 663, 668, 670, 675, 680, 684, 689,
-	694, 699, 701, 706, 711, 716, 720, 725, 728, 732,
-	737, 742, 747, 752, 757, 761, 766, 769, 773, 778,
-	783, 788, 793, 797, 800, 805, 809, 814, 819, 824,
-	829, 831, 838, 841, 845, 850, 855, 860, 865, 867,
-	872, 877, 881, 886, 891, 896, 898, 903, 908, 913,
-	917, 922, 927, 929, 937, 939, 944, 949, 953, 958,
-	963, 968, 970, 975, 980, 985, 989, 994, 997, 1001,
-	1006, 1011, 1016, 1021, 1023, 4, 8, 10, 15, 19,
-	22, 26, 31, 33, 37, 42, 44, 49, 53, 53, 60, 62,
-	67, 71, 73, 78, 82, 85, 89, 91, 96, 100,
-	103, 107, 109, 114, 118, 123, 125, 130,
-	134, 136, 141, 145, 148, 152, 154, 159,
-	163, 166, 170, 175, 177, 181, 184, 188,
-	193, 195, 199, 202, 206, 211, 213, 217,
-	222, 224, 229, 233, 235, 240, 244, 247,
-	251, 256, 258, 262, 267, 269, 274, 276,
-	280, 285, 287, 292, 294, 298, 303, 305,
-	310, 312, 316, 321, 325, 328, 332, 337,
-	339, 343, 348, 350, 355, 359, 361, 366,
-	368, 373, 377, 379, 384, 386, 391, 395,
-	397, 402, 404,
+	2,
+	4, 7, 12, 14, 17, 19, 24, 27, 29, 32,
+	37, 39, 42, 44, 48, 52, 56, 59, 64, 66,
+	69, 74, 76, 81, 84, 89, 91, 96, 99, 103,
+	106, 108, 113, 116, 121, 123, 128, 131, 136, 138,
+	143, 146, 148, 153, 155, 158, 163, 165, 170, 173,
+	178, 180, 185, 188, 193, 195, 198, 202, 205, 210,
+	212, 215, 220, 222, 227, 230, 235, 237, 242, 245,
+	250, 252, 254, 259, 262, 267, 269, 274, 277, 282,
+	284, 287, 292, 294, 299, 301, 304, 309, 311, 316,
+	319, 324, 326, 331, 334, 339, 341, 344, 349, 351,
+	356, 358, 361, 366, 368, 373, 376, 381, 383, 388,
+	391, 393, 398, 400, 405, 408, 413, 415, 420, 423,
+	428, 430, 433, 438, 440, 445, 448, 450, 455, 462,
+	465, 469, 474, 479, 484, 489, 494, 496, 501, 506,
+	510, 515, 520, 525, 527, 532, 537, 542, 547, 552,
+	554, 561, 566, 568, 573, 578, 583, 588, 593, 595,
+	600, 605, 610, 614, 619, 624, 626, 631, 636, 641,
+	646, 651, 656, 660, 665, 668, 672, 677, 682, 687,
+	692, 697, 699, 704, 709, 714, 718, 723, 726, 730,
+	735, 740, 745, 750, 755, 759, 764, 767, 772, 776,
+	781, 786, 791, 796, 798, 803, 808, 813, 817, 822,
+	827, 830, 837, 839, 844, 849, 854, 859, 863, 866,
+	871, 876, 880, 885, 890, 895, 897, 902, 907, 912,
+	917, 921, 926, 929, 936, 938, 943, 948, 953, 958,
+	963, 967, 970, 975, 979, 984, 989, 994, 996, 1001,
+	1006, 1011, 1016, 1021, 1023, 4, 9, 11, 16, 20,
+	22, 27, 31, 34, 38, 43, 45, 49, 54, 54,
+	61, 63, 67, 72, 74, 79, 83, 85, 90, 92,
+	97, 101, 103, 108, 110, 114, 119, 123, 126, 130,
+	135, 137, 141, 146, 148, 153, 155, 159, 164, 166,
+	171, 175, 177, 182, 184, 189, 193, 195, 200, 202,
+	206, 211, 213, 218, 222, 224, 229, 233, 236, 240,
+	245, 247, 251, 256, 258, 263, 267, 269, 274, 276,
+	281, 285, 287, 292, 294, 299, 303, 305, 310, 312,
+	316, 321, 325, 328, 332, 337, 339, 343, 348, 350,
+	355, 359, 361, 366, 368, 373, 377, 379, 384, 386,
+	391, 395, 397, 402, 404
 };
 
 static u8 elvss_table[EXTEND_BRIGHTNESS + 1] = {

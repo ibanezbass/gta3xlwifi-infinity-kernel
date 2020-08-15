@@ -90,6 +90,15 @@ config SAMSUNG_FREECESS
 	help
 	  thraw frozen process when recv sig.
 
+config ANDROID_VSOC
+	tristate "Android Virtual SoC support"
+	default n
+	depends on PCI_MSI
+	---help---
+	  This option adds support for the Virtual SoC driver needed to boot
+	  a 'cuttlefish' Android image inside QEmu. The driver interacts with
+	  a QEmu ivshmem device. If built as a module, it will be called vsoc.
+
 source "drivers/staging/android/ion/Kconfig"
 
 

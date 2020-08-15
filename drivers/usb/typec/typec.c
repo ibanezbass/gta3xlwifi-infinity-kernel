@@ -1003,12 +1003,12 @@ port_type_store(struct device *dev, struct device_attribute *attr,
 
 	type = ret;
 	mutex_lock(&port->port_type_lock);
-
+#if 0 /* logically, we don't need to compare previous role */
 	if (port->port_type == type) {
 		ret = size;
 		goto unlock_and_ret;
 	}
-
+#endif
 	ret = port->cap->port_type_set(port->cap, type);
 	if (ret)
 		goto unlock_and_ret;

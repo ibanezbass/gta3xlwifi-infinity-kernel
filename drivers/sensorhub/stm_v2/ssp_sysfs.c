@@ -282,7 +282,7 @@ static ssize_t set_flush(struct device *dev,
 
 	sensor_type = (u8)dTemp;
 	if (!(atomic64_read(&data->aSensorEnable) & (1ULL << sensor_type))) {
-		return -EINVAL;
+		ssp_infof("ssp sensor is not enabled(%d)", sensor_type);
 	}
 
 	if (flush(data, sensor_type) < 0) {

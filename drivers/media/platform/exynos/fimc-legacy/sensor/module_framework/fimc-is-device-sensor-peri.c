@@ -1348,15 +1348,18 @@ int fimc_is_sensor_peri_pre_flash_fire(struct v4l2_subdev *subdev, void *arg)
 
 	sensor_peri = (struct fimc_is_device_sensor_peri *)module->private_data;
 
-	sensor_ctl = &sensor_peri->cis.sensor_ctls[vsync_count % CAM2P0_UCTL_LIST_SIZE];
-
 	flash = sensor_peri->flash;
 	BUG_ON(!flash);
 
-	if (sensor_ctl->valid_flash_udctrl == false)
-		goto p_err;
+	mutex_lock(&sensor_peri->cis.control_lock);
+
+	sensor_ctl = &sensor_peri->cis.sensor_ctls[vsync_count % CAM2P0_UCTL_LIST_SIZE];
 
 	flash_uctl = &sensor_ctl->cur_cam20_flash_udctrl;
+
+	if ((sensor_ctl->valid_flash_udctrl == false)
+		|| (vsync_count != sensor_ctl->flash_frame_number))
+		goto p_err;
 
 	if ((flash_uctl->flashMode != flash->flash_data.mode) ||
 		(flash_uctl->flashMode != CAM2_FLASH_MODE_OFF && flash_uctl->firingPower == 0)) {
@@ -1395,8 +1398,10 @@ int fimc_is_sensor_peri_pre_flash_fire(struct v4l2_subdev *subdev, void *arg)
 	flash_uctl->firingTime = 0;
 	sensor_ctl->flash_frame_number = 0;
 	sensor_ctl->valid_flash_udctrl = false;
-
+	
 p_err:
+	mutex_unlock(&sensor_peri->cis.control_lock);
+
 	return ret;
 }
 
@@ -2295,7 +2300,7 @@ int fimc_is_sensor_peri_actuator_softlanding(struct fimc_is_device_sensor_peri *
 		actuator_itf->hw_pos = soft_landing_table->hw_table[i];
 
 		/* The actuator needs a delay time when lens moving for soft landing. */
-		mdelay(soft_landing_table->step_delay);
+		msleep(soft_landing_table->step_delay);
 
 		ret = fimc_is_sensor_peri_actuator_check_move_done(device);
 		if (ret) {

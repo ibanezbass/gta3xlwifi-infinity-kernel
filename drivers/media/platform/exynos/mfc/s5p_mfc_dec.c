@@ -201,19 +201,18 @@ static int vidioc_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 		   rectangle. */
 		s5p_mfc_dec_calc_dpb_size(ctx);
 
-        /* If total memory requirement is too big for this device,
-         * then it returns error.
-         * 5: number of extra DPBs
-         * 3: number of DPBs for Android framework
-         * 600MB: being used to return an error,
-         * when 8K resolution video clip is being tried to be decoded
-         */
-        if ((ctx->raw_buf.total_plane_size * (ctx->dpb_count + 5 + 3)) > (600 * 1024 * 1024)) {
-        	mfc_info_ctx("Total memory size is too big. width(%d), height(%d), dpb(%d)\n",
-        			ctx->img_width, ctx->img_height, ctx->dpb_count);
-        	return -EIO;
-        }
-        
+		/* If total memory requirement is too big for this device,
+		 * then it returns error.
+		 * 5: number of extra DPBs
+		 * 3: number of DPBs for Android framework
+		 * 600MB: being used to return an error,
+		 * when 8K resolution video clip is being tried to be decoded
+		 */
+		if ((ctx->raw_buf.total_plane_size * (ctx->dpb_count + 5 + 3)) > (600 * 1024 * 1024)) {
+			mfc_info_ctx("Total memory size is too big. width(%d), height(%d), dpb(%d)\n",
+					ctx->img_width, ctx->img_height, ctx->dpb_count);
+			return -EIO;
+		}
 
 		pix_mp->width = ctx->img_width;
 		pix_mp->height = ctx->img_height;
@@ -641,6 +640,7 @@ static int vidioc_querybuf(struct file *file, void *priv,
 static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 {
 	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
+	struct s5p_mfc_dev *dev = ctx->dev;
 	int ret = -EINVAL;
 
 	mfc_debug_enter();
@@ -665,7 +665,7 @@ static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 			return -EIO;
 		}
 
-		s5p_mfc_qos_update_framerate(ctx);
+		s5p_mfc_qos_update_framerate(ctx, 0);
 
 		if (!buf->m.planes[0].bytesused) {
 			buf->m.planes[0].bytesused = ctx->vq_src.plane_sizes[0];
@@ -676,9 +676,12 @@ static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 		}
 		ret = vb2_qbuf(&ctx->vq_src, buf);
 	} else {
+		s5p_mfc_qos_update_framerate(ctx, 1);
 		ret = vb2_qbuf(&ctx->vq_dst, buf);
 		mfc_debug(2, "End of enqueue(%d) : %d\n", buf->index, ret);
 	}
+
+	atomic_inc(&dev->queued_cnt);
 
 	mfc_debug_leave();
 	return ret;

@@ -128,6 +128,14 @@ config MUIC_S2MU004_AFC_DISABLE
 	  If you say yes here you will get support for
 	  the AFC disable control functionality.
 
+config S2MU004_NONE_WATERPROOF_MODEL
+	bool "Supporting S2MU004 Type-C NONE_WATERPROOF_MODEL"
+	depends on MUIC_S2MU004
+	default n
+	help
+	  If you say yes here you will get support for
+	  the S2MU004 Type-C NONE_WATERPROOF_MODEL functions.
+
 config MUIC_S2MU005
 	bool "Using S2MU005 MUIC"
 	depends on USE_MUIC && MFD_S2MU005
@@ -180,6 +188,22 @@ config S2MU106_TYPEC_WATER
 	help
 	  If you say yes here you will get support for
 	  the S2MU106 Type-C Water functions.
+
+config S2MU106_IFCONN_HOUSE_NOT_GND
+	bool "take w/a when ifconn house is not gnd"
+	depends on S2MU106_TYPEC_WATER
+	default n
+	help
+	  If you say yes here you will get support w/a for
+	  the ifconn house is not gnd models.
+
+config MUIC_S2MU106_FAST_DETECTION
+	bool "Using S2MU106 Type-C Water Detection, fast cable also."
+	depends on S2MU106_TYPEC_WATER
+	default n
+	help
+	  If you say yes here you will get support for
+	  the S2MU106 Type-C Water Fast Cable detect functions.
 
 config MUIC_S2MU205
 	bool "Using S2MU205 MUIC"
@@ -293,3 +317,25 @@ config MUIC_TEST_FUNC
 	default n
 	help
 	  If you say yes here you will get support for the TEST function's.
+
+config TYPEB_WATERPROOF_MODEL
+	bool "Using TYPEB WATERPROOF MODEL"
+	depends on USE_MUIC
+	default n
+	help
+		If you say yes here you will get support for
+		for the  TYPEB WATERPROOF MODEL feature.
+
+config MUIC_SUPPORT_PRSWAP
+	bool "MUIC supports power role swap"
+	depends on USE_MUIC
+	default n
+	help
+	  If you say yes here you will get support for the power role swap.
+
+config MUIC_NOT_SUPPORT_QC
+	bool "MUIC not supports quick charger"
+	depends on MUIC_HV
+	default n
+	help
+	  If you say yes here you will not get support for the quick charger.

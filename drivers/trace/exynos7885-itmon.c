@@ -107,7 +107,8 @@
 #define TMOUT				(0xFFFFF)
 #define TMOUT_TEST			(0x1)
 
-#define PANIC_ALLOWED_THRESHOLD		(0x2)
+#define PANIC_GO_THRESHOLD		(0x3)
+#define PANIC_GO_THRESHOLD_CPU		(CONFIG_EXYNOS_ITMON_THRESHOLD_CPU)
 #define INVALID_REMAPPING		(0x08000000)
 #define BAAW_RETURN			(0x08000000)
 
@@ -215,7 +216,9 @@ struct itmon_platdata {
 	struct itmon_traceinfo traceinfo[BUS_PATH_TYPE];
 	struct list_head tracelist[BUS_PATH_TYPE];
 	unsigned int err_cnt;
-	bool panic_allowed;
+	unsigned int err_cnt_by_cpu;
+	ktime_t last_time;
+	bool panic_go;
 	bool crash_in_progress;
 	unsigned int sysfs_tmout_val;
 	bool sysfs_scandump;
@@ -585,13 +588,23 @@ static void itmon_post_handler_by_master(struct itmon_dev *itmon,
 		return;
 
 	if (!strncmp(traceinfo->port, "CPU", strlen("CPU"))) {
+		ktime_t now, interval;
+
+		now = ktime_get();
+		interval = ktime_sub(now, pdata->last_time);
+		pdata->last_time = now;
+		pdata->err_cnt_by_cpu++;
+
 		/* if master is CPU, then we expect any exception */
-		if (pdata->err_cnt > PANIC_ALLOWED_THRESHOLD) {
-			pdata->err_cnt = 0;
-			itmon_init(itmon, false);
-			pr_info("ITMON is turn-off when CPU transaction is detected repeatly\n");
+		if (pdata->err_cnt_by_cpu > PANIC_GO_THRESHOLD_CPU) {
+			pdata->panic_go = true;
+			pr_info("ITMON try to run PANIC, even CPU transaction detected - %s",
+				itmon_errcode[traceinfo->errcode]);
 		} else {
-			pr_info("ITMON skips CPU transaction detected\n");
+			pr_info("ITMON skips CPU transaction detected - "
+				"err_cnt_by_cpu: %u, interval: %lluns\n",
+				pdata->err_cnt_by_cpu,
+				(unsigned long long)ktime_to_ns(interval));
 		}
 	} else if (!strncmp(traceinfo->port, "CP", strlen("CP"))) {
 		/* if master is DSP and operation is read, we don't care this */
@@ -604,6 +617,8 @@ static void itmon_post_handler_by_master(struct itmon_dev *itmon,
 			itmon_init(itmon, false);
 			/* TODO: CP Crash operation */
 		}
+	} else {
+		pdata->err_cnt++;
 	}
 }
 
@@ -1078,7 +1093,7 @@ static int itmon_search_node(struct itmon_dev *itmon, struct itmon_nodegroup *gr
 				if (BIT_HWA_ERR_OCCURRED(val)) {
 					itmon_report_hwa_rawdata(itmon, &node[bit]);
 					/* Go panic now */
-					pdata->err_cnt = PANIC_ALLOWED_THRESHOLD + 1;
+					pdata->panic_go = true;
 					ret = true;
 				}
 			}
@@ -1116,7 +1131,7 @@ static int itmon_search_node(struct itmon_dev *itmon, struct itmon_nodegroup *gr
 					if (BIT_HWA_ERR_OCCURRED(val)) {
 						itmon_report_hwa_rawdata(itmon, &node[bit]);
 						/* Go panic now */
-						pdata->err_cnt = PANIC_ALLOWED_THRESHOLD + 1;
+						pdata->panic_go = true;
 						ret = true;
 					}
 				}
@@ -1142,11 +1157,19 @@ static irqreturn_t itmon_irq_handler(int irq, void *data)
 		if (irq == nodegroup[i].irq) {
 			group = &pdata->nodegroup[i];
 			if (group->phy_regs != 0) {
-				pr_info("\nITMON Detected: %d irq, %s group, 0x%x vec, err_cnt:%u\n",
-					irq, group->name, __raw_readl(group->regs), pdata->err_cnt);
+				pr_info("\nITMON Detected: %d irq, %s group, 0x%x vec, "
+					"err_cnt:%u err_cnt_by_cpu:%u\n",
+					irq, group->name,
+					__raw_readl(group->regs),
+					pdata->err_cnt,
+					pdata->err_cnt_by_cpu);
+
 			} else {
-				pr_info("\nITMON Detected: %d irq, %s group, err_cnt:%u\n",
-					irq, group->name, pdata->err_cnt);
+				pr_info("\nITMON Detected: %d irq, %s group, "
+					"err_cnt:%u err_cnt_by_cpu:%u\n",
+					irq, group->name,
+					pdata->err_cnt,
+					pdata->err_cnt_by_cpu);
 			}
 			break;
 		}
@@ -1160,11 +1183,11 @@ static irqreturn_t itmon_irq_handler(int irq, void *data)
 			itmon_switch_scandump();
 			wfi();
 		}
-		if (pdata->err_cnt++ > PANIC_ALLOWED_THRESHOLD)
-			pdata->panic_allowed = true;
+		if (pdata->err_cnt > PANIC_GO_THRESHOLD)
+			pdata->panic_go = true;
 	}
 
-	if (pdata->panic_allowed)
+	if (pdata->panic_go)
 		panic("ITMON occurs panic, Transaction is invalid from IPs");
 
 	return IRQ_HANDLED;
@@ -1198,7 +1221,7 @@ static ssize_t itmon_timeout_fix_val_store(struct kobject *kobj,
 	struct itmon_platdata *pdata = g_itmon->pdata;
 
 	if (val > 0 && val <= 0xFFFFF)
-		pdata->sysfs_tmout_val = val;
+		pdata->sysfs_tmout_val = (unsigned int)val;
 
 	return count;
 }

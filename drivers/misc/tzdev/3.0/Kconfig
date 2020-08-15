@@ -216,12 +216,6 @@ config TEEGRIS_VERSION
 	help
 	  TEEGRIS built with specific version of SDK
 
-config TZDEV_INDICATOR_TZSL
-	bool "tzdev indicator for root_task"
-	default n
-	help
-	  Indicate TA verification at root_task
-
 choice
 	prompt "Choose per-cpu kthread workers variant"
 	default TZDEV_KTHREADS_NOTIFIER

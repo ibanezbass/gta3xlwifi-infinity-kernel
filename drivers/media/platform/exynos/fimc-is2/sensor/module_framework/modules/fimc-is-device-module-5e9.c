@@ -268,7 +268,7 @@ static int sensor_module_5e9_power_setpin_with_eeprom(struct device *dev,
 	if (gpio_is_valid(gpio_camio_1p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_camio_1p8_en, "gpio_camio_1p8_en", PIN_OUTPUT, 1, 0);
 	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 500);
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 3500);
 	}
 
 	/***** [ ROM power Off ] ***********************************************************/
@@ -378,13 +378,13 @@ static int sensor_module_5e9_power_setpin_with_otp(struct device *dev,
 	if (gpio_is_valid(gpio_cam_1p2_cam_a2p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_1p2_cam_a2p8_en, "sensor_1p2_2p8_en", PIN_OUTPUT, 1, 500);
 	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "VDDAR2_2.8V_CAM", PIN_REGULATOR, 1, 0);	//LDO07
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "FCAM_AVDD_2P8", PIN_REGULATOR, 1, 0);	//LDO07
 	}
 #else
 	if (gpio_is_valid(gpio_cam_core_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_core_en, "cam_core_en", PIN_OUTPUT, 1, 0);
 	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "VDDDF_1.2V_CAM", PIN_REGULATOR, 1, 0);
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "FCAM_DVDD_1P2", PIN_REGULATOR, 1, 0);
 	}
 	if (gpio_is_valid(gpio_cam_a2p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_cam_a2p8_en, "gpio_cam_a2p8_en", PIN_OUTPUT, 1, 0);
@@ -398,8 +398,9 @@ static int sensor_module_5e9_power_setpin_with_otp(struct device *dev,
 					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
 		}
 	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "VDDIOR1_1.8V_CAM", PIN_REGULATOR, 1, 500);	//LDO03
-		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "VDDDR2_1.2V_CAM", PIN_REGULATOR, 1, 500);	//LDO04
+		//SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "FCAM_AVDD_2P8", PIN_REGULATOR, 1, 0);	//LDO03
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 500);	//LDO03
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_ON, gpio_none, "FCAM_DVDD_1P2", PIN_REGULATOR, 1, 0);	//LDO04
 	}
 
 
@@ -422,11 +423,22 @@ static int sensor_module_5e9_power_setpin_with_otp(struct device *dev,
 
 	SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "pin", PIN_FUNCTION, 0, 0);
 
+	if (gpio_is_valid(gpio_camio_1p8_en)) {
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "sensor_1p8_en", PIN_OUTPUT, 0, 0);
+		if(shared_camio_1p8) {
+			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, SRT_RELEASE,
+					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
+		}
+	} else {
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 0, 0); //LDO03
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "FCAM_DVDD_1P2", PIN_REGULATOR, 0, 0); //LDO04
+	}
+
 #ifdef USE_COMMON_CAM_IO_PWR
 	if (gpio_is_valid(gpio_cam_1p2_cam_a2p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_1p2_cam_a2p8_en, "sensor_1p2_2p8_en", PIN_OUTPUT, 0, 0);
 	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "VDDAR2_2.8V_CAM", PIN_REGULATOR, 0, 0);	//LDO07
+		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "FCAM_AVDD_2P8", PIN_REGULATOR, 0, 0);	//LDO07
 	}
 #else
 	if (gpio_is_valid(gpio_cam_core_en)) {
@@ -438,16 +450,6 @@ static int sensor_module_5e9_power_setpin_with_otp(struct device *dev,
 		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_cam_a2p8_en, "gpio_cam_a2p8_en", PIN_OUTPUT, 0, 0);
 	}
 #endif
-	if (gpio_is_valid(gpio_camio_1p8_en)) {
-		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_camio_1p8_en, "sensor_1p8_en", PIN_OUTPUT, 0, 0);
-		if(shared_camio_1p8) {
-			SET_PIN_SHARED(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, SRT_RELEASE,
-					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
-		}
-	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "VDDIOR1_1.8V_CAM", PIN_REGULATOR, 0, 0);	//LDO03
-		SET_PIN(pdata, SENSOR_SCENARIO_NORMAL, GPIO_SCENARIO_OFF, gpio_none, "VDDDR2_1.2V_CAM", PIN_REGULATOR, 0, 0);	//LDO04
-	}
 
 
 	/***** [ ROM powerOn ] *************************************************************/
@@ -457,7 +459,7 @@ static int sensor_module_5e9_power_setpin_with_otp(struct device *dev,
 	if (gpio_is_valid(gpio_cam_1p2_cam_a2p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_cam_1p2_cam_a2p8_en, "sensor_1p2_2p8_en", PIN_OUTPUT, 1, 0);
 	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "VDDAR2_2.8V_CAM", PIN_REGULATOR, 1, 0);	//LDO07
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "FCAM_AVDD_2P8", PIN_REGULATOR, 1, 0);	//LDO07
 	}
 #else
 	if (gpio_is_valid(gpio_cam_core_en)) {
@@ -476,8 +478,8 @@ static int sensor_module_5e9_power_setpin_with_otp(struct device *dev,
 					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 1);
 		}
 	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "VDDIOR1_1.8V_CAM", PIN_REGULATOR, 1, 500);	//LDO03
-		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "VDDDR2_1.2V_CAM", PIN_REGULATOR, 1, 500);	//LDO04
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 1, 500);	//LDO03
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "FCAM_DVDD_1P2", PIN_REGULATOR, 1, 500);	//LDO04
 	}
 
 	SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_ON, gpio_none, "pin", PIN_FUNCTION, 2, 0);
@@ -503,7 +505,7 @@ static int sensor_module_5e9_power_setpin_with_otp(struct device *dev,
 	if (gpio_is_valid(gpio_cam_1p2_cam_a2p8_en)) {
 		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_cam_1p2_cam_a2p8_en, "sensor_1p2_2p8_en", PIN_OUTPUT, 0, 0);
 	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, "VDDAR2_2.8V_CAM", PIN_REGULATOR, 0, 0);	//LDO07
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, "FCAM_AVDD_2P8", PIN_REGULATOR, 0, 0);	//LDO07
 	}
 #else
 	if (gpio_is_valid(gpio_cam_core_en)) {
@@ -522,8 +524,8 @@ static int sensor_module_5e9_power_setpin_with_otp(struct device *dev,
 					&core->shared_rsc_slock[SHARED_PIN1], &core->shared_rsc_count[SHARED_PIN1], 0);
 		}
 	} else {
-		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, "VDDIOR1_1.8V_CAM", PIN_REGULATOR, 0, 0);	//ldO03
-		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, "VDDDR2_1.2V_CAM", PIN_REGULATOR, 0, 0);	//ldO04
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, "CAM_VDDIO_1P8", PIN_REGULATOR, 0, 0);	//ldO03
+		SET_PIN(pdata, SENSOR_SCENARIO_READ_ROM, GPIO_SCENARIO_OFF, gpio_none, "FCAM_DVDD_1P2", PIN_REGULATOR, 0, 0);	//ldO04
 	}
 
 

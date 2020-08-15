@@ -62,7 +62,7 @@ static long __ionfd2phys_ioctl(int fd, size_t nr_pfns, sk_pfn_t *pfns)
 	int ret;
 	struct ion_handle *handle;
 	void *addr;
-	int pfn;
+	size_t pfn;
 	size_t size = 0;
 
 	handle = ion_import_dma_buf(client, fd);
