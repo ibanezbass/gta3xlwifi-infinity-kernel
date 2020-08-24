@@ -1,8 +1,10 @@
-cmd_arch/arm64/kernel/cpu_errata.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/kernel/.cpu_errata.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(cpu_errata)"  -D"KBUILD_MODNAME=KBUILD_STR(cpu_errata)" -c -o arch/arm64/kernel/.tmp_cpu_errata.o arch/arm64/kernel/cpu_errata.c
+cmd_arch/arm64/kernel/cpu_errata.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/kernel/.cpu_errata.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(cpu_errata)"  -D"KBUILD_MODNAME=KBUILD_STR(cpu_errata)" -c -o arch/arm64/kernel/.tmp_cpu_errata.o arch/arm64/kernel/cpu_errata.c
 
 source_arch/arm64/kernel/cpu_errata.o := arch/arm64/kernel/cpu_errata.c
 
 deps_arch/arm64/kernel/cpu_errata.o := \
+    $(wildcard include/config/harden/branch/predictor.h) \
+    $(wildcard include/config/kvm.h) \
     $(wildcard include/config/arm64/erratum/826319.h) \
     $(wildcard include/config/arm64/erratum/827319.h) \
     $(wildcard include/config/arm64/erratum/824069.h) \
@@ -12,6 +14,7 @@ deps_arch/arm64/kernel/cpu_errata.o := \
     $(wildcard include/config/arm64/erratum/845719.h) \
     $(wildcard include/config/cavium/erratum/23154.h) \
     $(wildcard include/config/cavium/erratum/27456.h) \
+    $(wildcard include/config/qcom/falkor/erratum/1003.h) \
   include/linux/types.h \
     $(wildcard include/config/have/uid16.h) \
     $(wildcard include/config/uid16.h) \
@@ -84,7 +87,7 @@ deps_arch/arm64/kernel/cpu_errata.o := \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
     $(wildcard include/config/rkp/kdp.h) \
@@ -173,11 +176,11 @@ deps_arch/arm64/kernel/cpu_errata.o := \
   arch/arm64/include/asm/current.h \
     $(wildcard include/config/thread/info/in/task.h) \
   include/linux/thread_info.h \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -392,6 +395,7 @@ deps_arch/arm64/kernel/cpu_errata.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -416,6 +420,8 @@ deps_arch/arm64/kernel/cpu_errata.o := \
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/cpu/freq.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
@@ -486,11 +492,10 @@ deps_arch/arm64/kernel/cpu_errata.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
-  include/linux/cputime.h \
-  arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h \
-    $(wildcard include/config/virt/cpu/accounting.h) \
-  include/asm-generic/cputime_jiffies.h \
+  include/linux/percpu.h \
+    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
+    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
+    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/smp.h \
     $(wildcard include/config/up/late/init.h) \
   include/linux/llist.h \
@@ -498,10 +503,14 @@ deps_arch/arm64/kernel/cpu_errata.o := \
   arch/arm64/include/asm/smp.h \
   arch/arm64/include/asm/percpu.h \
   include/asm-generic/percpu.h \
-    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/percpu-defs.h \
     $(wildcard include/config/page/table/isolation.h) \
     $(wildcard include/config/debug/force/weak/per/cpu.h) \
+  include/linux/cputime.h \
+  arch/arm64/include/generated/asm/cputime.h \
+  include/asm-generic/cputime.h \
+    $(wildcard include/config/virt/cpu/accounting.h) \
+  include/asm-generic/cputime_jiffies.h \
   include/linux/sem.h \
   include/uapi/linux/sem.h \
   include/linux/ipc.h \
@@ -531,9 +540,6 @@ deps_arch/arm64/kernel/cpu_errata.o := \
   include/asm-generic/siginfo.h \
   include/uapi/asm-generic/siginfo.h \
   include/linux/pid.h \
-  include/linux/percpu.h \
-    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
-    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
   include/linux/topology.h \
     $(wildcard include/config/use/percpu/numa/node/id.h) \
     $(wildcard include/config/have/memoryless/nodes.h) \
@@ -663,6 +669,7 @@ deps_arch/arm64/kernel/cpu_errata.o := \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -694,6 +701,74 @@ deps_arch/arm64/kernel/cpu_errata.o := \
   arch/arm64/include/asm/device.h \
     $(wildcard include/config/iommu/api.h) \
   include/linux/pm_wakeup.h \
+  arch/arm64/include/asm/mmu_context.h \
+    $(wildcard include/config/pid/in/contextidr.h) \
+    $(wildcard include/config/arm64/va/bits/48.h) \
+  arch/arm64/include/asm/cacheflush.h \
+  include/linux/mm.h \
+    $(wildcard include/config/have/arch/mmap/rnd/bits.h) \
+    $(wildcard include/config/have/arch/mmap/rnd/compat/bits.h) \
+    $(wildcard include/config/mem/soft/dirty.h) \
+    $(wildcard include/config/x86.h) \
+    $(wildcard include/config/ppc.h) \
+    $(wildcard include/config/parisc.h) \
+    $(wildcard include/config/metag.h) \
+    $(wildcard include/config/ia64.h) \
+    $(wildcard include/config/shmem.h) \
+    $(wildcard include/config/debug/vm/rb.h) \
+    $(wildcard include/config/debug/pagealloc.h) \
+    $(wildcard include/config/hibernation.h) \
+  include/linux/debug_locks.h \
+    $(wildcard include/config/debug/locking/api/selftests.h) \
+  include/linux/range.h \
+  include/linux/page_ext.h \
+    $(wildcard include/config/idle/page/tracking.h) \
+    $(wildcard include/config/page/owner.h) \
+  include/linux/stacktrace.h \
+    $(wildcard include/config/stacktrace.h) \
+    $(wildcard include/config/user/stacktrace/support.h) \
+  arch/arm64/include/asm/pgtable.h \
+    $(wildcard include/config/arm64/hw/afdbm.h) \
+    $(wildcard include/config/tima/lkmauth.h) \
+    $(wildcard include/config/tima/lkmauth/code/prot.h) \
+    $(wildcard include/config/have/rcu/table/free.h) \
+  arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
+  arch/arm64/include/asm/fixmap.h \
+    $(wildcard include/config/uh.h) \
+  arch/arm64/include/asm/boot.h \
+  include/asm-generic/fixmap.h \
+  include/asm-generic/pgtable.h \
+    $(wildcard include/config/have/arch/soft/dirty.h) \
+    $(wildcard include/config/have/arch/huge/vmap.h) \
+  include/linux/page-flags.h \
+    $(wildcard include/config/arch/uses/pg/uncached.h) \
+    $(wildcard include/config/memory/failure.h) \
+    $(wildcard include/config/swap.h) \
+    $(wildcard include/config/ksm.h) \
+  include/linux/huge_mm.h \
+  include/linux/vmstat.h \
+    $(wildcard include/config/vm/event/counters.h) \
+    $(wildcard include/config/debug/tlbflush.h) \
+    $(wildcard include/config/debug/vm/vmacache.h) \
+  include/linux/vm_event_item.h \
+    $(wildcard include/config/memory/balloon.h) \
+    $(wildcard include/config/balloon/compaction.h) \
+  include/asm-generic/mm_hooks.h \
+  arch/arm64/include/asm/tlbflush.h \
+  include/uapi/linux/psci.h \
+  include/linux/arm-smccc.h \
+    $(wildcard include/config/arm64.h) \
+    $(wildcard include/config/arm.h) \
+  include/uapi/linux/const.h \
+  include/linux/psci.h \
+    $(wildcard include/config/arm/psci/fw.h) \
+    $(wildcard include/config/acpi.h) \
 
 arch/arm64/kernel/cpu_errata.o: $(deps_arch/arm64/kernel/cpu_errata.o)
 

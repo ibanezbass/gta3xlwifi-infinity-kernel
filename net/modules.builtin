@@ -10,6 +10,7 @@ kernel/net/ipv4/xfrm4_mode_transport.ko
 kernel/net/ipv4/xfrm4_mode_tunnel.ko
 kernel/net/ipv4/inet_diag.ko
 kernel/net/ipv4/tcp_diag.ko
+kernel/net/ipv4/udp_diag.ko
 kernel/net/ipv4/tcp_bic.ko
 kernel/net/ipv4/tcp_cubic.ko
 kernel/net/ipv4/tcp_westwood.ko
@@ -101,6 +102,7 @@ kernel/net/netfilter/xt_connmark.ko
 kernel/net/netfilter/xt_nat.ko
 kernel/net/netfilter/xt_CLASSIFY.ko
 kernel/net/netfilter/xt_CONNSECMARK.ko
+kernel/net/netfilter/xt_CT.ko
 kernel/net/netfilter/xt_LOG.ko
 kernel/net/netfilter/xt_NETMAP.ko
 kernel/net/netfilter/xt_NFLOG.ko
@@ -135,6 +137,7 @@ kernel/net/netfilter/xt_statistic.ko
 kernel/net/netfilter/xt_string.ko
 kernel/net/netfilter/xt_time.ko
 kernel/net/netfilter/xt_u32.ko
+kernel/net/netfilter/xt_domainfilter.ko
 kernel/net/packet/af_packet.ko
 kernel/net/phonet/phonet.ko
 kernel/net/phonet/pn_pep.ko

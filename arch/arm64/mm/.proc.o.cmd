@@ -1,4 +1,4 @@
-cmd_arch/arm64/mm/proc.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/mm/.proc.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian   -D__ASSEMBLY__ -fno-PIE -DCONFIG_AS_LSE=1 -DCC_HAVE_ASM_GOTO -Wa,-gdwarf-2            -c -o arch/arm64/mm/proc.o arch/arm64/mm/proc.S
+cmd_arch/arm64/mm/proc.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/mm/.proc.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian   -D__ASSEMBLY__ -fno-PIE -DCONFIG_AS_LSE=1 -DCC_HAVE_ASM_GOTO -Wa,-gdwarf-2            -c -o arch/arm64/mm/proc.o arch/arm64/mm/proc.S
 
 source_arch/arm64/mm/proc.o := arch/arm64/mm/proc.S
 
@@ -7,7 +7,9 @@ deps_arch/arm64/mm/proc.o := \
     $(wildcard include/config/arm64/16k/pages.h) \
     $(wildcard include/config/arm64/4k/pages.h) \
     $(wildcard include/config/cpu/pm.h) \
+    $(wildcard include/config/arm64/sw/ttbr0/pan.h) \
     $(wildcard include/config/arm64/hw/afdbm.h) \
+    $(wildcard include/config/arm64/erratum/1024718.h) \
   include/linux/init.h \
     $(wildcard include/config/broken/rodata.h) \
     $(wildcard include/config/debug/rodata.h) \
@@ -48,12 +50,10 @@ deps_arch/arm64/mm/proc.o := \
   arch/arm64/include/asm/assembler.h \
     $(wildcard include/config/cpu/big/endian.h) \
     $(wildcard include/config/arm64/va/bits/48.h) \
-    $(wildcard include/config/cavium/erratum/27456.h) \
   arch/arm64/include/asm/asm-offsets.h \
   include/generated/asm-offsets.h \
   arch/arm64/include/asm/cpufeature.h \
     $(wildcard include/config/hotplug/cpu.h) \
-    $(wildcard include/config/arm64/sw/ttbr0/pan.h) \
   arch/arm64/include/asm/hwcap.h \
     $(wildcard include/config/compat.h) \
   arch/arm64/include/uapi/asm/hwcap.h \
@@ -68,6 +68,7 @@ deps_arch/arm64/mm/proc.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/pgtable-hwdef.h \
     $(wildcard include/config/pgtable/levels.h) \
+  arch/arm64/include/asm/cputype.h \
   arch/arm64/include/asm/ptrace.h \
   arch/arm64/include/uapi/asm/ptrace.h \
   arch/arm64/include/asm/thread_info.h \
@@ -79,8 +80,8 @@ deps_arch/arm64/mm/proc.o := \
     $(wildcard include/config/transparent/hugepage.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/bug.h \
-    $(wildcard include/config/generic/bug.h) \
     $(wildcard include/config/debug/bugverbose.h) \
+    $(wildcard include/config/generic/bug.h) \
   arch/arm64/include/asm/brk-imm.h \
   include/asm-generic/bug.h \
     $(wildcard include/config/bug.h) \
@@ -100,6 +101,12 @@ deps_arch/arm64/mm/proc.o := \
     $(wildcard include/config/sparsemem/vmemmap.h) \
     $(wildcard include/config/sparsemem.h) \
   include/linux/pfn.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/alternative.h \
     $(wildcard include/config/arm64/uao.h) \
     $(wildcard include/config/foo.h) \

@@ -1,4 +1,4 @@
-cmd_arch/arm64/crypto/poly-hash-ce-core.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/crypto/.poly-hash-ce-core.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian   -D__ASSEMBLY__ -fno-PIE -DCONFIG_AS_LSE=1 -DCC_HAVE_ASM_GOTO -Wa,-gdwarf-2            -c -o arch/arm64/crypto/poly-hash-ce-core.o arch/arm64/crypto/poly-hash-ce-core.S
+cmd_arch/arm64/crypto/poly-hash-ce-core.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/crypto/.poly-hash-ce-core.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian   -D__ASSEMBLY__ -fno-PIE -DCONFIG_AS_LSE=1 -DCC_HAVE_ASM_GOTO -Wa,-gdwarf-2            -c -o arch/arm64/crypto/poly-hash-ce-core.o arch/arm64/crypto/poly-hash-ce-core.S
 
 source_arch/arm64/crypto/poly-hash-ce-core.o := arch/arm64/crypto/poly-hash-ce-core.S
 
@@ -24,7 +24,6 @@ deps_arch/arm64/crypto/poly-hash-ce-core.o := \
   arch/arm64/include/asm/assembler.h \
     $(wildcard include/config/cpu/big/endian.h) \
     $(wildcard include/config/arm64/va/bits/48.h) \
-    $(wildcard include/config/cavium/erratum/27456.h) \
   arch/arm64/include/asm/asm-offsets.h \
   include/generated/asm-offsets.h \
   arch/arm64/include/asm/cpufeature.h \
@@ -47,6 +46,7 @@ deps_arch/arm64/crypto/poly-hash-ce-core.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/pgtable-hwdef.h \
     $(wildcard include/config/pgtable/levels.h) \
+  arch/arm64/include/asm/cputype.h \
   arch/arm64/include/asm/ptrace.h \
   arch/arm64/include/uapi/asm/ptrace.h \
   include/linux/types.h \

@@ -1,8 +1,9 @@
-cmd_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc-is-device-module-base.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/.fimc-is-device-module-base.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/ -Idrivers/media/platform/exynos/fimc-is2 -Idrivers/media/platform/exynos/fimc-is2/include -Idrivers/media/platform/exynos/fimc-is2/interface -Idrivers/media/platform/exynos/fimc-is2/hardware -Idrivers/media/platform/exynos/fimc-is2/hardware/api -Idrivers/media/platform/exynos/fimc-is2/vendor -Idrivers/media/platform/exynos/fimc-is2/sensor/csi -Idrivers/media/platform/exynos/fimc-is2/sensor/module_framework -Idrivers/media/platform/exynos/fimc-is2/vendor/mcd/preprocessor -Idrivers/media/platform/exynos/fimc-is2/ischain/fimc-is-v6_20_0 -Idrivers/media/platform/exynos/fimc-is2/vendor/mcd_v2 -Idrivers/media/platform/exynos/fimc-is2 -Idrivers/media/platform/exynos/fimc-is2/include -Idrivers/media/platform/exynos/fimc-is2/vendor -Idrivers/media/platform/exynos/fimc-is2/sensor/module_framework -Idrivers/media/platform/exynos/fimc-is2/sensor    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(fimc_is_device_module_base)"  -D"KBUILD_MODNAME=KBUILD_STR(fimc_is_device_module_base)" -c -o drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/.tmp_fimc-is-device-module-base.o drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc-is-device-module-base.c
+cmd_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc-is-device-module-base.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/.fimc-is-device-module-base.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/ -Idrivers/media/platform/exynos/fimc-is2 -Idrivers/media/platform/exynos/fimc-is2/include -Idrivers/media/platform/exynos/fimc-is2/interface -Idrivers/media/platform/exynos/fimc-is2/hardware -Idrivers/media/platform/exynos/fimc-is2/hardware/api -Idrivers/media/platform/exynos/fimc-is2/vendor -Idrivers/media/platform/exynos/fimc-is2/sensor/csi -Idrivers/media/platform/exynos/fimc-is2/sensor/module_framework -Idrivers/media/platform/exynos/fimc-is2/vendor/mcd/preprocessor -Idrivers/media/platform/exynos/fimc-is2/ischain/fimc-is-v6_20_0 -Idrivers/media/platform/exynos/fimc-is2/vendor/mcd_v2 -Idrivers/media/platform/exynos/fimc-is2 -Idrivers/media/platform/exynos/fimc-is2/include -Idrivers/media/platform/exynos/fimc-is2/vendor -Idrivers/media/platform/exynos/fimc-is2/sensor/module_framework -Idrivers/media/platform/exynos/fimc-is2/sensor    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(fimc_is_device_module_base)"  -D"KBUILD_MODNAME=KBUILD_STR(fimc_is_device_module_base)" -c -o drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/.tmp_fimc-is-device-module-base.o drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc-is-device-module-base.c
 
 source_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc-is-device-module-base.o := drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc-is-device-module-base.c
 
 deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc-is-device-module-base.o := \
+    $(wildcard include/config/vender/mcd/v2.h) \
     $(wildcard include/config/companion/direct/use.h) \
     $(wildcard include/config/ois/direct/fw/control.h) \
     $(wildcard include/config/camera/pdp.h) \
@@ -50,7 +51,7 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
   include/uapi/linux/uuid.h \
   include/linux/string.h \
     $(wildcard include/config/binary/printf.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/uapi/linux/string.h \
   arch/arm64/include/asm/string.h \
   include/linux/device.h \
@@ -168,11 +169,11 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
   arch/arm64/include/asm/current.h \
     $(wildcard include/config/thread/info/in/task.h) \
   include/linux/thread_info.h \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -388,6 +389,7 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -412,6 +414,8 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/cpu/freq.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
@@ -482,11 +486,11 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
-  include/linux/cputime.h \
-  arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h \
-    $(wildcard include/config/virt/cpu/accounting.h) \
-  include/asm-generic/cputime_jiffies.h \
+    $(wildcard include/config/harden/branch/predictor.h) \
+  include/linux/percpu.h \
+    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
+    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
+    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/smp.h \
     $(wildcard include/config/up/late/init.h) \
   include/linux/llist.h \
@@ -494,10 +498,14 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
   arch/arm64/include/asm/smp.h \
   arch/arm64/include/asm/percpu.h \
   include/asm-generic/percpu.h \
-    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/percpu-defs.h \
     $(wildcard include/config/page/table/isolation.h) \
     $(wildcard include/config/debug/force/weak/per/cpu.h) \
+  include/linux/cputime.h \
+  arch/arm64/include/generated/asm/cputime.h \
+  include/asm-generic/cputime.h \
+    $(wildcard include/config/virt/cpu/accounting.h) \
+  include/asm-generic/cputime_jiffies.h \
   include/linux/sem.h \
   include/uapi/linux/sem.h \
   include/linux/ipc.h \
@@ -527,9 +535,6 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
   include/asm-generic/siginfo.h \
   include/uapi/asm-generic/siginfo.h \
   include/linux/pid.h \
-  include/linux/percpu.h \
-    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
-    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
   include/linux/topology.h \
     $(wildcard include/config/use/percpu/numa/node/id.h) \
     $(wildcard include/config/have/memoryless/nodes.h) \
@@ -659,6 +664,7 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -736,6 +742,12 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
     $(wildcard include/config/tima/lkmauth/code/prot.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/fixmap.h \
     $(wildcard include/config/uh.h) \
   arch/arm64/include/asm/boot.h \
@@ -941,18 +953,25 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
   drivers/media/platform/exynos/fimc-is2/vendor/mcd_v2/fimc-is-vendor-config.h \
     $(wildcard include/config/fimc/is/ddk/data/load.h) \
     $(wildcard include/config/samsung/product/ship.h) \
-    $(wildcard include/config/camera/a7y18.h) \
-    $(wildcard include/config/camera/wisdom.h) \
-    $(wildcard include/config/camera/gta3xl.h) \
-    $(wildcard include/config/camera/a30.h) \
-    $(wildcard include/config/camera/a40.h) \
-    $(wildcard include/config/camera/a20.h) \
-    $(wildcard include/config/camera/a30chn.h) \
-    $(wildcard include/config/camera/a10.h) \
-    $(wildcard include/config/camera/a30jpn.h) \
-    $(wildcard include/config/camera/a20e.h) \
-    $(wildcard include/config/camera/a10e.h) \
-  drivers/media/platform/exynos/fimc-is2/vendor/mcd_v2/fimc-is-vendor-config_gta3xl.h \
+    $(wildcard include/config/camera/wxs/v00.h) \
+    $(wildcard include/config/camera/ats/v03.h) \
+    $(wildcard include/config/camera/ats/v04.h) \
+    $(wildcard include/config/camera/aas/v30.h) \
+    $(wildcard include/config/camera/aas/v40.h) \
+    $(wildcard include/config/camera/aas/v20.h) \
+    $(wildcard include/config/camera/aas/v30c.h) \
+    $(wildcard include/config/camera/aas/v30s.h) \
+    $(wildcard include/config/camera/aas/v10.h) \
+    $(wildcard include/config/camera/aas/v30j.h) \
+    $(wildcard include/config/camera/aas/v20e.h) \
+    $(wildcard include/config/camera/aas/v10e.h) \
+    $(wildcard include/config/camera/aas/v10ekx.h) \
+    $(wildcard include/config/camera/xxs/v04s.h) \
+    $(wildcard include/config/camera/aas/v07j.h) \
+    $(wildcard include/config/camera/mms/v20.h) \
+    $(wildcard include/config/camera/mms/v10s.h) \
+  drivers/media/platform/exynos/fimc-is2/vendor/mcd_v2/fimc-is-vendor-config_ats_v03.h \
+    $(wildcard include/config/ats/v03/h.h) \
     $(wildcard include/config/gta3xl/h.h) \
   drivers/media/platform/exynos/fimc-is2/fimc-is-time.h \
   drivers/media/platform/exynos/fimc-is2/fimc-is-subdev-ctrl.h \
@@ -995,6 +1014,7 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
   include/linux/ion.h \
   include/uapi/linux/ion.h \
   include/linux/exynos_ion.h \
+    $(wildcard include/config/hpa/extra.h) \
     $(wildcard include/config/of/reserved/mem.h) \
     $(wildcard include/config/ion/exynos.h) \
     $(wildcard include/config/exynos/content/path/protection.h) \
@@ -1129,6 +1149,89 @@ deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc
   drivers/media/platform/exynos/fimc-is2/fimc-is-debug.h \
   drivers/media/platform/exynos/fimc-is2/include/fimc-is-regs.h \
   drivers/media/platform/exynos/fimc-is2/sensor/module_framework/pdp/fimc-is-pdp.h \
+  drivers/media/platform/exynos/fimc-is2/vendor/mcd_v2/fimc-is-sec-define.h \
+    $(wildcard include/config/reload/cal/data.h) \
+  include/video/videonode.h \
+  arch/arm64/include/asm/cacheflush.h \
+  include/linux/firmware.h \
+    $(wildcard include/config/fw/loader.h) \
+  include/linux/syscalls.h \
+    $(wildcard include/config/ftrace/syscalls.h) \
+    $(wildcard include/config/old/sigsuspend.h) \
+    $(wildcard include/config/old/sigsuspend3.h) \
+    $(wildcard include/config/odd/rt/sigaction.h) \
+    $(wildcard include/config/clone/backwards.h) \
+    $(wildcard include/config/clone/backwards3.h) \
+  include/uapi/linux/aio_abi.h \
+  include/trace/syscall.h \
+    $(wildcard include/config/have/syscall/tracepoints.h) \
+  include/linux/tracepoint.h \
+    $(wildcard include/config/tracepoint.h) \
+  include/linux/trace_events.h \
+    $(wildcard include/config/bpf/events.h) \
+  include/linux/ring_buffer.h \
+    $(wildcard include/config/ring/buffer/allow/swap.h) \
+  include/linux/trace_seq.h \
+  include/linux/seq_buf.h \
+  include/linux/perf_event.h \
+    $(wildcard include/config/function/tracer.h) \
+    $(wildcard include/config/cpu/sup/intel.h) \
+  include/uapi/linux/perf_event.h \
+  arch/arm64/include/asm/perf_event.h \
+  arch/arm64/include/generated/asm/local64.h \
+  include/asm-generic/local64.h \
+  arch/arm64/include/generated/asm/local.h \
+  include/asm-generic/local.h \
+  include/linux/pid_namespace.h \
+    $(wildcard include/config/pid/ns.h) \
+  include/linux/nsproxy.h \
+  include/linux/ns_common.h \
+  include/linux/ftrace.h \
+    $(wildcard include/config/dynamic/ftrace/with/regs.h) \
+    $(wildcard include/config/dynamic/ftrace.h) \
+    $(wildcard include/config/stack/tracer.h) \
+    $(wildcard include/config/frame/pointer.h) \
+    $(wildcard include/config/preemptirq/events.h) \
+  include/linux/trace_clock.h \
+  arch/arm64/include/generated/asm/trace_clock.h \
+  include/asm-generic/trace_clock.h \
+  include/linux/kallsyms.h \
+  include/linux/ptrace.h \
+  include/uapi/linux/ptrace.h \
+  arch/arm64/include/asm/ftrace.h \
+  include/linux/compat.h \
+    $(wildcard include/config/compat/old/sigaction.h) \
+  include/linux/socket.h \
+  arch/arm64/include/generated/asm/socket.h \
+  include/uapi/asm-generic/socket.h \
+  arch/arm64/include/generated/asm/sockios.h \
+  include/uapi/asm-generic/sockios.h \
+  include/uapi/linux/sockios.h \
+  include/linux/uio.h \
+  include/uapi/linux/uio.h \
+  include/uapi/linux/socket.h \
+  include/uapi/linux/if.h \
+    $(wildcard include/config/mptcp.h) \
+  include/uapi/linux/libc-compat.h \
+  include/uapi/linux/hdlc/ioctl.h \
+  include/linux/cpu.h \
+    $(wildcard include/config/pm/sleep/smp.h) \
+  include/linux/node.h \
+    $(wildcard include/config/memory/hotplug/sparse.h) \
+  include/linux/irq_work.h \
+    $(wildcard include/config/irq/work.h) \
+  arch/arm64/include/asm/irq_work.h \
+  include/linux/jump_label_ratelimit.h \
+  include/linux/perf_regs.h \
+    $(wildcard include/config/have/perf/regs.h) \
+  arch/arm64/include/uapi/asm/perf_regs.h \
+  include/linux/cgroup.h \
+  include/uapi/linux/cgroupstats.h \
+  include/uapi/linux/taskstats.h \
+  include/linux/zlib.h \
+  include/linux/zconf.h \
+  drivers/media/platform/exynos/fimc-is2/fimc-is-video.h \
+  drivers/media/platform/exynos/fimc-is2/vendor/mcd_v2/crc32.h \
 
 drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc-is-device-module-base.o: $(deps_drivers/media/platform/exynos/fimc-is2/sensor/module_framework/modules/fimc-is-device-module-base.o)
 

@@ -750,6 +750,7 @@ static void send_file_work(struct work_struct *data)
 	filp = dev->xfer_file;
 	offset = dev->xfer_file_offset;
 	count = dev->xfer_file_length;
+
 	if (count < 0) {
 		dev->xfer_result = -EINVAL;
 		return;
@@ -860,6 +861,7 @@ static void receive_file_work(struct work_struct *data)
 	filp = dev->xfer_file;
 	offset = dev->xfer_file_offset;
 	count = dev->xfer_file_length;
+
 	if (count < 0) {
 		dev->xfer_result = -EINVAL;
 		return;

@@ -1,4 +1,4 @@
-cmd_arch/arm64/kernel/process.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/kernel/.process.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(process)"  -D"KBUILD_MODNAME=KBUILD_STR(process)" -c -o arch/arm64/kernel/.tmp_process.o arch/arm64/kernel/process.c
+cmd_arch/arm64/kernel/process.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/kernel/.process.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(process)"  -D"KBUILD_MODNAME=KBUILD_STR(process)" -c -o arch/arm64/kernel/.tmp_process.o arch/arm64/kernel/process.c
 
 source_arch/arm64/kernel/process.o := arch/arm64/kernel/process.c
 
@@ -6,9 +6,10 @@ deps_arch/arm64/kernel/process.o := \
     $(wildcard include/config/thread/info/in/task.h) \
     $(wildcard include/config/cc/stackprotector.h) \
     $(wildcard include/config/hotplug/cpu.h) \
+    $(wildcard include/config/sec/debug/avoid/unnecessary/trap.h) \
     $(wildcard include/config/arm64/uao.h) \
     $(wildcard include/config/function/graph/tracer.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/compat.h \
     $(wildcard include/config/compat.h) \
     $(wildcard include/config/compat/old/sigaction.h) \
@@ -97,6 +98,7 @@ deps_arch/arm64/kernel/process.o := \
     $(wildcard include/config/memcg/kmem.h) \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -126,6 +128,7 @@ deps_arch/arm64/kernel/process.o := \
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
     $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/preempt.h) \
     $(wildcard include/config/cpu/freq.h) \
@@ -249,6 +252,7 @@ deps_arch/arm64/kernel/process.o := \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -452,11 +456,11 @@ deps_arch/arm64/kernel/process.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
-  include/linux/cputime.h \
-  arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h \
-    $(wildcard include/config/virt/cpu/accounting.h) \
-  include/asm-generic/cputime_jiffies.h \
+    $(wildcard include/config/harden/branch/predictor.h) \
+  include/linux/percpu.h \
+    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
+    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
+    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/smp.h \
     $(wildcard include/config/up/late/init.h) \
   include/linux/llist.h \
@@ -464,10 +468,14 @@ deps_arch/arm64/kernel/process.o := \
   arch/arm64/include/asm/smp.h \
   arch/arm64/include/asm/percpu.h \
   include/asm-generic/percpu.h \
-    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/percpu-defs.h \
     $(wildcard include/config/page/table/isolation.h) \
     $(wildcard include/config/debug/force/weak/per/cpu.h) \
+  include/linux/cputime.h \
+  arch/arm64/include/generated/asm/cputime.h \
+  include/asm-generic/cputime.h \
+    $(wildcard include/config/virt/cpu/accounting.h) \
+  include/asm-generic/cputime_jiffies.h \
   include/linux/sem.h \
   include/uapi/linux/sem.h \
   include/linux/ipc.h \
@@ -497,9 +505,6 @@ deps_arch/arm64/kernel/process.o := \
   include/asm-generic/siginfo.h \
   include/uapi/asm-generic/siginfo.h \
   include/linux/pid.h \
-  include/linux/percpu.h \
-    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
-    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
   include/linux/topology.h \
     $(wildcard include/config/use/percpu/numa/node/id.h) \
     $(wildcard include/config/have/memoryless/nodes.h) \
@@ -641,6 +646,7 @@ deps_arch/arm64/kernel/process.o := \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -674,6 +680,7 @@ deps_arch/arm64/kernel/process.o := \
     $(wildcard include/config/efi/vars.h) \
     $(wildcard include/config/efi/runtime/map.h) \
   include/linux/proc_fs.h \
+    $(wildcard include/config/proc/uid.h) \
   include/linux/rtc.h \
     $(wildcard include/config/rtc/alarm/boot.h) \
     $(wildcard include/config/rtc/intf/dev/uie/emul.h) \
@@ -743,6 +750,12 @@ deps_arch/arm64/kernel/process.o := \
     $(wildcard include/config/tima/lkmauth/code/prot.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/fixmap.h \
     $(wildcard include/config/uh.h) \
   arch/arm64/include/asm/boot.h \

@@ -1,4 +1,4 @@
-cmd_drivers/muic/muic_sysfs.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/muic/.muic_sysfs.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(muic_sysfs)"  -D"KBUILD_MODNAME=KBUILD_STR(muic_sysfs)" -c -o drivers/muic/.tmp_muic_sysfs.o drivers/muic/muic_sysfs.c
+cmd_drivers/muic/muic_sysfs.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/muic/.muic_sysfs.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(muic_sysfs)"  -D"KBUILD_MODNAME=KBUILD_STR(muic_sysfs)" -c -o drivers/muic/.tmp_muic_sysfs.o drivers/muic/muic_sysfs.c
 
 source_drivers/muic/muic_sysfs.o := drivers/muic/muic_sysfs.c
 
@@ -77,7 +77,7 @@ deps_drivers/muic/muic_sysfs.o := \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
     $(wildcard include/config/rkp/kdp.h) \
@@ -167,11 +167,11 @@ deps_drivers/muic/muic_sysfs.o := \
   arch/arm64/include/asm/current.h \
     $(wildcard include/config/thread/info/in/task.h) \
   include/linux/thread_info.h \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -387,6 +387,7 @@ deps_drivers/muic/muic_sysfs.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -411,6 +412,8 @@ deps_drivers/muic/muic_sysfs.o := \
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/cpu/freq.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
@@ -481,11 +484,11 @@ deps_drivers/muic/muic_sysfs.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
-  include/linux/cputime.h \
-  arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h \
-    $(wildcard include/config/virt/cpu/accounting.h) \
-  include/asm-generic/cputime_jiffies.h \
+    $(wildcard include/config/harden/branch/predictor.h) \
+  include/linux/percpu.h \
+    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
+    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
+    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/smp.h \
     $(wildcard include/config/up/late/init.h) \
   include/linux/llist.h \
@@ -493,10 +496,14 @@ deps_drivers/muic/muic_sysfs.o := \
   arch/arm64/include/asm/smp.h \
   arch/arm64/include/asm/percpu.h \
   include/asm-generic/percpu.h \
-    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/percpu-defs.h \
     $(wildcard include/config/page/table/isolation.h) \
     $(wildcard include/config/debug/force/weak/per/cpu.h) \
+  include/linux/cputime.h \
+  arch/arm64/include/generated/asm/cputime.h \
+  include/asm-generic/cputime.h \
+    $(wildcard include/config/virt/cpu/accounting.h) \
+  include/asm-generic/cputime_jiffies.h \
   include/linux/sem.h \
   include/uapi/linux/sem.h \
   include/linux/ipc.h \
@@ -526,9 +533,6 @@ deps_drivers/muic/muic_sysfs.o := \
   include/asm-generic/siginfo.h \
   include/uapi/asm-generic/siginfo.h \
   include/linux/pid.h \
-  include/linux/percpu.h \
-    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
-    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
   include/linux/topology.h \
     $(wildcard include/config/use/percpu/numa/node/id.h) \
     $(wildcard include/config/have/memoryless/nodes.h) \
@@ -658,6 +662,7 @@ deps_drivers/muic/muic_sysfs.o := \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -695,14 +700,187 @@ deps_drivers/muic/muic_sysfs.o := \
   include/linux/sec_sysfs.h \
     $(wildcard include/config/sec/sysfs.h) \
   include/linux/muic/muic_interface.h \
-    $(wildcard include/config/muic/support/powermeter.h) \
+    $(wildcard include/config/muic/support/prswap.h) \
     $(wildcard include/config/usb/external/notify.h) \
     $(wildcard include/config/usb/typec/manager/notifier.h) \
     $(wildcard include/config/hv/muic/s2mu004/afc.h) \
+    $(wildcard include/config/muic/support/powermeter.h) \
     $(wildcard include/config/muic/sysfs.h) \
   include/linux/muic/muic.h \
     $(wildcard include/config/muic/hv/force/limit.h) \
     $(wildcard include/config/ifconn/notifier.h) \
+  include/linux/power_supply.h \
+    $(wildcard include/config/thermal.h) \
+    $(wildcard include/config/leds/triggers.h) \
+    $(wildcard include/config/power/supply.h) \
+  include/linux/leds.h \
+    $(wildcard include/config/leds/trigger/ide/disk.h) \
+    $(wildcard include/config/leds/trigger/camera.h) \
+    $(wildcard include/config/leds/trigger/cpu.h) \
+  include/../drivers/battery_v2/include/sec_charging_common.h \
+    $(wildcard include/config/fuelgauge/s2mu004.h) \
+    $(wildcard include/config/fuelgauge/s2mu005.h) \
+    $(wildcard include/config/fuelgauge/s2mu106.h) \
+    $(wildcard include/config/fuelgauge/s2mu205.h) \
+    $(wildcard include/config/enable/usb/suspend/state.h) \
+    $(wildcard include/config/battery/age/forecast.h) \
+    $(wildcard include/config/step/charging.h) \
+    $(wildcard include/config/calc/time/to/full.h) \
+    $(wildcard include/config/battery/cisd.h) \
+  include/linux/module.h \
+    $(wildcard include/config/module/sig.h) \
+    $(wildcard include/config/modules/tree/lookup.h) \
+    $(wildcard include/config/kallsyms.h) \
+    $(wildcard include/config/tracepoints.h) \
+    $(wildcard include/config/event/tracing.h) \
+    $(wildcard include/config/livepatch.h) \
+    $(wildcard include/config/module/unload.h) \
+    $(wildcard include/config/constructors.h) \
+    $(wildcard include/config/debug/set/module/ronx.h) \
+  include/linux/kmod.h \
+  include/linux/elf.h \
+  arch/arm64/include/asm/elf.h \
+  arch/arm64/include/generated/asm/user.h \
+  include/asm-generic/user.h \
+  include/uapi/linux/elf.h \
+  include/uapi/linux/elf-em.h \
+  include/linux/moduleparam.h \
+    $(wildcard include/config/alpha.h) \
+    $(wildcard include/config/ia64.h) \
+    $(wildcard include/config/ppc64.h) \
+  include/linux/jump_label.h \
+    $(wildcard include/config/jump/label.h) \
+  include/linux/rbtree_latch.h \
+  arch/arm64/include/asm/module.h \
+    $(wildcard include/config/arm64/module/plts.h) \
+    $(wildcard include/config/randomize/base.h) \
+  include/asm-generic/module.h \
+    $(wildcard include/config/have/mod/arch/specific.h) \
+    $(wildcard include/config/modules/use/elf/rel.h) \
+    $(wildcard include/config/modules/use/elf/rela.h) \
+  include/linux/platform_device.h \
+    $(wildcard include/config/suspend.h) \
+    $(wildcard include/config/hibernate/callbacks.h) \
+  include/linux/mod_devicetable.h \
+  include/linux/uuid.h \
+  include/uapi/linux/uuid.h \
+  include/linux/gpio.h \
+    $(wildcard include/config/gpiolib.h) \
+    $(wildcard include/config/arch/have/custom/gpio/h.h) \
+  include/asm-generic/gpio.h \
+  include/linux/of.h \
+    $(wildcard include/config/sparc.h) \
+    $(wildcard include/config/of/dynamic.h) \
+    $(wildcard include/config/attach/node.h) \
+    $(wildcard include/config/detach/node.h) \
+    $(wildcard include/config/add/property.h) \
+    $(wildcard include/config/remove/property.h) \
+    $(wildcard include/config/update/property.h) \
+    $(wildcard include/config/no/change.h) \
+    $(wildcard include/config/change/add.h) \
+    $(wildcard include/config/change/remove.h) \
+    $(wildcard include/config/of/resolve.h) \
+    $(wildcard include/config/of/overlay.h) \
+  include/linux/property.h \
+  include/linux/fwnode.h \
+  include/linux/gpio/driver.h \
+    $(wildcard include/config/gpiolib/irqchip.h) \
+    $(wildcard include/config/of/gpio.h) \
+  include/linux/irq.h \
+    $(wildcard include/config/irq/domain/hierarchy.h) \
+    $(wildcard include/config/generic/pending/irq.h) \
+    $(wildcard include/config/hardirqs/sw/resend.h) \
+    $(wildcard include/config/generic/irq/legacy/alloc/hwirq.h) \
+    $(wildcard include/config/generic/irq/legacy.h) \
+  include/linux/irqhandler.h \
+  include/linux/irqreturn.h \
+  include/linux/irqnr.h \
+  include/uapi/linux/irqnr.h \
+  include/linux/io.h \
+    $(wildcard include/config/have/arch/huge/vmap.h) \
+    $(wildcard include/config/has/ioport/map.h) \
+  arch/arm64/include/asm/io.h \
+  arch/arm64/include/asm/pgtable.h \
+    $(wildcard include/config/arm64/hw/afdbm.h) \
+    $(wildcard include/config/tima/lkmauth.h) \
+    $(wildcard include/config/tima/lkmauth/code/prot.h) \
+    $(wildcard include/config/have/rcu/table/free.h) \
+  arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
+  arch/arm64/include/asm/fixmap.h \
+    $(wildcard include/config/uh.h) \
+  arch/arm64/include/asm/boot.h \
+  include/asm-generic/fixmap.h \
+  include/asm-generic/pgtable.h \
+    $(wildcard include/config/have/arch/soft/dirty.h) \
+  arch/arm64/include/generated/asm/early_ioremap.h \
+  include/asm-generic/early_ioremap.h \
+    $(wildcard include/config/generic/early/ioremap.h) \
+  include/xen/xen.h \
+    $(wildcard include/config/xen.h) \
+    $(wildcard include/config/xen/dom0.h) \
+    $(wildcard include/config/xen/pvh.h) \
+  include/asm-generic/io.h \
+    $(wildcard include/config/generic/iomap.h) \
+    $(wildcard include/config/virt/to/bus.h) \
+  include/asm-generic/pci_iomap.h \
+    $(wildcard include/config/pci.h) \
+    $(wildcard include/config/no/generic/pci/ioport/map.h) \
+    $(wildcard include/config/generic/pci/iomap.h) \
+  include/linux/vmalloc.h \
+  arch/arm64/include/asm/irq.h \
+  include/asm-generic/irq.h \
+  arch/arm64/include/generated/asm/irq_regs.h \
+  include/asm-generic/irq_regs.h \
+  include/linux/irqdesc.h \
+    $(wildcard include/config/irq/preflow/fasteoi.h) \
+    $(wildcard include/config/sparse/irq.h) \
+    $(wildcard include/config/handle/domain/irq.h) \
+  arch/arm64/include/generated/asm/hw_irq.h \
+  include/asm-generic/hw_irq.h \
+  include/linux/irqchip/chained_irq.h \
+  include/linux/irqdomain.h \
+    $(wildcard include/config/irq/domain.h) \
+  include/linux/pinctrl/pinctrl.h \
+    $(wildcard include/config/generic/pinconf.h) \
+  include/linux/gpio/consumer.h \
+    $(wildcard include/config/gpio/sysfs.h) \
+  include/linux/interrupt.h \
+    $(wildcard include/config/irq/forced/threading.h) \
+    $(wildcard include/config/generic/irq/probe.h) \
+  include/linux/hardirq.h \
+  include/linux/ftrace_irq.h \
+    $(wildcard include/config/ftrace/nmi/enter.h) \
+  include/linux/vtime.h \
+  include/linux/context_tracking_state.h \
+    $(wildcard include/config/context/tracking.h) \
+  include/linux/static_key.h \
+  arch/arm64/include/asm/hardirq.h \
+  include/linux/irq_cpustat.h \
+  arch/arm64/include/generated/asm/sections.h \
+  include/asm-generic/sections.h \
+  include/linux/i2c.h \
+    $(wildcard include/config/i2c.h) \
+    $(wildcard include/config/i2c/slave.h) \
+    $(wildcard include/config/i2c/boardinfo.h) \
+    $(wildcard include/config/i2c/mux.h) \
+  include/uapi/linux/i2c.h \
+  include/linux/slab.h \
+    $(wildcard include/config/debug/slab.h) \
+    $(wildcard include/config/failslab.h) \
+    $(wildcard include/config/have/hardened/usercopy/allocator.h) \
+    $(wildcard include/config/slab.h) \
+    $(wildcard include/config/slub.h) \
+    $(wildcard include/config/slob.h) \
+  include/linux/kmemleak.h \
+    $(wildcard include/config/debug/kmemleak.h) \
+  include/linux/kasan.h \
+  include/linux/wakelock.h \
   include/linux/muic/muic_sysfs.h \
   include/linux/sec_ext.h \
     $(wildcard include/config/sec/bootstat.h) \
@@ -710,7 +888,66 @@ deps_drivers/muic/muic_sysfs.o := \
     $(wildcard include/config/sec/initcall/debug.h) \
     $(wildcard include/config/sec/param.h) \
     $(wildcard include/config/cm/offset.h) \
+    $(wildcard include/config/fmm/lock/offset.h) \
     $(wildcard include/config/sec/ext.h) \
+  include/linux/sec_batt.h \
+    $(wildcard include/config/samsung/mhl/8240.h) \
+    $(wildcard include/config/w1.h) \
+  include/linux/sec_debug.h \
+    $(wildcard include/config/sec/debug/reset/reason.h) \
+    $(wildcard include/config/sec/debug/extra/info.h) \
+    $(wildcard include/config/sec/debug/init/log.h) \
+    $(wildcard include/config/sec/debug/last/kmsg.h) \
+    $(wildcard include/config/sec/avc/log.h) \
+    $(wildcard include/config/sec/debug/tsp/log.h) \
+    $(wildcard include/config/touchscreen/dump/mode.h) \
+    $(wildcard include/config/sec/dump/summary.h) \
+    $(wildcard include/config/sec/debug/limit/backtrace.h) \
+  include/linux/memblock.h \
+    $(wildcard include/config/have/memblock.h) \
+    $(wildcard include/config/have/memblock/phys/map.h) \
+    $(wildcard include/config/arch/discard/memblock.h) \
+    $(wildcard include/config/memtest.h) \
+  include/linux/mm.h \
+    $(wildcard include/config/have/arch/mmap/rnd/bits.h) \
+    $(wildcard include/config/have/arch/mmap/rnd/compat/bits.h) \
+    $(wildcard include/config/mem/soft/dirty.h) \
+    $(wildcard include/config/x86.h) \
+    $(wildcard include/config/ppc.h) \
+    $(wildcard include/config/parisc.h) \
+    $(wildcard include/config/metag.h) \
+    $(wildcard include/config/shmem.h) \
+    $(wildcard include/config/debug/vm/rb.h) \
+    $(wildcard include/config/debug/pagealloc.h) \
+    $(wildcard include/config/hibernation.h) \
+    $(wildcard include/config/hugetlbfs.h) \
+  include/linux/debug_locks.h \
+    $(wildcard include/config/debug/locking/api/selftests.h) \
+  include/linux/range.h \
+  include/linux/page_ext.h \
+    $(wildcard include/config/idle/page/tracking.h) \
+    $(wildcard include/config/page/owner.h) \
+  include/linux/stacktrace.h \
+    $(wildcard include/config/stacktrace.h) \
+    $(wildcard include/config/user/stacktrace/support.h) \
+  include/linux/page-flags.h \
+    $(wildcard include/config/arch/uses/pg/uncached.h) \
+    $(wildcard include/config/memory/failure.h) \
+    $(wildcard include/config/swap.h) \
+    $(wildcard include/config/ksm.h) \
+  include/linux/huge_mm.h \
+  include/linux/vmstat.h \
+    $(wildcard include/config/vm/event/counters.h) \
+    $(wildcard include/config/debug/tlbflush.h) \
+    $(wildcard include/config/debug/vm/vmacache.h) \
+  include/linux/vm_event_item.h \
+    $(wildcard include/config/memory/balloon.h) \
+    $(wildcard include/config/balloon/compaction.h) \
+  include/linux/reboot.h \
+  include/uapi/linux/reboot.h \
+  arch/arm64/include/generated/asm/emergency-restart.h \
+  include/asm-generic/emergency-restart.h \
+  drivers/muic/../battery_v2/include/sec_charging_common.h \
 
 drivers/muic/muic_sysfs.o: $(deps_drivers/muic/muic_sysfs.o)
 

@@ -895,6 +895,8 @@ int f2fs_get_valid_checkpoint(struct f2fs_sb_info *sbi)
 		goto free_fail_no_cp;
 	}
 
+	f2fs_get_fsck_stat(sbi);
+
 	if (cp_blks <= 1)
 		goto done;
 
@@ -1605,7 +1607,7 @@ int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 stop:
 	unblock_operations(sbi);
 	stat_inc_cp_count(sbi->stat_info);
-	sbi->sec_stat.cp_cnt[0]++;
+	sbi->sec_stat.cp_cnt[STAT_CP_ALL]++;
 	f2fs_update_max_cp_interval(sbi);
 
 	if (cpc->reason & CP_RECOVERY)

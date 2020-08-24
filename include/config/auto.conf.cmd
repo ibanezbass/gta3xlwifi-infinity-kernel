@@ -15,11 +15,12 @@ deps_config := \
 	drivers/crypto/Kconfig \
 	crypto/async_tx/Kconfig \
 	crypto/Kconfig \
+	security/proca/gaf/Kconfig \
 	security/proca/Kconfig \
-	security/dsms/Kconfig \
-	security/defex_lsm/Kconfig \
+	security/samsung/dsms/Kconfig \
+	security/samsung/defex_lsm/Kconfig \
+	security/samsung/five/Kconfig \
 	security/tz_iccc/Kconfig \
-	security/integrity/five/Kconfig \
 	security/integrity/evm/Kconfig \
 	security/integrity/ima/Kconfig \
 	security/integrity/Kconfig \
@@ -40,6 +41,7 @@ deps_config := \
 	mm/Kconfig.debug \
 	lib/Kconfig.debug \
 	arch/arm64/Kconfig.debug \
+	drivers/vhost/Kconfig \
 	virt/kvm/Kconfig \
 	arch/arm64/kvm/Kconfig \
 	fs/dlm/Kconfig \
@@ -75,7 +77,7 @@ deps_config := \
 	fs/befs/Kconfig \
 	fs/hfsplus/Kconfig \
 	fs/hfs/Kconfig \
-	fs/sdcardfs/p/Kconfig \
+	fs/sdcardfs/q/Kconfig \
 	fs/sdcardfs/Kconfig \
 	fs/ecryptfs/Kconfig \
 	fs/affs/Kconfig \
@@ -119,8 +121,10 @@ deps_config := \
 	drivers/firmware/google/Kconfig \
 	drivers/firmware/broadcom/Kconfig \
 	drivers/firmware/Kconfig \
-	drivers/five/five_tee_driver/Kconfig \
-	drivers/five/Kconfig \
+	drivers/security/samsung/tzic/Kconfig \
+	drivers/gator/Kconfig \
+	drivers/security/samsung/icdrv/Kconfig \
+	drivers/security/samsung/five_tee_driver/Kconfig \
 	drivers/motor/Kconfig \
 	drivers/gps/Kconfig \
 	drivers/sensors/Kconfig \
@@ -417,6 +421,7 @@ deps_config := \
 	sound/oss/Kconfig \
 	sound/soc/generic/Kconfig \
 	sound/soc/codecs/dbmdx/Kconfig \
+	sound/soc/codecs/tas2562/Kconfig \
 	sound/soc/codecs/Kconfig \
 	sound/soc/zte/Kconfig \
 	sound/soc/xtensa/Kconfig \
@@ -534,6 +539,12 @@ deps_config := \
 	drivers/gpu/ipu-v3/Kconfig \
 	drivers/gpu/host1x/Kconfig \
 	drivers/gpu/vga/Kconfig \
+	drivers/gpu/arm/b_r19p0/tests/mali_kutf_irq_test/Kconfig \
+	drivers/gpu/arm/b_r19p0/tests/kutf/Kconfig \
+	drivers/gpu/arm/b_r19p0/tests/Kconfig \
+	drivers/gpu/arm/b_r19p0/platform/exynos/Kconfig \
+	drivers/gpu/arm/b_r19p0/platform/Kconfig \
+	drivers/gpu/arm/b_r19p0/Kconfig \
 	drivers/gpu/arm/tMIx/b_r16p0/platform/exynos/Kconfig \
 	drivers/gpu/arm/tMIx/b_r16p0/platform/Kconfig \
 	drivers/gpu/arm/tMIx/b_r16p0/Kconfig \
@@ -779,8 +790,10 @@ deps_config := \
 	drivers/input/serio/Kconfig \
 	drivers/input/misc/Kconfig \
 	drivers/input/wacom/Kconfig \
+	drivers/input/touchscreen/himax/himax_83102P/Kconfig \
 	drivers/input/touchscreen/himax_83xxx/Kconfig \
 	drivers/input/touchscreen/novatek_nt36xx/Kconfig \
+	drivers/input/touchscreen/imagis/ist4050/Kconfig \
 	drivers/input/touchscreen/imagis_40xx/Kconfig \
 	drivers/input/touchscreen/imagis_30xxh/Kconfig \
 	drivers/input/touchscreen/stm_fts1ba90a/Kconfig \
@@ -954,7 +967,7 @@ deps_config := \
 	drivers/net/ethernet/3com/Kconfig \
 	drivers/net/ethernet/Kconfig \
 	drivers/net/dsa/Kconfig \
-	drivers/vhost/Kconfig \
+	drivers/vhost/Kconfig.vringh \
 	drivers/net/caif/Kconfig \
 	drivers/atm/Kconfig \
 	drivers/net/arcnet/Kconfig \
@@ -1184,13 +1197,13 @@ deps_config := \
 include/config/auto.conf: \
 	$(deps_config)
 
-ifneq "$(KERNELVERSION)" "4.4.111"
+ifneq "$(KERNELVERSION)" "4.4.177"
 include/config/auto.conf: FORCE
 endif
 ifneq "$(ARCH)" "arm64"
 include/config/auto.conf: FORCE
 endif
-ifneq "$(ANDROID_MAJOR_VERSION)" "p"
+ifneq "$(ANDROID_MAJOR_VERSION)" "q"
 include/config/auto.conf: FORCE
 endif
 ifneq "$(ANDROID_VERSION)" "990000"

@@ -1,4 +1,4 @@
-cmd_arch/arm64/kernel/sleep.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/kernel/.sleep.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian   -D__ASSEMBLY__ -fno-PIE -DCONFIG_AS_LSE=1 -DCC_HAVE_ASM_GOTO -Wa,-gdwarf-2            -c -o arch/arm64/kernel/sleep.o arch/arm64/kernel/sleep.S
+cmd_arch/arm64/kernel/sleep.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/kernel/.sleep.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian   -D__ASSEMBLY__ -fno-PIE -DCONFIG_AS_LSE=1 -DCC_HAVE_ASM_GOTO -Wa,-gdwarf-2            -c -o arch/arm64/kernel/sleep.o arch/arm64/kernel/sleep.S
 
 source_arch/arm64/kernel/sleep.o := arch/arm64/kernel/sleep.S
 
@@ -31,7 +31,6 @@ deps_arch/arm64/kernel/sleep.o := \
   arch/arm64/include/asm/assembler.h \
     $(wildcard include/config/cpu/big/endian.h) \
     $(wildcard include/config/arm64/va/bits/48.h) \
-    $(wildcard include/config/cavium/erratum/27456.h) \
   arch/arm64/include/asm/cpufeature.h \
     $(wildcard include/config/hotplug/cpu.h) \
     $(wildcard include/config/arm64/sw/ttbr0/pan.h) \
@@ -52,6 +51,7 @@ deps_arch/arm64/kernel/sleep.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/pgtable-hwdef.h \
     $(wildcard include/config/pgtable/levels.h) \
+  arch/arm64/include/asm/cputype.h \
   arch/arm64/include/asm/ptrace.h \
   arch/arm64/include/uapi/asm/ptrace.h \
   include/linux/types.h \

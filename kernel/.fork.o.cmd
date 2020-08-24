@@ -1,4 +1,4 @@
-cmd_kernel/fork.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,kernel/.fork.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(fork)"  -D"KBUILD_MODNAME=KBUILD_STR(fork)" -c -o kernel/.tmp_fork.o kernel/fork.c
+cmd_kernel/fork.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,kernel/.fork.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(fork)"  -D"KBUILD_MODNAME=KBUILD_STR(fork)" -c -o kernel/.tmp_fork.o kernel/fork.c
 
 source_kernel/fork.o := kernel/fork.c
 
@@ -58,6 +58,7 @@ deps_kernel/fork.o := \
     $(wildcard include/config/debug/virtual.h) \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -97,7 +98,7 @@ deps_kernel/fork.o := \
     $(wildcard include/config/debug/atomic/sleep.h) \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
   include/linux/stringify.h \
@@ -222,7 +223,6 @@ deps_kernel/fork.o := \
   include/asm-generic/preempt.h \
   include/linux/thread_info.h \
     $(wildcard include/config/thread/info/in/task.h) \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/restart_block.h \
@@ -476,6 +476,7 @@ deps_kernel/fork.o := \
     $(wildcard include/config/memcg/kmem.h) \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
     $(wildcard include/config/task/xacct.h) \
@@ -491,6 +492,8 @@ deps_kernel/fork.o := \
     $(wildcard include/config/irq/time/accounting.h) \
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
   include/linux/sched/prio.h \
@@ -513,6 +516,7 @@ deps_kernel/fork.o := \
   include/linux/uprobes.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
+    $(wildcard include/config/harden/branch/predictor.h) \
   include/linux/cputime.h \
   arch/arm64/include/generated/asm/cputime.h \
   include/asm-generic/cputime.h \
@@ -688,6 +692,12 @@ deps_kernel/fork.o := \
     $(wildcard include/config/tima/lkmauth/code/prot.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/fixmap.h \
     $(wildcard include/config/uh.h) \
   arch/arm64/include/asm/boot.h \
@@ -735,6 +745,7 @@ deps_kernel/fork.o := \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -783,6 +794,7 @@ deps_kernel/fork.o := \
   include/uapi/linux/mempolicy.h \
   include/linux/file.h \
   include/linux/fdtable.h \
+  include/linux/nospec.h \
   include/linux/iocontext.h \
   include/linux/binfmts.h \
   arch/arm64/include/asm/exec.h \
@@ -921,35 +933,10 @@ deps_kernel/fork.o := \
   include/linux/kthread.h \
   include/linux/task_io_accounting_ops.h \
   include/linux/mount.h \
-    $(wildcard include/config/rkp/ns/prot.h) \
   include/linux/audit.h \
     $(wildcard include/config/audit/compat/generic.h) \
   include/uapi/linux/audit.h \
     $(wildcard include/config/change.h) \
-  arch/arm64/include/asm/syscall.h \
-  include/linux/proc_fs.h \
-  include/linux/profile.h \
-    $(wildcard include/config/profiling.h) \
-  include/linux/rmap.h \
-  include/linux/ksm.h \
-  include/linux/acct.h \
-    $(wildcard include/config/bsd/process/acct/v3.h) \
-    $(wildcard include/config/m68k.h) \
-  include/uapi/linux/acct.h \
-  include/linux/tsacct_kern.h \
-  include/linux/cn_proc.h \
-    $(wildcard include/config/proc/events.h) \
-  include/uapi/linux/cn_proc.h \
-  include/linux/freezer.h \
-  include/linux/kaiser.h \
-  include/linux/delayacct.h \
-  include/linux/taskstats_kern.h \
-  include/linux/random.h \
-    $(wildcard include/config/arch/random.h) \
-  include/linux/once.h \
-  include/uapi/linux/random.h \
-  include/linux/irqnr.h \
-  include/uapi/linux/irqnr.h \
   include/linux/tty.h \
     $(wildcard include/config/tty.h) \
   include/uapi/linux/major.h \
@@ -967,6 +954,32 @@ deps_kernel/fork.o := \
   include/linux/tty_ldisc.h \
   include/uapi/linux/tty_flags.h \
   include/uapi/linux/tty.h \
+  arch/arm64/include/asm/syscall.h \
+  include/linux/proc_fs.h \
+    $(wildcard include/config/proc/uid.h) \
+  include/linux/profile.h \
+    $(wildcard include/config/profiling.h) \
+  include/linux/rmap.h \
+  include/linux/ksm.h \
+  include/linux/acct.h \
+    $(wildcard include/config/bsd/process/acct/v3.h) \
+    $(wildcard include/config/m68k.h) \
+  include/uapi/linux/acct.h \
+  include/linux/tsacct_kern.h \
+  include/linux/cn_proc.h \
+    $(wildcard include/config/proc/events.h) \
+  include/uapi/linux/cn_proc.h \
+  include/linux/freezer.h \
+  include/linux/kaiser.h \
+  include/linux/delayacct.h \
+    $(wildcard include/config/page/boost.h) \
+  include/linux/taskstats_kern.h \
+  include/linux/random.h \
+    $(wildcard include/config/arch/random.h) \
+  include/linux/once.h \
+  include/uapi/linux/random.h \
+  include/linux/irqnr.h \
+  include/uapi/linux/irqnr.h \
   include/linux/blkdev.h \
     $(wildcard include/config/mmc/srpmb.h) \
     $(wildcard include/config/blk/dev/bsg.h) \
@@ -1031,9 +1044,24 @@ deps_kernel/fork.o := \
     $(wildcard include/config/signalfd.h) \
   include/uapi/linux/signalfd.h \
   include/linux/aio.h \
+  include/linux/cpufreq_times.h \
+  include/linux/cpufreq.h \
+    $(wildcard include/config/cpu/freq/gov/performance.h) \
+    $(wildcard include/config/cpu/freq/gov/interactive.h) \
+    $(wildcard include/config/cpu/freq/default/gov/performance.h) \
+    $(wildcard include/config/cpu/freq/default/gov/powersave.h) \
+    $(wildcard include/config/cpu/freq/default/gov/userspace.h) \
+    $(wildcard include/config/cpu/freq/default/gov/ondemand.h) \
+    $(wildcard include/config/cpu/freq/default/gov/conservative.h) \
+    $(wildcard include/config/cpu/freq/default/gov/interactive.h) \
+    $(wildcard include/config/cpu/freq/default/gov/schedutil.h) \
+    $(wildcard include/config/pm/opp.h) \
+  include/linux/clk.h \
+    $(wildcard include/config/common/clk.h) \
+    $(wildcard include/config/have/clk/prepare.h) \
+    $(wildcard include/config/have/clk.h) \
   include/linux/task_integrity.h \
   arch/arm64/include/asm/pgalloc.h \
-    $(wildcard include/config/knox/kap.h) \
   arch/arm64/include/asm/tlbflush.h \
   arch/arm64/include/asm/mmu_context.h \
     $(wildcard include/config/pid/in/contextidr.h) \
@@ -1087,6 +1115,10 @@ deps_kernel/fork.o := \
     $(wildcard include/config/ip/mroute.h) \
     $(wildcard include/config/ip/mroute/multiple/tables.h) \
   include/net/inet_frag.h \
+  include/linux/rhashtable.h \
+  include/linux/jhash.h \
+  include/linux/unaligned/packed_struct.h \
+  include/linux/list_nulls.h \
   include/net/netns/ipv6.h \
     $(wildcard include/config/ipv6/multiple/tables.h) \
     $(wildcard include/config/ipv6/mroute.h) \
@@ -1107,7 +1139,6 @@ deps_kernel/fork.o := \
     $(wildcard include/config/nf/conntrack/events.h) \
     $(wildcard include/config/nf/conntrack/labels.h) \
     $(wildcard include/config/nf/nat/needed.h) \
-  include/linux/list_nulls.h \
   include/linux/netfilter/nf_conntrack_tcp.h \
   include/uapi/linux/netfilter/nf_conntrack_tcp.h \
   include/net/netns/nftables.h \

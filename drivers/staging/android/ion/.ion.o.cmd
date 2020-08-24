@@ -1,25 +1,15 @@
-cmd_drivers/staging/android/ion/ion.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/staging/android/ion/.ion.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ion)"  -D"KBUILD_MODNAME=KBUILD_STR(ion)" -c -o drivers/staging/android/ion/.tmp_ion.o drivers/staging/android/ion/ion.c
+cmd_drivers/staging/android/ion/ion.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/staging/android/ion/.ion.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(ion)"  -D"KBUILD_MODNAME=KBUILD_STR(ion)" -c -o drivers/staging/android/ion/.tmp_ion.o drivers/staging/android/ion/ion.c
 
 source_drivers/staging/android/ion/ion.o := drivers/staging/android/ion/ion.c
 
 deps_drivers/staging/android/ion/ion.o := \
     $(wildcard include/config/ion/exynos/stat/log.h) \
     $(wildcard include/config/exynos/content/path/protection.h) \
-  include/linux/device.h \
-    $(wildcard include/config/debug/devres.h) \
-    $(wildcard include/config/generic/msi/irq/domain.h) \
-    $(wildcard include/config/pinctrl.h) \
-    $(wildcard include/config/generic/msi/irq.h) \
-    $(wildcard include/config/numa.h) \
-    $(wildcard include/config/dma/cma.h) \
-    $(wildcard include/config/pm/sleep.h) \
-    $(wildcard include/config/of.h) \
-    $(wildcard include/config/devtmpfs.h) \
-    $(wildcard include/config/printk.h) \
-    $(wildcard include/config/dynamic/debug.h) \
-    $(wildcard include/config/sysfs/deprecated.h) \
-  include/linux/ioport.h \
-    $(wildcard include/config/memory/hotremove.h) \
+  include/linux/atomic.h \
+    $(wildcard include/config/generic/atomic64.h) \
+  arch/arm64/include/asm/atomic.h \
+    $(wildcard include/config/arm64/lse/atomics.h) \
+    $(wildcard include/config/as/lse.h) \
   include/linux/compiler.h \
     $(wildcard include/config/sparse/rcu/pointer.h) \
     $(wildcard include/config/trace/branch/profiling.h) \
@@ -53,14 +43,20 @@ deps_drivers/staging/android/ion/ion.o := \
     $(wildcard include/config/lbdaf.h) \
     $(wildcard include/config/arch/dma/addr/t/64bit.h) \
     $(wildcard include/config/phys/addr/t/64bit.h) \
-  include/linux/kobject.h \
-    $(wildcard include/config/uevent/helper.h) \
-    $(wildcard include/config/debug/kobject/release.h) \
-  include/linux/list.h \
-    $(wildcard include/config/debug/list.h) \
-  include/linux/poison.h \
-    $(wildcard include/config/illegal/pointer/value.h) \
-  include/uapi/linux/const.h \
+  arch/arm64/include/asm/barrier.h \
+  arch/arm64/include/asm/lse.h \
+  arch/arm64/include/asm/atomic_ll_sc.h \
+  arch/arm64/include/asm/cmpxchg.h \
+  include/linux/bug.h \
+    $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
+  arch/arm64/include/asm/bug.h \
+    $(wildcard include/config/debug/bugverbose.h) \
+  arch/arm64/include/asm/brk-imm.h \
+  include/asm-generic/bug.h \
+    $(wildcard include/config/bug.h) \
+    $(wildcard include/config/generic/bug/relative/pointers.h) \
+    $(wildcard include/config/smp.h) \
   include/linux/kernel.h \
     $(wildcard include/config/preempt/voluntary.h) \
     $(wildcard include/config/debug/atomic/sleep.h) \
@@ -69,7 +65,7 @@ deps_drivers/staging/android/ion/ion.o := \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
     $(wildcard include/config/rkp/kdp.h) \
@@ -82,7 +78,6 @@ deps_drivers/staging/android/ion/ion.o := \
   arch/arm64/include/asm/linkage.h \
   include/linux/bitops.h \
   arch/arm64/include/asm/bitops.h \
-  arch/arm64/include/asm/barrier.h \
   include/asm-generic/bitops/builtin-__ffs.h \
   include/asm-generic/bitops/builtin-ffs.h \
   include/asm-generic/bitops/builtin-__fls.h \
@@ -114,13 +109,14 @@ deps_drivers/staging/android/ion/ion.o := \
     $(wildcard include/config/sec/debug/auto/summary.h) \
     $(wildcard include/config/message/loglevel/default.h) \
     $(wildcard include/config/early/printk.h) \
+    $(wildcard include/config/printk.h) \
+    $(wildcard include/config/dynamic/debug.h) \
   include/linux/init.h \
     $(wildcard include/config/broken/rodata.h) \
     $(wildcard include/config/debug/rodata.h) \
     $(wildcard include/config/lto.h) \
   include/linux/kern_levels.h \
   include/linux/cache.h \
-    $(wildcard include/config/smp.h) \
     $(wildcard include/config/arch/has/cache/line/size.h) \
   include/uapi/linux/kernel.h \
   include/uapi/linux/sysinfo.h \
@@ -147,6 +143,28 @@ deps_drivers/staging/android/ion/ion.o := \
   arch/arm64/include/generated/asm/errno.h \
   include/uapi/asm-generic/errno.h \
   include/uapi/asm-generic/errno-base.h \
+  include/asm-generic/atomic-long.h \
+  include/linux/device.h \
+    $(wildcard include/config/debug/devres.h) \
+    $(wildcard include/config/generic/msi/irq/domain.h) \
+    $(wildcard include/config/pinctrl.h) \
+    $(wildcard include/config/generic/msi/irq.h) \
+    $(wildcard include/config/numa.h) \
+    $(wildcard include/config/dma/cma.h) \
+    $(wildcard include/config/pm/sleep.h) \
+    $(wildcard include/config/of.h) \
+    $(wildcard include/config/devtmpfs.h) \
+    $(wildcard include/config/sysfs/deprecated.h) \
+  include/linux/ioport.h \
+    $(wildcard include/config/memory/hotremove.h) \
+  include/linux/kobject.h \
+    $(wildcard include/config/uevent/helper.h) \
+    $(wildcard include/config/debug/kobject/release.h) \
+  include/linux/list.h \
+    $(wildcard include/config/debug/list.h) \
+  include/linux/poison.h \
+    $(wildcard include/config/illegal/pointer/value.h) \
+  include/uapi/linux/const.h \
   include/linux/sysfs.h \
     $(wildcard include/config/debug/lock/alloc.h) \
     $(wildcard include/config/sysfs.h) \
@@ -159,17 +177,8 @@ deps_drivers/staging/android/ion/ion.o := \
   arch/arm64/include/asm/current.h \
     $(wildcard include/config/thread/info/in/task.h) \
   include/linux/thread_info.h \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
-  include/linux/bug.h \
-    $(wildcard include/config/generic/bug.h) \
-  arch/arm64/include/asm/bug.h \
-    $(wildcard include/config/debug/bugverbose.h) \
-  arch/arm64/include/asm/brk-imm.h \
-  include/asm-generic/bug.h \
-    $(wildcard include/config/bug.h) \
-    $(wildcard include/config/generic/bug/relative/pointers.h) \
   include/linux/restart_block.h \
     $(wildcard include/config/compat.h) \
   arch/arm64/include/asm/thread_info.h \
@@ -184,15 +193,6 @@ deps_drivers/staging/android/ion/ion.o := \
     $(wildcard include/config/lock/stat.h) \
     $(wildcard include/config/trace/irqflags.h) \
   include/linux/rwlock_types.h \
-  include/linux/atomic.h \
-    $(wildcard include/config/generic/atomic64.h) \
-  arch/arm64/include/asm/atomic.h \
-    $(wildcard include/config/arm64/lse/atomics.h) \
-    $(wildcard include/config/as/lse.h) \
-  arch/arm64/include/asm/lse.h \
-  arch/arm64/include/asm/atomic_ll_sc.h \
-  arch/arm64/include/asm/cmpxchg.h \
-  include/asm-generic/atomic-long.h \
   arch/arm64/include/asm/processor.h \
   arch/arm64/include/asm/alternative.h \
     $(wildcard include/config/arm64/uao.h) \
@@ -379,6 +379,7 @@ deps_drivers/staging/android/ion/ion.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -403,6 +404,8 @@ deps_drivers/staging/android/ion/ion.o := \
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/cpu/freq.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
@@ -473,11 +476,11 @@ deps_drivers/staging/android/ion/ion.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
-  include/linux/cputime.h \
-  arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h \
-    $(wildcard include/config/virt/cpu/accounting.h) \
-  include/asm-generic/cputime_jiffies.h \
+    $(wildcard include/config/harden/branch/predictor.h) \
+  include/linux/percpu.h \
+    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
+    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
+    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/smp.h \
     $(wildcard include/config/up/late/init.h) \
   include/linux/llist.h \
@@ -485,10 +488,14 @@ deps_drivers/staging/android/ion/ion.o := \
   arch/arm64/include/asm/smp.h \
   arch/arm64/include/asm/percpu.h \
   include/asm-generic/percpu.h \
-    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/percpu-defs.h \
     $(wildcard include/config/page/table/isolation.h) \
     $(wildcard include/config/debug/force/weak/per/cpu.h) \
+  include/linux/cputime.h \
+  arch/arm64/include/generated/asm/cputime.h \
+  include/asm-generic/cputime.h \
+    $(wildcard include/config/virt/cpu/accounting.h) \
+  include/asm-generic/cputime_jiffies.h \
   include/linux/sem.h \
   include/uapi/linux/sem.h \
   include/linux/ipc.h \
@@ -518,9 +525,6 @@ deps_drivers/staging/android/ion/ion.o := \
   include/asm-generic/siginfo.h \
   include/uapi/asm-generic/siginfo.h \
   include/linux/pid.h \
-  include/linux/percpu.h \
-    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
-    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
   include/linux/topology.h \
     $(wildcard include/config/use/percpu/numa/node/id.h) \
     $(wildcard include/config/have/memoryless/nodes.h) \
@@ -650,6 +654,7 @@ deps_drivers/staging/android/ion/ion.o := \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -719,6 +724,12 @@ deps_drivers/staging/android/ion/ion.o := \
     $(wildcard include/config/tima/lkmauth/code/prot.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/fixmap.h \
     $(wildcard include/config/uh.h) \
   arch/arm64/include/asm/boot.h \
@@ -856,6 +867,7 @@ deps_drivers/staging/android/ion/ion.o := \
   include/asm-generic/pci-dma-compat.h \
   include/trace/define_trace.h \
   include/linux/exynos_ion.h \
+    $(wildcard include/config/hpa/extra.h) \
     $(wildcard include/config/of/reserved/mem.h) \
     $(wildcard include/config/ion/exynos.h) \
   include/linux/ion.h \

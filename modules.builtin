@@ -28,7 +28,7 @@ kernel/fs/pstore/pstore.ko
 kernel/fs/pstore/ramoops.ko
 kernel/fs/quota/quota_v2.ko
 kernel/fs/quota/quota_tree.ko
-kernel/fs/sdcardfs/p/sdcardfs.ko
+kernel/fs/sdcardfs/q/sdcardfs.ko
 kernel/fs/sdfat/sdfat_fs.ko
 kernel/security/keys/encrypted-keys/encrypted-keys.ko
 kernel/crypto/crypto.ko
@@ -43,6 +43,7 @@ kernel/crypto/echainiv.ko
 kernel/crypto/crypto_hash.ko
 kernel/crypto/pcompress.ko
 kernel/crypto/akcipher.ko
+kernel/crypto/rsa_generic.ko
 kernel/crypto/cryptomgr.ko
 kernel/crypto/cmac.ko
 kernel/crypto/hmac.ko
@@ -81,7 +82,6 @@ kernel/crypto/asymmetric_keys/asymmetric_keys.ko
 kernel/crypto/asymmetric_keys/public_key.ko
 kernel/crypto/asymmetric_keys/rsa.ko
 kernel/crypto/asymmetric_keys/x509_key_parser.ko
-kernel/block/deadline-iosched.ko
 kernel/block/cfq-iosched.ko
 kernel/drivers/base/firmware_class.ko
 kernel/drivers/base/regmap/regmap-i2c.ko
@@ -96,9 +96,7 @@ kernel/drivers/char/hw_random/exyswd-rng.ko
 kernel/drivers/clk/samsung/clk-exynos-pwm.ko
 kernel/drivers/cpufreq/cpufreq_stats.ko
 kernel/drivers/cpufreq/cpufreq_performance.ko
-kernel/drivers/cpufreq/cpufreq_powersave.ko
 kernel/drivers/cpufreq/cpufreq_userspace.ko
-kernel/drivers/cpufreq/cpufreq_ondemand.ko
 kernel/drivers/cpufreq/cpufreq_conservative.ko
 kernel/drivers/devfreq/governor_simpleinteractive.ko
 kernel/drivers/dma/pl330.ko
@@ -245,7 +243,6 @@ kernel/drivers/media/v4l2-core/videobuf2-memops.ko
 kernel/drivers/mfd/mfd-core.ko
 kernel/drivers/misc/tima_debug_log.ko
 kernel/drivers/misc/dmverity_query.ko
-kernel/drivers/misc/samsung/scsc/scsc_logring.ko
 kernel/drivers/misc/samsung/scsc/scsc_wifilogger.ko
 kernel/drivers/misc/samsung/scsc/scsc_platform_mif.ko
 kernel/drivers/misc/samsung/scsc/scsc_mx.ko
@@ -302,7 +299,6 @@ kernel/drivers/sensors/sx9360_wifi.ko
 kernel/drivers/spi/spi-s3c64xx.ko
 kernel/drivers/staging/android/timed_gpio.ko
 kernel/drivers/staging/android/alarm-dev.ko
-kernel/drivers/staging/android/ion/ion_test.ko
 kernel/drivers/staging/android/ion/exynos/exynos_ion.ko
 kernel/drivers/staging/android/ion/exynos/exynos_ion_sync.ko
 kernel/drivers/staging/samsung/sec_batt.ko
@@ -349,6 +345,7 @@ kernel/drivers/video/fbdev/core/cfbfillrect.ko
 kernel/drivers/video/fbdev/core/cfbcopyarea.ko
 kernel/drivers/video/fbdev/core/cfbimgblt.ko
 kernel/drivers/watchdog/s3c2410_wdt.ko
+kernel/drivers/watchdog/softdog.ko
 kernel/sound/soundcore.ko
 kernel/sound/core/snd.ko
 kernel/sound/core/snd-hwdep.ko
@@ -386,6 +383,7 @@ kernel/net/ipv4/xfrm4_mode_transport.ko
 kernel/net/ipv4/xfrm4_mode_tunnel.ko
 kernel/net/ipv4/inet_diag.ko
 kernel/net/ipv4/tcp_diag.ko
+kernel/net/ipv4/udp_diag.ko
 kernel/net/ipv4/tcp_bic.ko
 kernel/net/ipv4/tcp_cubic.ko
 kernel/net/ipv4/tcp_westwood.ko
@@ -477,6 +475,7 @@ kernel/net/netfilter/xt_connmark.ko
 kernel/net/netfilter/xt_nat.ko
 kernel/net/netfilter/xt_CLASSIFY.ko
 kernel/net/netfilter/xt_CONNSECMARK.ko
+kernel/net/netfilter/xt_CT.ko
 kernel/net/netfilter/xt_LOG.ko
 kernel/net/netfilter/xt_NETMAP.ko
 kernel/net/netfilter/xt_NFLOG.ko
@@ -511,6 +510,7 @@ kernel/net/netfilter/xt_statistic.ko
 kernel/net/netfilter/xt_string.ko
 kernel/net/netfilter/xt_time.ko
 kernel/net/netfilter/xt_u32.ko
+kernel/net/netfilter/xt_domainfilter.ko
 kernel/net/packet/af_packet.ko
 kernel/net/phonet/phonet.ko
 kernel/net/phonet/pn_pep.ko

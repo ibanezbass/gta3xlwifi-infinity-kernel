@@ -1,0 +1,19 @@
+exynos7885.o: arch/arm64/boot/dts/exynos/dtbo/exynos7885.dts \
+ scripts/dtc/include-prefixes/dt-bindings/soc/samsung/exynos7885.h \
+ scripts/dtc/include-prefixes/dt-bindings/clock/exynos7885.h \
+ scripts/dtc/include-prefixes/dt-bindings/interrupt-controller/arm-gic.h \
+ scripts/dtc/include-prefixes/dt-bindings/interrupt-controller/irq.h \
+ scripts/dtc/include-prefixes/dt-bindings/sysmmu/sysmmu.h \
+ scripts/dtc/include-prefixes/dt-bindings/thermal/thermal.h \
+ arch/arm64/boot/dts/exynos/dtbo/exynos7885-rmem.dtsi \
+ arch/arm64/boot/dts/exynos/dtbo/exynos7885-pinctrl.dtsi \
+ arch/arm64/boot/dts/exynos/dtbo/exynos7885-pm-domains.dtsi \
+ scripts/dtc/include-prefixes/dt-bindings/power/exynos-power.h \
+ arch/arm64/boot/dts/exynos/dtbo/exynos7885-ess.dtsi \
+ arch/arm64/boot/dts/exynos/dtbo/exynos7885-camera.dtsi \
+ scripts/dtc/include-prefixes/dt-bindings/camera/fimc_is.h \
+ arch/arm64/boot/dts/exynos/dtbo/exynos7885-inputbooster.dtsi \
+ arch/arm64/boot/dts/exynos/dtbo/exynos7885-mali_common.dtsi \
+ arch/arm64/boot/dts/exynos/dtbo/exynos7885-pm-extra.dtsi \
+ arch/arm64/boot/dts/exynos/dtbo/exynos7872-tmu-sensor-conf.dtsi \
+ scripts/dtc/include-prefixes/dt-bindings/thermal/thermal_exynos.h

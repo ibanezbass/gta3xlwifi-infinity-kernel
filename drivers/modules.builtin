@@ -11,9 +11,7 @@ kernel/drivers/char/hw_random/exyswd-rng.ko
 kernel/drivers/clk/samsung/clk-exynos-pwm.ko
 kernel/drivers/cpufreq/cpufreq_stats.ko
 kernel/drivers/cpufreq/cpufreq_performance.ko
-kernel/drivers/cpufreq/cpufreq_powersave.ko
 kernel/drivers/cpufreq/cpufreq_userspace.ko
-kernel/drivers/cpufreq/cpufreq_ondemand.ko
 kernel/drivers/cpufreq/cpufreq_conservative.ko
 kernel/drivers/devfreq/governor_simpleinteractive.ko
 kernel/drivers/dma/pl330.ko
@@ -160,7 +158,6 @@ kernel/drivers/media/v4l2-core/videobuf2-memops.ko
 kernel/drivers/mfd/mfd-core.ko
 kernel/drivers/misc/tima_debug_log.ko
 kernel/drivers/misc/dmverity_query.ko
-kernel/drivers/misc/samsung/scsc/scsc_logring.ko
 kernel/drivers/misc/samsung/scsc/scsc_wifilogger.ko
 kernel/drivers/misc/samsung/scsc/scsc_platform_mif.ko
 kernel/drivers/misc/samsung/scsc/scsc_mx.ko
@@ -218,7 +215,6 @@ kernel/drivers/sensors/sx9360_wifi.ko
 kernel/drivers/spi/spi-s3c64xx.ko
 kernel/drivers/staging/android/timed_gpio.ko
 kernel/drivers/staging/android/alarm-dev.ko
-kernel/drivers/staging/android/ion/ion_test.ko
 kernel/drivers/staging/android/ion/exynos/exynos_ion.ko
 kernel/drivers/staging/android/ion/exynos/exynos_ion_sync.ko
 kernel/drivers/staging/samsung/sec_batt.ko
@@ -265,3 +261,4 @@ kernel/drivers/video/fbdev/core/cfbfillrect.ko
 kernel/drivers/video/fbdev/core/cfbcopyarea.ko
 kernel/drivers/video/fbdev/core/cfbimgblt.ko
 kernel/drivers/watchdog/s3c2410_wdt.ko
+kernel/drivers/watchdog/softdog.ko

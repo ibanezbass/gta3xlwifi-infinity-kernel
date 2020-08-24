@@ -1,4 +1,4 @@
-cmd_security/selinux/ss/policydb.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,security/selinux/ss/.policydb.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/ -Isecurity/selinux -Isecurity/selinux/include    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(policydb)"  -D"KBUILD_MODNAME=KBUILD_STR(selinux)" -c -o security/selinux/ss/.tmp_policydb.o security/selinux/ss/policydb.c
+cmd_security/selinux/ss/policydb.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,security/selinux/ss/.policydb.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/ -I./security/selinux -I./security/selinux/include    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(policydb)"  -D"KBUILD_MODNAME=KBUILD_STR(selinux)" -c -o security/selinux/ss/.tmp_policydb.o security/selinux/ss/policydb.c
 
 source_security/selinux/ss/policydb.o := security/selinux/ss/policydb.c
 
@@ -14,7 +14,7 @@ deps_security/selinux/ss/policydb.o := \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
     $(wildcard include/config/rkp/kdp.h) \
@@ -171,6 +171,7 @@ deps_security/selinux/ss/policydb.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -202,6 +203,7 @@ deps_security/selinux/ss/policydb.o := \
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
     $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/preempt.h) \
     $(wildcard include/config/cpu/freq.h) \
@@ -242,6 +244,7 @@ deps_security/selinux/ss/policydb.o := \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -446,11 +449,11 @@ deps_security/selinux/ss/policydb.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
-  include/linux/cputime.h \
-  arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h \
-    $(wildcard include/config/virt/cpu/accounting.h) \
-  include/asm-generic/cputime_jiffies.h \
+    $(wildcard include/config/harden/branch/predictor.h) \
+  include/linux/percpu.h \
+    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
+    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
+    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/smp.h \
     $(wildcard include/config/up/late/init.h) \
   include/linux/llist.h \
@@ -458,10 +461,14 @@ deps_security/selinux/ss/policydb.o := \
   arch/arm64/include/asm/smp.h \
   arch/arm64/include/asm/percpu.h \
   include/asm-generic/percpu.h \
-    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/percpu-defs.h \
     $(wildcard include/config/page/table/isolation.h) \
     $(wildcard include/config/debug/force/weak/per/cpu.h) \
+  include/linux/cputime.h \
+  arch/arm64/include/generated/asm/cputime.h \
+  include/asm-generic/cputime.h \
+    $(wildcard include/config/virt/cpu/accounting.h) \
+  include/asm-generic/cputime_jiffies.h \
   include/linux/sem.h \
   include/uapi/linux/sem.h \
   include/linux/ipc.h \
@@ -491,9 +498,6 @@ deps_security/selinux/ss/policydb.o := \
   include/asm-generic/siginfo.h \
   include/uapi/asm-generic/siginfo.h \
   include/linux/pid.h \
-  include/linux/percpu.h \
-    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
-    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
   include/linux/topology.h \
     $(wildcard include/config/use/percpu/numa/node/id.h) \
     $(wildcard include/config/have/memoryless/nodes.h) \
@@ -638,6 +642,12 @@ deps_security/selinux/ss/policydb.o := \
     $(wildcard include/config/tima/lkmauth/code/prot.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/fixmap.h \
     $(wildcard include/config/uh.h) \
   arch/arm64/include/asm/boot.h \
@@ -666,29 +676,8 @@ deps_security/selinux/ss/policydb.o := \
   include/uapi/linux/audit.h \
     $(wildcard include/config/change.h) \
   include/uapi/linux/elf-em.h \
-  arch/arm64/include/asm/syscall.h \
-  include/linux/compat.h \
-    $(wildcard include/config/compat/old/sigaction.h) \
-    $(wildcard include/config/odd/rt/sigaction.h) \
-  include/linux/stat.h \
-  arch/arm64/include/asm/stat.h \
-  arch/arm64/include/uapi/asm/stat.h \
-  include/uapi/asm-generic/stat.h \
-  arch/arm64/include/asm/compat.h \
-  include/uapi/linux/stat.h \
-  include/linux/socket.h \
-  arch/arm64/include/generated/asm/socket.h \
-  include/uapi/asm-generic/socket.h \
-  arch/arm64/include/generated/asm/sockios.h \
-  include/uapi/asm-generic/sockios.h \
-  include/uapi/linux/sockios.h \
-  include/linux/uio.h \
-  include/uapi/linux/uio.h \
-  include/uapi/linux/socket.h \
-  include/uapi/linux/if.h \
-    $(wildcard include/config/mptcp.h) \
-  include/uapi/linux/libc-compat.h \
-  include/uapi/linux/hdlc/ioctl.h \
+  include/linux/tty.h \
+    $(wildcard include/config/tty.h) \
   include/linux/fs.h \
     $(wildcard include/config/crypto/fips.h) \
     $(wildcard include/config/fs/posix/acl.h) \
@@ -710,11 +699,18 @@ deps_security/selinux/ss/policydb.o := \
   include/linux/lockref.h \
     $(wildcard include/config/arch/use/cmpxchg/lockref.h) \
   include/linux/path.h \
+  include/linux/stat.h \
+  arch/arm64/include/asm/stat.h \
+  arch/arm64/include/uapi/asm/stat.h \
+  include/uapi/asm-generic/stat.h \
+  arch/arm64/include/asm/compat.h \
+  include/uapi/linux/stat.h \
   include/linux/list_lru.h \
   include/linux/radix-tree.h \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -737,6 +733,49 @@ deps_security/selinux/ss/policydb.o := \
   include/linux/projid.h \
   include/uapi/linux/quota.h \
   include/linux/nfs_fs_i.h \
+  include/uapi/linux/major.h \
+  include/uapi/linux/termios.h \
+  arch/arm64/include/generated/asm/termios.h \
+  include/asm-generic/termios.h \
+  arch/arm64/include/asm/uaccess.h \
+    $(wildcard include/config/arm64/pan.h) \
+  arch/arm64/include/asm/kernel-pgtable.h \
+  arch/arm64/include/asm/compiler.h \
+  include/uapi/asm-generic/termios.h \
+  arch/arm64/include/generated/asm/termbits.h \
+  include/uapi/asm-generic/termbits.h \
+  arch/arm64/include/generated/asm/ioctls.h \
+  include/uapi/asm-generic/ioctls.h \
+  include/linux/tty_driver.h \
+    $(wildcard include/config/console/poll.h) \
+  include/linux/cdev.h \
+  include/linux/kobject.h \
+    $(wildcard include/config/uevent/helper.h) \
+    $(wildcard include/config/debug/kobject/release.h) \
+  include/linux/sysfs.h \
+  include/linux/kernfs.h \
+    $(wildcard include/config/kernfs.h) \
+  include/linux/kobject_ns.h \
+  include/linux/tty_ldisc.h \
+  include/uapi/linux/tty_flags.h \
+  include/uapi/linux/tty.h \
+  arch/arm64/include/asm/syscall.h \
+  include/linux/compat.h \
+    $(wildcard include/config/compat/old/sigaction.h) \
+    $(wildcard include/config/odd/rt/sigaction.h) \
+  include/linux/socket.h \
+  arch/arm64/include/generated/asm/socket.h \
+  include/uapi/asm-generic/socket.h \
+  arch/arm64/include/generated/asm/sockios.h \
+  include/uapi/asm-generic/sockios.h \
+  include/uapi/linux/sockios.h \
+  include/linux/uio.h \
+  include/uapi/linux/uio.h \
+  include/uapi/linux/socket.h \
+  include/uapi/linux/if.h \
+    $(wildcard include/config/mptcp.h) \
+  include/uapi/linux/libc-compat.h \
+  include/uapi/linux/hdlc/ioctl.h \
   include/uapi/linux/aio_abi.h \
   include/linux/flex_array.h \
   include/linux/reciprocal_div.h \
@@ -783,10 +822,6 @@ deps_security/selinux/ss/policydb.o := \
     $(wildcard include/config/ip/vs.h) \
   include/linux/textsearch.h \
   include/net/checksum.h \
-  arch/arm64/include/asm/uaccess.h \
-    $(wildcard include/config/arm64/pan.h) \
-  arch/arm64/include/asm/kernel-pgtable.h \
-  arch/arm64/include/asm/compiler.h \
   arch/arm64/include/generated/asm/checksum.h \
   include/asm-generic/checksum.h \
   include/linux/dma-mapping.h \
@@ -804,13 +839,6 @@ deps_security/selinux/ss/policydb.o := \
     $(wildcard include/config/devtmpfs.h) \
     $(wildcard include/config/sysfs/deprecated.h) \
   include/linux/ioport.h \
-  include/linux/kobject.h \
-    $(wildcard include/config/uevent/helper.h) \
-    $(wildcard include/config/debug/kobject/release.h) \
-  include/linux/sysfs.h \
-  include/linux/kernfs.h \
-    $(wildcard include/config/kernfs.h) \
-  include/linux/kobject_ns.h \
   include/linux/klist.h \
   include/linux/pinctrl/devinfo.h \
     $(wildcard include/config/pm.h) \
@@ -956,6 +984,9 @@ deps_security/selinux/ss/policydb.o := \
     $(wildcard include/config/ip/mroute.h) \
     $(wildcard include/config/ip/mroute/multiple/tables.h) \
   include/net/inet_frag.h \
+  include/linux/rhashtable.h \
+  include/linux/jhash.h \
+  include/linux/unaligned/packed_struct.h \
   include/net/netns/ipv6.h \
     $(wildcard include/config/ipv6/multiple/tables.h) \
     $(wildcard include/config/ipv6/mroute.h) \

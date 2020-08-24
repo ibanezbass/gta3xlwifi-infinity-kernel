@@ -1,4 +1,4 @@
-cmd_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/video/fbdev/exynos/dpu_7885/panels/.hx8279d_gta3xllte_lcd_ctrl.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(hx8279d_gta3xllte_lcd_ctrl)"  -D"KBUILD_MODNAME=KBUILD_STR(hx8279d_gta3xllte_lcd_ctrl)" -c -o drivers/video/fbdev/exynos/dpu_7885/panels/.tmp_hx8279d_gta3xllte_lcd_ctrl.o drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.c
+cmd_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/video/fbdev/exynos/dpu_7885/panels/.hx8279d_gta3xllte_lcd_ctrl.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(hx8279d_gta3xllte_lcd_ctrl)"  -D"KBUILD_MODNAME=KBUILD_STR(hx8279d_gta3xllte_lcd_ctrl)" -c -o drivers/video/fbdev/exynos/dpu_7885/panels/.tmp_hx8279d_gta3xllte_lcd_ctrl.o drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.c
 
 source_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.c
 
@@ -69,7 +69,7 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
     $(wildcard include/config/rkp/kdp.h) \
@@ -159,11 +159,11 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
   arch/arm64/include/asm/current.h \
     $(wildcard include/config/thread/info/in/task.h) \
   include/linux/thread_info.h \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -379,6 +379,7 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -403,6 +404,8 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/cpu/freq.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
@@ -473,11 +476,11 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
-  include/linux/cputime.h \
-  arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h \
-    $(wildcard include/config/virt/cpu/accounting.h) \
-  include/asm-generic/cputime_jiffies.h \
+    $(wildcard include/config/harden/branch/predictor.h) \
+  include/linux/percpu.h \
+    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
+    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
+    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/smp.h \
     $(wildcard include/config/up/late/init.h) \
   include/linux/llist.h \
@@ -485,10 +488,14 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
   arch/arm64/include/asm/smp.h \
   arch/arm64/include/asm/percpu.h \
   include/asm-generic/percpu.h \
-    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/percpu-defs.h \
     $(wildcard include/config/page/table/isolation.h) \
     $(wildcard include/config/debug/force/weak/per/cpu.h) \
+  include/linux/cputime.h \
+  arch/arm64/include/generated/asm/cputime.h \
+  include/asm-generic/cputime.h \
+    $(wildcard include/config/virt/cpu/accounting.h) \
+  include/asm-generic/cputime_jiffies.h \
   include/linux/sem.h \
   include/uapi/linux/sem.h \
   include/linux/ipc.h \
@@ -518,9 +525,6 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
   include/asm-generic/siginfo.h \
   include/uapi/asm-generic/siginfo.h \
   include/linux/pid.h \
-  include/linux/percpu.h \
-    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
-    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
   include/linux/topology.h \
     $(wildcard include/config/use/percpu/numa/node/id.h) \
     $(wildcard include/config/have/memoryless/nodes.h) \
@@ -650,6 +654,7 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -726,6 +731,12 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
     $(wildcard include/config/tima/lkmauth/code/prot.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/fixmap.h \
     $(wildcard include/config/uh.h) \
   arch/arm64/include/asm/boot.h \
@@ -882,81 +893,16 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
   include/linux/of_platform.h \
     $(wildcard include/config/of/address.h) \
   include/video/mipi_display.h \
-  drivers/video/fbdev/exynos/dpu_7885/panels/../dsim.h \
-    $(wildcard include/config/exynos/support/doze.h) \
-    $(wildcard include/config/lcd/hmt.h) \
-  include/linux/regulator/consumer.h \
-    $(wildcard include/config/regulator.h) \
-  include/linux/delay.h \
-  arch/arm64/include/generated/asm/delay.h \
-  include/asm-generic/delay.h \
-  include/media/v4l2-subdev.h \
-    $(wildcard include/config/video/adv/debug.h) \
-    $(wildcard include/config/media/controller.h) \
-    $(wildcard include/config/video/v4l2/subdev/api.h) \
-  include/uapi/linux/v4l2-subdev.h \
-  include/uapi/linux/v4l2-common.h \
-  include/uapi/linux/v4l2-mediabus.h \
-  include/uapi/linux/media-bus-format.h \
-  include/linux/videodev2.h \
-  include/uapi/linux/videodev2.h \
-  include/uapi/linux/v4l2-controls.h \
-  include/media/media-entity.h \
-  include/uapi/linux/media.h \
-  include/generated/uapi/linux/version.h \
-  include/media/v4l2-async.h \
-  include/media/v4l2-common.h \
-    $(wildcard include/config/spi.h) \
-  include/media/v4l2-dev.h \
-  include/linux/poll.h \
-  arch/arm64/include/asm/uaccess.h \
-    $(wildcard include/config/arm64/pan.h) \
-  arch/arm64/include/asm/kernel-pgtable.h \
-  arch/arm64/include/asm/compiler.h \
-  include/uapi/linux/poll.h \
-  arch/arm64/include/generated/asm/poll.h \
-  include/uapi/asm-generic/poll.h \
-  include/linux/cdev.h \
-  include/linux/spi/spi.h \
-  include/linux/kthread.h \
-  include/linux/scatterlist.h \
-    $(wildcard include/config/debug/sg.h) \
-    $(wildcard include/config/need/sg/dma/length.h) \
-  include/media/v4l2-fh.h \
-    $(wildcard include/config/v4l2/mem2mem/dev.h) \
-  include/media/v4l2-mediabus.h \
-  drivers/video/fbdev/exynos/dpu_7885/panels/.././panels/decon_lcd.h \
-    $(wildcard include/config/dpu/20.h) \
-  drivers/video/fbdev/exynos/dpu_7885/panels/../regs-dsim.h \
-    $(wildcard include/config/sync/inform.h) \
-    $(wildcard include/config/burst/mode.h) \
-    $(wildcard include/config/lp/force/en.h) \
-    $(wildcard include/config/hse/disable.h) \
-    $(wildcard include/config/hfp/disable.h) \
-    $(wildcard include/config/hbp/disable.h) \
-    $(wildcard include/config/hsa/disable.h) \
-    $(wildcard include/config/cprs/en.h) \
-    $(wildcard include/config/video/mode.h) \
-    $(wildcard include/config/vc/id.h) \
-    $(wildcard include/config/vc/id/mask.h) \
-    $(wildcard include/config/pixel/format.h) \
-    $(wildcard include/config/pixel/format/mask.h) \
-    $(wildcard include/config/per/frame/read/en.h) \
-    $(wildcard include/config/eotp/en.h) \
-    $(wildcard include/config/num/of/data/lane.h) \
-    $(wildcard include/config/num/of/data/lane/mask.h) \
-    $(wildcard include/config/lanes/en.h) \
-    $(wildcard include/config/pkt/go/rdy.h) \
-    $(wildcard include/config/pkt/go/en.h) \
-    $(wildcard include/config/multi/cmd/pkt/en.h) \
-    $(wildcard include/config/multi/pkt/cnt.h) \
-    $(wildcard include/config/multi/pkt/cnt/mask.h) \
   drivers/video/fbdev/exynos/dpu_7885/panels/../decon.h \
+    $(wildcard include/config/dpu/20.h) \
+    $(wildcard include/config/support/mask/layer.h) \
     $(wildcard include/config/decon/event/log.h) \
+    $(wildcard include/config/exynos/doze.h) \
     $(wildcard include/config/logging/bigdata/bug.h) \
     $(wildcard include/config/exynos/itmon.h) \
     $(wildcard include/config/exynos/pd.h) \
     $(wildcard include/config/exynos/support/fb/handover.h) \
+    $(wildcard include/config/lcd/hmt.h) \
     $(wildcard include/config/exynos/content/path/protection.h) \
   include/linux/clk.h \
     $(wildcard include/config/common/clk.h) \
@@ -976,13 +922,51 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
   include/linux/irq_cpustat.h \
   arch/arm64/include/generated/asm/sections.h \
   include/asm-generic/sections.h \
+  include/linux/kthread.h \
   include/linux/pm_qos.h \
     $(wildcard include/config/arm/exynos/devfreq/debug.h) \
   include/linux/miscdevice.h \
   include/uapi/linux/major.h \
+  include/linux/delay.h \
+  arch/arm64/include/generated/asm/delay.h \
+  include/asm-generic/delay.h \
   include/media/v4l2-device.h \
+    $(wildcard include/config/media/controller.h) \
   include/media/media-device.h \
   include/media/media-devnode.h \
+  include/linux/poll.h \
+  arch/arm64/include/asm/uaccess.h \
+    $(wildcard include/config/arm64/pan.h) \
+  arch/arm64/include/asm/kernel-pgtable.h \
+  arch/arm64/include/asm/compiler.h \
+  include/uapi/linux/poll.h \
+  arch/arm64/include/generated/asm/poll.h \
+  include/uapi/asm-generic/poll.h \
+  include/linux/cdev.h \
+  include/media/media-entity.h \
+  include/uapi/linux/media.h \
+  include/generated/uapi/linux/version.h \
+  include/media/v4l2-subdev.h \
+    $(wildcard include/config/video/adv/debug.h) \
+    $(wildcard include/config/video/v4l2/subdev/api.h) \
+  include/uapi/linux/v4l2-subdev.h \
+  include/uapi/linux/v4l2-common.h \
+  include/uapi/linux/v4l2-mediabus.h \
+  include/uapi/linux/media-bus-format.h \
+  include/linux/videodev2.h \
+  include/uapi/linux/videodev2.h \
+  include/uapi/linux/v4l2-controls.h \
+  include/media/v4l2-async.h \
+  include/media/v4l2-common.h \
+    $(wildcard include/config/spi.h) \
+  include/media/v4l2-dev.h \
+  include/linux/spi/spi.h \
+  include/linux/scatterlist.h \
+    $(wildcard include/config/debug/sg.h) \
+    $(wildcard include/config/need/sg/dma/length.h) \
+  include/media/v4l2-fh.h \
+    $(wildcard include/config/v4l2/mem2mem/dev.h) \
+  include/media/v4l2-mediabus.h \
   include/media/videobuf2-core.h \
   include/linux/dma-buf.h \
   include/linux/file.h \
@@ -1017,40 +1001,45 @@ deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o := 
     $(wildcard include/config/exynos8895/bts.h) \
   include/soc/samsung/exynos-itmon.h \
   drivers/video/fbdev/exynos/dpu_7885/panels/../regs-decon.h \
+  drivers/video/fbdev/exynos/dpu_7885/panels/.././panels/decon_lcd.h \
+  drivers/video/fbdev/exynos/dpu_7885/panels/../decon_abd.h \
+    $(wildcard include/config/soc/exynos7885.h) \
+    $(wildcard include/config/soc/exynos9810.h) \
   drivers/video/fbdev/exynos/dpu_7885/panels/../dsim.h \
+  include/linux/regulator/consumer.h \
+    $(wildcard include/config/regulator.h) \
+  drivers/video/fbdev/exynos/dpu_7885/panels/../regs-dsim.h \
+    $(wildcard include/config/sync/inform.h) \
+    $(wildcard include/config/burst/mode.h) \
+    $(wildcard include/config/lp/force/en.h) \
+    $(wildcard include/config/hse/disable.h) \
+    $(wildcard include/config/hfp/disable.h) \
+    $(wildcard include/config/hbp/disable.h) \
+    $(wildcard include/config/hsa/disable.h) \
+    $(wildcard include/config/cprs/en.h) \
+    $(wildcard include/config/video/mode.h) \
+    $(wildcard include/config/vc/id.h) \
+    $(wildcard include/config/vc/id/mask.h) \
+    $(wildcard include/config/pixel/format.h) \
+    $(wildcard include/config/pixel/format/mask.h) \
+    $(wildcard include/config/per/frame/read/en.h) \
+    $(wildcard include/config/eotp/en.h) \
+    $(wildcard include/config/num/of/data/lane.h) \
+    $(wildcard include/config/num/of/data/lane/mask.h) \
+    $(wildcard include/config/lanes/en.h) \
+    $(wildcard include/config/pkt/go/rdy.h) \
+    $(wildcard include/config/pkt/go/en.h) \
+    $(wildcard include/config/multi/cmd/pkt/en.h) \
+    $(wildcard include/config/multi/pkt/cnt.h) \
+    $(wildcard include/config/multi/pkt/cnt/mask.h) \
   drivers/video/fbdev/exynos/dpu_7885/panels/../../../../../staging/android/sw_sync.h \
+  drivers/video/fbdev/exynos/dpu_7885/panels/../dsim.h \
   drivers/video/fbdev/exynos/dpu_7885/panels/dsim_panel.h \
-    $(wildcard include/config/exynos/decon/lcd/s6e3fa0.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e3fa7.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e3fa7/jackpot2.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e3fa7/jackpot.h) \
-    $(wildcard include/config/exynos/decon/lcd/td4100/j3tope.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6d7at0b/j7tope.h) \
-    $(wildcard include/config/exynos/decon/lcd/ea8061s/j7duo.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e8aa5/a6elte.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e8aa5/feel2.h) \
-    $(wildcard include/config/exynos/decon/lcd/sn65dsi86/gview2.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e3fa7/a7y18.h) \
-    $(wildcard include/config/exynos/decon/lcd/td4101/j2corepelte.h) \
-    $(wildcard include/config/exynos/decon/lcd/hx8279d/gta3xllte.h) \
-    $(wildcard include/config/exynos/decon/lcd/nt36672a/m20.h) \
-    $(wildcard include/config/exynos/decon/lcd/hx83112a/m20.h) \
-    $(wildcard include/config/exynos/decon/lcd/ea8076/m30.h) \
-    $(wildcard include/config/exynos/decon/lcd/ea8076/a30.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e3aa2/a40.h) \
-    $(wildcard include/config/exynos/decon/lcd/hx8279d/wisdom.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e8fc0/a20.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e8fc0/a40.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6d7at0b/a10.h) \
-    $(wildcard include/config/exynos/decon/lcd/hx83102d/a10e.h) \
-    $(wildcard include/config/exynos/decon/lcd/hx83102d/a20e.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6d7aa0/xcover4s.h) \
-    $(wildcard include/config/exynos/decon/lcd/s6e8fc0/a30c.h) \
   drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_param.h \
   drivers/video/fbdev/exynos/dpu_7885/panels/dd.h \
     $(wildcard include/config/samsung/product/ship.h) \
     $(wildcard include/config/sec/gpio/dvs.h) \
-    $(wildcard include/config/exynos/decon/mdnie/lite.h) \
+    $(wildcard include/config/exynos/decon/mdnie.h) \
 
 drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o: $(deps_drivers/video/fbdev/exynos/dpu_7885/panels/hx8279d_gta3xllte_lcd_ctrl.o)
 

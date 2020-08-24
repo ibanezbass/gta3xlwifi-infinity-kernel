@@ -20,5 +20,5 @@ kernel/fs/pstore/pstore.ko
 kernel/fs/pstore/ramoops.ko
 kernel/fs/quota/quota_v2.ko
 kernel/fs/quota/quota_tree.ko
-kernel/fs/sdcardfs/p/sdcardfs.ko
+kernel/fs/sdcardfs/q/sdcardfs.ko
 kernel/fs/sdfat/sdfat_fs.ko

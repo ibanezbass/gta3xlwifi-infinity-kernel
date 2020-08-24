@@ -10,6 +10,7 @@ kernel/crypto/echainiv.ko
 kernel/crypto/crypto_hash.ko
 kernel/crypto/pcompress.ko
 kernel/crypto/akcipher.ko
+kernel/crypto/rsa_generic.ko
 kernel/crypto/cryptomgr.ko
 kernel/crypto/cmac.ko
 kernel/crypto/hmac.ko

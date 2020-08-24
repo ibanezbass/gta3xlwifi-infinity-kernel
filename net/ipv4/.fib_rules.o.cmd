@@ -1,4 +1,4 @@
-cmd_net/ipv4/fib_rules.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,net/ipv4/.fib_rules.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(fib_rules)"  -D"KBUILD_MODNAME=KBUILD_STR(fib_rules)" -c -o net/ipv4/.tmp_fib_rules.o net/ipv4/fib_rules.c
+cmd_net/ipv4/fib_rules.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,net/ipv4/.fib_rules.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(fib_rules)"  -D"KBUILD_MODNAME=KBUILD_STR(fib_rules)" -c -o net/ipv4/.tmp_fib_rules.o net/ipv4/fib_rules.c
 
 source_net/ipv4/fib_rules.o := net/ipv4/fib_rules.c
 
@@ -45,7 +45,7 @@ deps_net/ipv4/fib_rules.o := \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
     $(wildcard include/config/rkp/kdp.h) \
@@ -189,11 +189,11 @@ deps_net/ipv4/fib_rules.o := \
   include/asm-generic/preempt.h \
   include/linux/thread_info.h \
     $(wildcard include/config/thread/info/in/task.h) \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -445,6 +445,7 @@ deps_net/ipv4/fib_rules.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -468,6 +469,8 @@ deps_net/ipv4/fib_rules.o := \
     $(wildcard include/config/irq/time/accounting.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/cpu/freq.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
@@ -528,6 +531,7 @@ deps_net/ipv4/fib_rules.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
+    $(wildcard include/config/harden/branch/predictor.h) \
   include/linux/cputime.h \
   arch/arm64/include/generated/asm/cputime.h \
   include/asm-generic/cputime.h \
@@ -689,6 +693,7 @@ deps_net/ipv4/fib_rules.o := \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -754,6 +759,12 @@ deps_net/ipv4/fib_rules.o := \
     $(wildcard include/config/tima/lkmauth/code/prot.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/fixmap.h \
     $(wildcard include/config/uh.h) \
   arch/arm64/include/asm/boot.h \
@@ -900,6 +911,10 @@ deps_net/ipv4/fib_rules.o := \
     $(wildcard include/config/ip/mroute.h) \
     $(wildcard include/config/ip/mroute/multiple/tables.h) \
   include/net/inet_frag.h \
+  include/linux/rhashtable.h \
+  include/linux/jhash.h \
+  include/linux/unaligned/packed_struct.h \
+  include/linux/list_nulls.h \
   include/net/netns/ipv6.h \
     $(wildcard include/config/ipv6/multiple/tables.h) \
     $(wildcard include/config/ipv6/mroute.h) \
@@ -920,7 +935,6 @@ deps_net/ipv4/fib_rules.o := \
     $(wildcard include/config/nf/conntrack/events.h) \
     $(wildcard include/config/nf/conntrack/labels.h) \
     $(wildcard include/config/nf/nat/needed.h) \
-  include/linux/list_nulls.h \
   include/linux/netfilter/nf_conntrack_tcp.h \
   include/uapi/linux/netfilter/nf_conntrack_tcp.h \
   include/net/netns/nftables.h \
@@ -1030,8 +1044,6 @@ deps_net/ipv4/fib_rules.o := \
   include/net/ip.h \
     $(wildcard include/config/inet.h) \
   include/net/inet_sock.h \
-  include/linux/jhash.h \
-  include/linux/unaligned/packed_struct.h \
   include/net/sock.h \
     $(wildcard include/config/net.h) \
   include/linux/uaccess.h \

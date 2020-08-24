@@ -145,6 +145,7 @@ config USB_ANDROID_SAMSUNG_COMPOSITE
 	  If you enable this option, android composite will be changed.
 
 config USB_ANDROID_SAMSUNG_MTP
+
 	boolean "Samsung MTP Function"
 	depends on USB_G_ANDROID &&!SEC_FACTORY
 	help
@@ -152,6 +153,7 @@ config USB_ANDROID_SAMSUNG_MTP
           for samsung gadget driver.
           If you enable this option,
           google mtp will be changed to samsung mtp.
+
 
 config USB_DUN_SUPPORT
 	boolean "DUN support function"
@@ -485,7 +487,17 @@ config USB_CONFIGFS_F_CONN_GADGET
         depends on USB_CONFIGFS
         select USB_F_CONN_GADGET
         help
-          SydeSync
+          SideSync
+
+config USB_F_CONN_GADGET_NDOP
+        bool "Conn gadget that do not support DexLive"
+        depends on USB_CONFIGFS_F_CONN_GADGET
+	depends on ANDROID_MAJOR_VERSION != "n"
+	depends on ANDROID_MAJOR_VERSION != "o"
+	depends on ANDROID_MAJOR_VERSION != "p"
+	default y
+        help
+          Next SideSync
 
 config USB_CONFIGFS_F_ACC
 	boolean "Accessory gadget"

@@ -1,4 +1,4 @@
-cmd_drivers/input/joystick/xpad.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/input/joystick/.xpad.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(xpad)"  -D"KBUILD_MODNAME=KBUILD_STR(xpad)" -c -o drivers/input/joystick/.tmp_xpad.o drivers/input/joystick/xpad.c
+cmd_drivers/input/joystick/xpad.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/input/joystick/.xpad.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(xpad)"  -D"KBUILD_MODNAME=KBUILD_STR(xpad)" -c -o drivers/input/joystick/.tmp_xpad.o drivers/input/joystick/xpad.c
 
 source_drivers/input/joystick/xpad.o := drivers/input/joystick/xpad.c
 
@@ -14,7 +14,7 @@ deps_drivers/input/joystick/xpad.o := \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
     $(wildcard include/config/rkp/kdp.h) \
@@ -126,64 +126,15 @@ deps_drivers/input/joystick/xpad.o := \
   arch/arm64/include/generated/asm/errno.h \
   include/uapi/asm-generic/errno.h \
   include/uapi/asm-generic/errno-base.h \
-  include/linux/slab.h \
-    $(wildcard include/config/debug/slab.h) \
-    $(wildcard include/config/debug/objects.h) \
-    $(wildcard include/config/kmemcheck.h) \
-    $(wildcard include/config/failslab.h) \
-    $(wildcard include/config/have/hardened/usercopy/allocator.h) \
-    $(wildcard include/config/slab.h) \
-    $(wildcard include/config/slub.h) \
-    $(wildcard include/config/slob.h) \
-    $(wildcard include/config/zone/dma.h) \
-    $(wildcard include/config/numa.h) \
-  include/linux/gfp.h \
-    $(wildcard include/config/highmem.h) \
-    $(wildcard include/config/zone/dma32.h) \
-    $(wildcard include/config/deferred/struct/page/init.h) \
-    $(wildcard include/config/pm/sleep.h) \
-    $(wildcard include/config/cma.h) \
-    $(wildcard include/config/hpa.h) \
-  include/linux/mmdebug.h \
-    $(wildcard include/config/debug/vm.h) \
-    $(wildcard include/config/debug/virtual.h) \
-  include/linux/bug.h \
-    $(wildcard include/config/generic/bug.h) \
-  arch/arm64/include/asm/bug.h \
-    $(wildcard include/config/debug/bugverbose.h) \
-  arch/arm64/include/asm/brk-imm.h \
-  include/asm-generic/bug.h \
-    $(wildcard include/config/bug.h) \
-    $(wildcard include/config/generic/bug/relative/pointers.h) \
-  include/linux/mmzone.h \
-    $(wildcard include/config/force/max/zoneorder.h) \
-    $(wildcard include/config/memory/isolation.h) \
-    $(wildcard include/config/memcg.h) \
-    $(wildcard include/config/zone/device.h) \
-    $(wildcard include/config/sparsemem.h) \
-    $(wildcard include/config/memory/hotplug.h) \
-    $(wildcard include/config/compaction.h) \
-    $(wildcard include/config/discontigmem.h) \
-    $(wildcard include/config/flat/node/mem/map.h) \
-    $(wildcard include/config/page/extension.h) \
-    $(wildcard include/config/no/bootmem.h) \
-    $(wildcard include/config/numa/balancing.h) \
-    $(wildcard include/config/have/memory/present.h) \
-    $(wildcard include/config/have/memoryless/nodes.h) \
-    $(wildcard include/config/need/node/memmap/size.h) \
-    $(wildcard include/config/have/memblock/node/map.h) \
-    $(wildcard include/config/need/multiple/nodes.h) \
-    $(wildcard include/config/have/arch/early/pfn/to/nid.h) \
-    $(wildcard include/config/flatmem.h) \
-    $(wildcard include/config/sparsemem/extreme.h) \
-    $(wildcard include/config/have/arch/pfn/valid.h) \
-    $(wildcard include/config/holes/in/zone.h) \
-    $(wildcard include/config/arch/has/holes/memorymodel.h) \
+  include/linux/input.h \
+  include/linux/time.h \
+    $(wildcard include/config/arch/uses/gettimeoffset.h) \
+  include/linux/seqlock.h \
+    $(wildcard include/config/debug/lock/alloc.h) \
   include/linux/spinlock.h \
     $(wildcard include/config/debug/spinlock.h) \
     $(wildcard include/config/generic/lockbreak.h) \
     $(wildcard include/config/preempt.h) \
-    $(wildcard include/config/debug/lock/alloc.h) \
   include/linux/preempt.h \
     $(wildcard include/config/preempt/count.h) \
     $(wildcard include/config/debug/preempt.h) \
@@ -198,9 +149,17 @@ deps_drivers/input/joystick/xpad.o := \
   include/asm-generic/preempt.h \
   include/linux/thread_info.h \
     $(wildcard include/config/thread/info/in/task.h) \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
+  include/linux/bug.h \
+    $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
+  arch/arm64/include/asm/bug.h \
+    $(wildcard include/config/debug/bugverbose.h) \
+  arch/arm64/include/asm/brk-imm.h \
+  include/asm-generic/bug.h \
+    $(wildcard include/config/bug.h) \
+    $(wildcard include/config/generic/bug/relative/pointers.h) \
   include/linux/restart_block.h \
     $(wildcard include/config/compat.h) \
   arch/arm64/include/asm/thread_info.h \
@@ -297,23 +256,101 @@ deps_drivers/input/joystick/xpad.o := \
   arch/arm64/include/asm/atomic_ll_sc.h \
   arch/arm64/include/asm/cmpxchg.h \
   include/asm-generic/atomic-long.h \
+  include/linux/math64.h \
+    $(wildcard include/config/arch/supports/int128.h) \
+  arch/arm64/include/generated/asm/div64.h \
+  include/asm-generic/div64.h \
+  include/linux/time64.h \
+  include/uapi/linux/time.h \
+  include/uapi/linux/input.h \
+    $(wildcard include/config/sec/debug/tsp/log.h) \
+    $(wildcard include/config/usb/hmt/samsung/input.h) \
+  include/uapi/linux/input-event-codes.h \
+  include/linux/sec_debug.h \
+    $(wildcard include/config/sec/debug/reset/reason.h) \
+    $(wildcard include/config/sec/debug/extra/info.h) \
+    $(wildcard include/config/sec/debug/init/log.h) \
+    $(wildcard include/config/sec/debug/last/kmsg.h) \
+    $(wildcard include/config/sec/avc/log.h) \
+    $(wildcard include/config/touchscreen/dump/mode.h) \
+    $(wildcard include/config/sec/dump/summary.h) \
+    $(wildcard include/config/nr/cpus.h) \
+    $(wildcard include/config/sec/debug/limit/backtrace.h) \
+  include/linux/sizes.h \
+  include/linux/memblock.h \
+    $(wildcard include/config/have/memblock.h) \
+    $(wildcard include/config/have/memblock/node/map.h) \
+    $(wildcard include/config/have/memblock/phys/map.h) \
+    $(wildcard include/config/movable/node.h) \
+    $(wildcard include/config/arch/discard/memblock.h) \
+    $(wildcard include/config/memtest.h) \
+  include/linux/mm.h \
+    $(wildcard include/config/need/multiple/nodes.h) \
+    $(wildcard include/config/sysctl.h) \
+    $(wildcard include/config/have/arch/mmap/rnd/bits.h) \
+    $(wildcard include/config/have/arch/mmap/rnd/compat/bits.h) \
+    $(wildcard include/config/mem/soft/dirty.h) \
+    $(wildcard include/config/x86.h) \
+    $(wildcard include/config/ppc.h) \
+    $(wildcard include/config/parisc.h) \
+    $(wildcard include/config/metag.h) \
+    $(wildcard include/config/ia64.h) \
+    $(wildcard include/config/stack/growsup.h) \
+    $(wildcard include/config/numa.h) \
+    $(wildcard include/config/transparent/hugepage.h) \
+    $(wildcard include/config/hugetlb/page.h) \
+    $(wildcard include/config/sparsemem.h) \
+    $(wildcard include/config/sparsemem/vmemmap.h) \
+    $(wildcard include/config/numa/balancing.h) \
+    $(wildcard include/config/memcg.h) \
+    $(wildcard include/config/highmem.h) \
+    $(wildcard include/config/shmem.h) \
+    $(wildcard include/config/have/arch/early/pfn/to/nid.h) \
+    $(wildcard include/config/debug/vm/rb.h) \
+    $(wildcard include/config/proc/fs.h) \
+    $(wildcard include/config/debug/pagealloc.h) \
+    $(wildcard include/config/hibernation.h) \
+    $(wildcard include/config/memory/hotplug.h) \
+    $(wildcard include/config/hugetlbfs.h) \
+  include/linux/mmdebug.h \
+    $(wildcard include/config/debug/vm.h) \
+    $(wildcard include/config/debug/virtual.h) \
+  include/linux/gfp.h \
+    $(wildcard include/config/zone/dma.h) \
+    $(wildcard include/config/zone/dma32.h) \
+    $(wildcard include/config/deferred/struct/page/init.h) \
+    $(wildcard include/config/pm/sleep.h) \
+    $(wildcard include/config/cma.h) \
+    $(wildcard include/config/hpa.h) \
+  include/linux/mmzone.h \
+    $(wildcard include/config/force/max/zoneorder.h) \
+    $(wildcard include/config/memory/isolation.h) \
+    $(wildcard include/config/zone/device.h) \
+    $(wildcard include/config/compaction.h) \
+    $(wildcard include/config/discontigmem.h) \
+    $(wildcard include/config/flat/node/mem/map.h) \
+    $(wildcard include/config/page/extension.h) \
+    $(wildcard include/config/no/bootmem.h) \
+    $(wildcard include/config/have/memory/present.h) \
+    $(wildcard include/config/have/memoryless/nodes.h) \
+    $(wildcard include/config/need/node/memmap/size.h) \
+    $(wildcard include/config/flatmem.h) \
+    $(wildcard include/config/sparsemem/extreme.h) \
+    $(wildcard include/config/have/arch/pfn/valid.h) \
+    $(wildcard include/config/holes/in/zone.h) \
+    $(wildcard include/config/arch/has/holes/memorymodel.h) \
   include/linux/wait.h \
   arch/arm64/include/asm/current.h \
   include/uapi/linux/wait.h \
   include/linux/threads.h \
-    $(wildcard include/config/nr/cpus.h) \
     $(wildcard include/config/base/small.h) \
   include/linux/numa.h \
     $(wildcard include/config/nodes/shift.h) \
-  include/linux/seqlock.h \
   include/linux/nodemask.h \
-    $(wildcard include/config/movable/node.h) \
   include/linux/bitmap.h \
   include/linux/pageblock-flags.h \
-    $(wildcard include/config/hugetlb/page.h) \
     $(wildcard include/config/hugetlb/page/size/variable.h) \
   include/linux/page-flags-layout.h \
-    $(wildcard include/config/sparsemem/vmemmap.h) \
   include/generated/bounds.h \
   arch/arm64/include/asm/sparsemem.h \
   arch/arm64/include/asm/page.h \
@@ -324,7 +361,6 @@ deps_drivers/input/joystick/xpad.o := \
     $(wildcard include/config/blk/dev/initrd.h) \
   arch/arm64/include/generated/asm/sizes.h \
   include/asm-generic/sizes.h \
-  include/linux/sizes.h \
   include/asm-generic/memory_model.h \
   include/linux/pfn.h \
   include/asm-generic/getorder.h \
@@ -364,16 +400,9 @@ deps_drivers/input/joystick/xpad.o := \
     $(wildcard include/config/debug/per/cpu/maps.h) \
   include/linux/completion.h \
   include/linux/debugobjects.h \
+    $(wildcard include/config/debug/objects.h) \
     $(wildcard include/config/debug/objects/free.h) \
   include/linux/ktime.h \
-  include/linux/time.h \
-    $(wildcard include/config/arch/uses/gettimeoffset.h) \
-  include/linux/math64.h \
-    $(wildcard include/config/arch/supports/int128.h) \
-  arch/arm64/include/generated/asm/div64.h \
-  include/asm-generic/div64.h \
-  include/linux/time64.h \
-  include/uapi/linux/time.h \
   include/linux/jiffies.h \
   include/linux/timex.h \
   include/uapi/linux/timex.h \
@@ -400,7 +429,6 @@ deps_drivers/input/joystick/xpad.o := \
     $(wildcard include/config/debug/objects/timers.h) \
     $(wildcard include/config/no/hz/common.h) \
   include/linux/sysctl.h \
-    $(wildcard include/config/sysctl.h) \
   include/linux/rbtree.h \
   include/uapi/linux/sysctl.h \
   include/linux/topology.h \
@@ -423,9 +451,89 @@ deps_drivers/input/joystick/xpad.o := \
   arch/arm64/include/asm/topology.h \
     $(wildcard include/config/cpu/freq.h) \
   include/asm-generic/topology.h \
-  include/linux/kmemleak.h \
-    $(wildcard include/config/debug/kmemleak.h) \
-  include/linux/kasan.h \
+  include/linux/debug_locks.h \
+    $(wildcard include/config/debug/locking/api/selftests.h) \
+  include/linux/mm_types.h \
+    $(wildcard include/config/split/ptlock/cpus.h) \
+    $(wildcard include/config/arch/enable/split/pmd/ptlock.h) \
+    $(wildcard include/config/have/cmpxchg/double.h) \
+    $(wildcard include/config/have/aligned/struct/page.h) \
+    $(wildcard include/config/kmemcheck.h) \
+    $(wildcard include/config/userfaultfd.h) \
+    $(wildcard include/config/aio.h) \
+    $(wildcard include/config/mmu/notifier.h) \
+    $(wildcard include/config/arch/want/batched/unmap/tlb/flush.h) \
+    $(wildcard include/config/x86/intel/mpx.h) \
+  include/linux/auxvec.h \
+  include/uapi/linux/auxvec.h \
+  arch/arm64/include/uapi/asm/auxvec.h \
+  include/linux/uprobes.h \
+    $(wildcard include/config/uprobes.h) \
+  arch/arm64/include/asm/mmu.h \
+    $(wildcard include/config/unmap/kernel/at/el0.h) \
+    $(wildcard include/config/harden/branch/predictor.h) \
+  include/linux/range.h \
+  include/linux/bit_spinlock.h \
+  include/linux/shrinker.h \
+  include/linux/resource.h \
+  include/uapi/linux/resource.h \
+  arch/arm64/include/generated/asm/resource.h \
+  include/asm-generic/resource.h \
+  include/uapi/asm-generic/resource.h \
+  include/linux/page_ext.h \
+    $(wildcard include/config/idle/page/tracking.h) \
+    $(wildcard include/config/page/owner.h) \
+  include/linux/stacktrace.h \
+    $(wildcard include/config/stacktrace.h) \
+    $(wildcard include/config/user/stacktrace/support.h) \
+  arch/arm64/include/asm/pgtable.h \
+    $(wildcard include/config/arm64/hw/afdbm.h) \
+    $(wildcard include/config/tima/lkmauth.h) \
+    $(wildcard include/config/tima/lkmauth/code/prot.h) \
+    $(wildcard include/config/have/rcu/table/free.h) \
+  arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
+  arch/arm64/include/asm/fixmap.h \
+    $(wildcard include/config/uh.h) \
+  arch/arm64/include/asm/boot.h \
+  include/asm-generic/fixmap.h \
+  include/asm-generic/pgtable.h \
+    $(wildcard include/config/have/arch/soft/dirty.h) \
+    $(wildcard include/config/have/arch/huge/vmap.h) \
+  include/linux/page-flags.h \
+    $(wildcard include/config/arch/uses/pg/uncached.h) \
+    $(wildcard include/config/memory/failure.h) \
+    $(wildcard include/config/swap.h) \
+    $(wildcard include/config/ksm.h) \
+  include/linux/huge_mm.h \
+  include/linux/vmstat.h \
+    $(wildcard include/config/vm/event/counters.h) \
+    $(wildcard include/config/debug/tlbflush.h) \
+    $(wildcard include/config/debug/vm/vmacache.h) \
+  include/linux/vm_event_item.h \
+    $(wildcard include/config/migration.h) \
+    $(wildcard include/config/memory/balloon.h) \
+    $(wildcard include/config/balloon/compaction.h) \
+  include/linux/module.h \
+    $(wildcard include/config/module/sig.h) \
+    $(wildcard include/config/modules/tree/lookup.h) \
+    $(wildcard include/config/kallsyms.h) \
+    $(wildcard include/config/tracepoints.h) \
+    $(wildcard include/config/event/tracing.h) \
+    $(wildcard include/config/livepatch.h) \
+    $(wildcard include/config/module/unload.h) \
+    $(wildcard include/config/constructors.h) \
+    $(wildcard include/config/debug/set/module/ronx.h) \
+  include/linux/stat.h \
+  arch/arm64/include/asm/stat.h \
+  arch/arm64/include/uapi/asm/stat.h \
+  include/uapi/asm-generic/stat.h \
+  arch/arm64/include/asm/compat.h \
   include/linux/sched.h \
     $(wildcard include/config/cpu/quiet.h) \
     $(wildcard include/config/sched/debug.h) \
@@ -461,6 +569,7 @@ deps_drivers/input/joystick/xpad.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -469,21 +578,19 @@ deps_drivers/input/joystick/xpad.o := \
     $(wildcard include/config/task/xacct.h) \
     $(wildcard include/config/cpusets.h) \
     $(wildcard include/config/futex.h) \
-    $(wildcard include/config/arch/want/batched/unmap/tlb/flush.h) \
     $(wildcard include/config/fault/injection.h) \
     $(wildcard include/config/latencytop.h) \
     $(wildcard include/config/function/graph/tracer.h) \
     $(wildcard include/config/kcov.h) \
-    $(wildcard include/config/uprobes.h) \
     $(wildcard include/config/bcache.h) \
     $(wildcard include/config/sdp.h) \
     $(wildcard include/config/arch/wants/dynamic/task/struct.h) \
     $(wildcard include/config/trace/task/usage.h) \
     $(wildcard include/config/have/unstable/sched/clock.h) \
     $(wildcard include/config/irq/time/accounting.h) \
-    $(wildcard include/config/proc/fs.h) \
-    $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
   include/linux/sched/prio.h \
@@ -492,22 +599,6 @@ deps_drivers/input/joystick/xpad.o := \
   include/uapi/linux/capability.h \
   include/linux/plist.h \
     $(wildcard include/config/debug/pi/list.h) \
-  include/linux/mm_types.h \
-    $(wildcard include/config/split/ptlock/cpus.h) \
-    $(wildcard include/config/arch/enable/split/pmd/ptlock.h) \
-    $(wildcard include/config/have/cmpxchg/double.h) \
-    $(wildcard include/config/have/aligned/struct/page.h) \
-    $(wildcard include/config/transparent/hugepage.h) \
-    $(wildcard include/config/userfaultfd.h) \
-    $(wildcard include/config/aio.h) \
-    $(wildcard include/config/mmu/notifier.h) \
-    $(wildcard include/config/x86/intel/mpx.h) \
-  include/linux/auxvec.h \
-  include/uapi/linux/auxvec.h \
-  arch/arm64/include/uapi/asm/auxvec.h \
-  include/linux/uprobes.h \
-  arch/arm64/include/asm/mmu.h \
-    $(wildcard include/config/unmap/kernel/at/el0.h) \
   include/linux/cputime.h \
   arch/arm64/include/generated/asm/cputime.h \
   include/asm-generic/cputime.h \
@@ -560,11 +651,6 @@ deps_drivers/input/joystick/xpad.o := \
   include/linux/rculist.h \
   include/linux/rtmutex.h \
     $(wildcard include/config/debug/rt/mutexes.h) \
-  include/linux/resource.h \
-  include/uapi/linux/resource.h \
-  arch/arm64/include/generated/asm/resource.h \
-  include/asm-generic/resource.h \
-  include/uapi/asm-generic/resource.h \
   include/linux/hrtimer.h \
     $(wildcard include/config/high/res/timers.h) \
     $(wildcard include/config/time/low/res.h) \
@@ -602,22 +688,7 @@ deps_drivers/input/joystick/xpad.o := \
     $(wildcard include/config/cgroup/hugetlb.h) \
     $(wildcard include/config/cgroup/pids.h) \
     $(wildcard include/config/cgroup/debug.h) \
-  include/linux/stat.h \
-  arch/arm64/include/asm/stat.h \
-  arch/arm64/include/uapi/asm/stat.h \
-  include/uapi/asm-generic/stat.h \
-  arch/arm64/include/asm/compat.h \
   include/uapi/linux/stat.h \
-  include/linux/module.h \
-    $(wildcard include/config/module/sig.h) \
-    $(wildcard include/config/modules/tree/lookup.h) \
-    $(wildcard include/config/kallsyms.h) \
-    $(wildcard include/config/tracepoints.h) \
-    $(wildcard include/config/event/tracing.h) \
-    $(wildcard include/config/livepatch.h) \
-    $(wildcard include/config/module/unload.h) \
-    $(wildcard include/config/constructors.h) \
-    $(wildcard include/config/debug/set/module/ronx.h) \
   include/linux/kmod.h \
   include/linux/elf.h \
   arch/arm64/include/asm/elf.h \
@@ -635,7 +706,6 @@ deps_drivers/input/joystick/xpad.o := \
   include/linux/kref.h \
   include/linux/moduleparam.h \
     $(wildcard include/config/alpha.h) \
-    $(wildcard include/config/ia64.h) \
     $(wildcard include/config/ppc64.h) \
   include/linux/jump_label.h \
     $(wildcard include/config/jump/label.h) \
@@ -647,16 +717,10 @@ deps_drivers/input/joystick/xpad.o := \
     $(wildcard include/config/have/mod/arch/specific.h) \
     $(wildcard include/config/modules/use/elf/rel.h) \
     $(wildcard include/config/modules/use/elf/rela.h) \
-  include/linux/usb/input.h \
-  include/linux/usb.h \
-    $(wildcard include/config/usb/mon.h) \
-    $(wildcard include/config/pm.h) \
-    $(wildcard include/config/acpi.h) \
-    $(wildcard include/config/usb/led/trig.h) \
-  include/linux/mod_devicetable.h \
-  include/linux/uuid.h \
-  include/uapi/linux/uuid.h \
-  include/linux/usb/ch9.h \
+  include/linux/reboot.h \
+  include/uapi/linux/reboot.h \
+  arch/arm64/include/generated/asm/emergency-restart.h \
+  include/asm-generic/emergency-restart.h \
   include/linux/device.h \
     $(wildcard include/config/debug/devres.h) \
     $(wildcard include/config/generic/msi/irq/domain.h) \
@@ -669,6 +733,7 @@ deps_drivers/input/joystick/xpad.o := \
   include/linux/ioport.h \
   include/linux/klist.h \
   include/linux/pinctrl/devinfo.h \
+    $(wildcard include/config/pm.h) \
   include/linux/pinctrl/consumer.h \
   include/linux/seq_file.h \
   include/linux/fs.h \
@@ -684,22 +749,20 @@ deps_drivers/input/joystick/xpad.o := \
     $(wildcard include/config/ext4crypt/sdp.h) \
     $(wildcard include/config/quota.h) \
     $(wildcard include/config/fs/dax.h) \
-    $(wildcard include/config/migration.h) \
   include/linux/kdev_t.h \
   include/uapi/linux/kdev_t.h \
   include/linux/dcache.h \
   include/linux/rculist_bl.h \
   include/linux/list_bl.h \
-  include/linux/bit_spinlock.h \
   include/linux/lockref.h \
     $(wildcard include/config/arch/use/cmpxchg/lockref.h) \
   include/linux/path.h \
   include/linux/list_lru.h \
-  include/linux/shrinker.h \
   include/linux/radix-tree.h \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -731,6 +794,25 @@ deps_drivers/input/joystick/xpad.o := \
   arch/arm64/include/asm/device.h \
     $(wildcard include/config/iommu/api.h) \
   include/linux/pm_wakeup.h \
+  include/linux/mod_devicetable.h \
+  include/linux/uuid.h \
+  include/uapi/linux/uuid.h \
+  include/linux/slab.h \
+    $(wildcard include/config/debug/slab.h) \
+    $(wildcard include/config/failslab.h) \
+    $(wildcard include/config/have/hardened/usercopy/allocator.h) \
+    $(wildcard include/config/slab.h) \
+    $(wildcard include/config/slub.h) \
+    $(wildcard include/config/slob.h) \
+  include/linux/kmemleak.h \
+    $(wildcard include/config/debug/kmemleak.h) \
+  include/linux/kasan.h \
+  include/linux/usb/input.h \
+  include/linux/usb.h \
+    $(wildcard include/config/usb/mon.h) \
+    $(wildcard include/config/acpi.h) \
+    $(wildcard include/config/usb/led/trig.h) \
+  include/linux/usb/ch9.h \
   include/uapi/linux/usb/ch9.h \
     $(wildcard include/config/size.h) \
     $(wildcard include/config/att/one.h) \
@@ -760,75 +842,8 @@ deps_drivers/input/joystick/xpad.o := \
   arch/arm64/include/generated/asm/sections.h \
   include/asm-generic/sections.h \
   include/linux/pm_runtime.h \
-  include/linux/input.h \
-  include/uapi/linux/input.h \
-    $(wildcard include/config/sec/debug/tsp/log.h) \
-    $(wildcard include/config/usb/hmt/samsung/input.h) \
-  include/uapi/linux/input-event-codes.h \
-  include/linux/sec_debug.h \
-    $(wildcard include/config/sec/debug/reset/reason.h) \
-    $(wildcard include/config/sec/debug/extra/info.h) \
-    $(wildcard include/config/sec/debug/last/kmsg.h) \
-    $(wildcard include/config/sec/avc/log.h) \
-    $(wildcard include/config/touchscreen/dump/mode.h) \
-    $(wildcard include/config/sec/dump/summary.h) \
-  include/linux/memblock.h \
-    $(wildcard include/config/have/memblock.h) \
-    $(wildcard include/config/have/memblock/phys/map.h) \
-    $(wildcard include/config/arch/discard/memblock.h) \
-    $(wildcard include/config/memtest.h) \
-  include/linux/mm.h \
-    $(wildcard include/config/have/arch/mmap/rnd/bits.h) \
-    $(wildcard include/config/have/arch/mmap/rnd/compat/bits.h) \
-    $(wildcard include/config/mem/soft/dirty.h) \
-    $(wildcard include/config/x86.h) \
-    $(wildcard include/config/ppc.h) \
-    $(wildcard include/config/parisc.h) \
-    $(wildcard include/config/metag.h) \
-    $(wildcard include/config/shmem.h) \
-    $(wildcard include/config/debug/vm/rb.h) \
-    $(wildcard include/config/debug/pagealloc.h) \
-    $(wildcard include/config/hibernation.h) \
-    $(wildcard include/config/hugetlbfs.h) \
-  include/linux/debug_locks.h \
-    $(wildcard include/config/debug/locking/api/selftests.h) \
-  include/linux/range.h \
-  include/linux/page_ext.h \
-    $(wildcard include/config/idle/page/tracking.h) \
-    $(wildcard include/config/page/owner.h) \
-  include/linux/stacktrace.h \
-    $(wildcard include/config/stacktrace.h) \
-    $(wildcard include/config/user/stacktrace/support.h) \
-  arch/arm64/include/asm/pgtable.h \
-    $(wildcard include/config/arm64/hw/afdbm.h) \
-    $(wildcard include/config/tima/lkmauth.h) \
-    $(wildcard include/config/tima/lkmauth/code/prot.h) \
-    $(wildcard include/config/have/rcu/table/free.h) \
-  arch/arm64/include/asm/proc-fns.h \
-  arch/arm64/include/asm/fixmap.h \
-    $(wildcard include/config/uh.h) \
-  arch/arm64/include/asm/boot.h \
-  include/asm-generic/fixmap.h \
-  include/asm-generic/pgtable.h \
-    $(wildcard include/config/have/arch/soft/dirty.h) \
-    $(wildcard include/config/have/arch/huge/vmap.h) \
-  include/linux/page-flags.h \
-    $(wildcard include/config/arch/uses/pg/uncached.h) \
-    $(wildcard include/config/memory/failure.h) \
-    $(wildcard include/config/swap.h) \
-    $(wildcard include/config/ksm.h) \
-  include/linux/huge_mm.h \
-  include/linux/vmstat.h \
-    $(wildcard include/config/vm/event/counters.h) \
-    $(wildcard include/config/debug/tlbflush.h) \
-    $(wildcard include/config/debug/vm/vmacache.h) \
-  include/linux/vm_event_item.h \
-    $(wildcard include/config/memory/balloon.h) \
-    $(wildcard include/config/balloon/compaction.h) \
-  include/linux/reboot.h \
-  include/uapi/linux/reboot.h \
-  arch/arm64/include/generated/asm/emergency-restart.h \
-  include/asm-generic/emergency-restart.h \
+  include/linux/usb/quirks.h \
+    $(wildcard include/config/intf/strings.h) \
   include/linux/leds.h \
     $(wildcard include/config/leds/triggers.h) \
     $(wildcard include/config/leds/trigger/ide/disk.h) \

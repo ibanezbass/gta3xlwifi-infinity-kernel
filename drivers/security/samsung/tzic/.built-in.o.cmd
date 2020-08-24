@@ -1,0 +1,1 @@
+cmd_drivers/security/samsung/tzic/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/security/samsung/tzic/built-in.o drivers/security/samsung/tzic/tzic64.o drivers/security/samsung/tzic/tzic_kinibi.o 

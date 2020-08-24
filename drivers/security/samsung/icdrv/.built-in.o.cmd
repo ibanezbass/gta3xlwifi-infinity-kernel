@@ -1,0 +1,1 @@
+cmd_drivers/security/samsung/icdrv/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/security/samsung/icdrv/built-in.o drivers/security/samsung/icdrv/icd.o drivers/security/samsung/icdrv/oemflag.o drivers/security/samsung/icdrv/kinibi_oemflag.o 

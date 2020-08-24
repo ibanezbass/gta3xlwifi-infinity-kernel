@@ -1,4 +1,4 @@
-cmd_arch/arm64/kernel/vmlinux.lds := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -E -Wp,-MD,arch/arm64/kernel/.vmlinux.lds.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian     -DTEXT_OFFSET=0x00080000 -P -C -Uarm64 -D__ASSEMBLY__ -DLINKER_SCRIPT -o arch/arm64/kernel/vmlinux.lds arch/arm64/kernel/vmlinux.lds.S
+cmd_arch/arm64/kernel/vmlinux.lds := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -E -Wp,-MD,arch/arm64/kernel/.vmlinux.lds.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian     -DTEXT_OFFSET=0x00080000 -P -C -Uarm64 -D__ASSEMBLY__ -DLINKER_SCRIPT -o arch/arm64/kernel/vmlinux.lds arch/arm64/kernel/vmlinux.lds.S
 
 source_arch/arm64/kernel/vmlinux.lds := arch/arm64/kernel/vmlinux.lds.S
 
@@ -92,6 +92,13 @@ deps_arch/arm64/kernel/vmlinux.lds := \
     $(wildcard include/config/sparsemem.h) \
   include/linux/pfn.h \
   arch/arm64/include/asm/pgtable-hwdef.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/kdp.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/sparsemem.h \
   arch/arm64/include/asm/thread_info.h \
     $(wildcard include/config/thread/info/in/task.h) \
@@ -100,6 +107,7 @@ deps_arch/arm64/kernel/vmlinux.lds := \
   include/asm-generic/getorder.h \
   arch/arm64/kernel/image.h \
     $(wildcard include/config/cpu/big/endian.h) \
+    $(wildcard include/config/proca.h) \
 
 arch/arm64/kernel/vmlinux.lds: $(deps_arch/arm64/kernel/vmlinux.lds)
 

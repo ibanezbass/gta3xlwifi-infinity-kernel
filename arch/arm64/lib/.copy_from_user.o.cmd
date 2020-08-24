@@ -1,4 +1,4 @@
-cmd_arch/arm64/lib/copy_from_user.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/lib/.copy_from_user.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian   -D__ASSEMBLY__ -fno-PIE -DCONFIG_AS_LSE=1 -DCC_HAVE_ASM_GOTO -Wa,-gdwarf-2            -c -o arch/arm64/lib/copy_from_user.o arch/arm64/lib/copy_from_user.S
+cmd_arch/arm64/lib/copy_from_user.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,arch/arm64/lib/.copy_from_user.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian   -D__ASSEMBLY__ -fno-PIE -DCONFIG_AS_LSE=1 -DCC_HAVE_ASM_GOTO -Wa,-gdwarf-2            -c -o arch/arm64/lib/copy_from_user.o arch/arm64/lib/copy_from_user.S
 
 source_arch/arm64/lib/copy_from_user.o := arch/arm64/lib/copy_from_user.S
 
@@ -63,7 +63,6 @@ deps_arch/arm64/lib/copy_from_user.o := \
   include/uapi/asm-generic/bitsperlong.h \
   arch/arm64/include/asm/assembler.h \
     $(wildcard include/config/arm64/va/bits/48.h) \
-    $(wildcard include/config/cavium/erratum/27456.h) \
   arch/arm64/include/asm/asm-offsets.h \
   include/generated/asm-offsets.h \
   arch/arm64/include/asm/page.h \
@@ -85,8 +84,8 @@ deps_arch/arm64/lib/copy_from_user.o := \
     $(wildcard include/config/transparent/hugepage.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/bug.h \
-    $(wildcard include/config/generic/bug.h) \
     $(wildcard include/config/debug/bugverbose.h) \
+    $(wildcard include/config/generic/bug.h) \
   arch/arm64/include/asm/brk-imm.h \
   include/asm-generic/bug.h \
     $(wildcard include/config/bug.h) \
@@ -105,8 +104,15 @@ deps_arch/arm64/lib/copy_from_user.o := \
     $(wildcard include/config/discontigmem.h) \
     $(wildcard include/config/sparsemem.h) \
   include/linux/pfn.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/sparsemem.h \
   arch/arm64/include/asm/mmu.h \
+    $(wildcard include/config/harden/branch/predictor.h) \
   arch/arm64/lib/copy_template.S \
 
 arch/arm64/lib/copy_from_user.o: $(deps_arch/arm64/lib/copy_from_user.o)

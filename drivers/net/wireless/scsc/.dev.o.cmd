@@ -1,9 +1,10 @@
-cmd_drivers/net/wireless/scsc/dev.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/net/wireless/scsc/.dev.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/ -DCONFIG_SCSC_WLAN_GSCAN_ENABLE -DCONFIG_SCSC_WLAN_KEY_MGMT_OFFLOAD -Idrivers/misc/samsung/scsc -Iinclude/scsc -Idrivers/net/wireless/scsc -DCONFIG_SCSC_WLAN_HIP_SUPPORT_SCATTER_GATHER_API -DCONFIG_SCSC_WLAN_WES_NCHO -DCONFIG_SCSC_WLAN_MAX_INTERFACES=3 -DCONFIG_SCSC_WLAN_ANDROID -DCONFIG_SCSC_PRINTK    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(dev)"  -D"KBUILD_MODNAME=KBUILD_STR(scsc_wlan)" -c -o drivers/net/wireless/scsc/.tmp_dev.o drivers/net/wireless/scsc/dev.c
+cmd_drivers/net/wireless/scsc/dev.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,drivers/net/wireless/scsc/.dev.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/ -DCONFIG_SCSC_WLAN_GSCAN_ENABLE -DCONFIG_SCSC_WLAN_KEY_MGMT_OFFLOAD -Idrivers/misc/samsung/scsc -Iinclude/scsc -Idrivers/net/wireless/scsc -DCONFIG_SCSC_WLAN_HIP_SUPPORT_SCATTER_GATHER_API -DCONFIG_SCSC_WLAN_WES_NCHO -DCONFIG_SCSC_WLAN_MAX_INTERFACES=3 -DCONFIG_SCSC_WLAN_ANDROID    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(dev)"  -D"KBUILD_MODNAME=KBUILD_STR(scsc_wlan)" -c -o drivers/net/wireless/scsc/.tmp_dev.o drivers/net/wireless/scsc/dev.c
 
 source_drivers/net/wireless/scsc/dev.o := drivers/net/wireless/scsc/dev.c
 
 deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/scsc/wlan/kic/ops.h) \
+    $(wildcard include/config/scsc/wifi/nan/enable.h) \
     $(wildcard include/config/scsc/wlan/max/interfaces.h) \
     $(wildcard include/config/scsc/wlan/block/ipv6.h) \
     $(wildcard include/config/scsc/wlan/wifi/sharing.h) \
@@ -11,10 +12,13 @@ deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/scsc/wlan/offline/trace.h) \
     $(wildcard include/config/scsc/wlan/gscan/enable.h) \
     $(wildcard include/config/scsc/wlan/sta/only.h) \
+    $(wildcard include/config/scsc/wlan/dual/station.h) \
     $(wildcard include/config/scsc/wlan/mhs/static/interface.h) \
+    $(wildcard include/config/scsc/wlan/enhanced/pkt/filter.h) \
   drivers/net/wireless/scsc/dev.h \
     $(wildcard include/config/scsc/wlan/mutex/debug.h) \
     $(wildcard include/config/scsc/wlan/rx/napi.h) \
+    $(wildcard include/config/scsc/wlan/sta/enhanced/arp/detect.h) \
     $(wildcard include/config/scsc/wlan/disable/nat/ka.h) \
     $(wildcard include/config/slsi/wlan/sta/fwd/beacon.h) \
     $(wildcard include/config/scsc/log/collection.h) \
@@ -89,7 +93,7 @@ deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
     $(wildcard include/config/rkp/kdp.h) \
@@ -175,11 +179,11 @@ deps_drivers/net/wireless/scsc/dev.o := \
   arch/arm64/include/asm/current.h \
     $(wildcard include/config/thread/info/in/task.h) \
   include/linux/thread_info.h \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -395,6 +399,7 @@ deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -419,6 +424,8 @@ deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/cpu/freq.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
@@ -489,11 +496,11 @@ deps_drivers/net/wireless/scsc/dev.o := \
   include/asm-generic/getorder.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
-  include/linux/cputime.h \
-  arch/arm64/include/generated/asm/cputime.h \
-  include/asm-generic/cputime.h \
-    $(wildcard include/config/virt/cpu/accounting.h) \
-  include/asm-generic/cputime_jiffies.h \
+    $(wildcard include/config/harden/branch/predictor.h) \
+  include/linux/percpu.h \
+    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
+    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
+    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/smp.h \
     $(wildcard include/config/up/late/init.h) \
   include/linux/llist.h \
@@ -501,10 +508,14 @@ deps_drivers/net/wireless/scsc/dev.o := \
   arch/arm64/include/asm/smp.h \
   arch/arm64/include/asm/percpu.h \
   include/asm-generic/percpu.h \
-    $(wildcard include/config/have/setup/per/cpu/area.h) \
   include/linux/percpu-defs.h \
     $(wildcard include/config/page/table/isolation.h) \
     $(wildcard include/config/debug/force/weak/per/cpu.h) \
+  include/linux/cputime.h \
+  arch/arm64/include/generated/asm/cputime.h \
+  include/asm-generic/cputime.h \
+    $(wildcard include/config/virt/cpu/accounting.h) \
+  include/asm-generic/cputime_jiffies.h \
   include/linux/sem.h \
   include/uapi/linux/sem.h \
   include/linux/ipc.h \
@@ -534,9 +545,6 @@ deps_drivers/net/wireless/scsc/dev.o := \
   include/asm-generic/siginfo.h \
   include/uapi/asm-generic/siginfo.h \
   include/linux/pid.h \
-  include/linux/percpu.h \
-    $(wildcard include/config/need/per/cpu/embed/first/chunk.h) \
-    $(wildcard include/config/need/per/cpu/page/first/chunk.h) \
   include/linux/topology.h \
     $(wildcard include/config/use/percpu/numa/node/id.h) \
     $(wildcard include/config/have/memoryless/nodes.h) \
@@ -666,6 +674,7 @@ deps_drivers/net/wireless/scsc/dev.o := \
   include/linux/semaphore.h \
   include/linux/fcntl.h \
   include/uapi/linux/fcntl.h \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/fiemap.h \
@@ -761,6 +770,12 @@ deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/tima/lkmauth/code/prot.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/fixmap.h \
     $(wildcard include/config/uh.h) \
   arch/arm64/include/asm/boot.h \
@@ -921,6 +936,10 @@ deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/ip/mroute.h) \
     $(wildcard include/config/ip/mroute/multiple/tables.h) \
   include/net/inet_frag.h \
+  include/linux/rhashtable.h \
+  include/linux/jhash.h \
+  include/linux/unaligned/packed_struct.h \
+  include/linux/list_nulls.h \
   include/net/netns/ipv6.h \
     $(wildcard include/config/ipv6/multiple/tables.h) \
     $(wildcard include/config/ipv6/mroute.h) \
@@ -941,7 +960,6 @@ deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/nf/conntrack/events.h) \
     $(wildcard include/config/nf/conntrack/labels.h) \
     $(wildcard include/config/nf/nat/needed.h) \
-  include/linux/list_nulls.h \
   include/linux/netfilter/nf_conntrack_tcp.h \
   include/uapi/linux/netfilter/nf_conntrack_tcp.h \
   include/net/netns/nftables.h \
@@ -1098,8 +1116,6 @@ deps_drivers/net/wireless/scsc/dev.o := \
   include/uapi/linux/net_tstamp.h \
   include/net/inet_connection_sock.h \
   include/net/inet_sock.h \
-  include/linux/jhash.h \
-  include/linux/unaligned/packed_struct.h \
   include/net/request_sock.h \
   include/net/netns/hash.h \
   include/net/inet_timewait_sock.h \
@@ -1123,6 +1139,7 @@ deps_drivers/net/wireless/scsc/dev.o := \
   include/linux/wireless.h \
   include/uapi/linux/wireless.h \
   include/linux/proc_fs.h \
+    $(wildcard include/config/proc/uid.h) \
   include/linux/ieee80211.h \
     $(wildcard include/config/timeout.h) \
   include/net/cfg80211.h \
@@ -1133,13 +1150,13 @@ deps_drivers/net/wireless/scsc/dev.o := \
   include/scsc/scsc_mx.h \
   include/scsc/scsc_mifram.h \
   drivers/net/wireless/scsc/fapi.h \
+    $(wildcard include/config/scsc/smapper.h) \
     $(wildcard include/config/req.h) \
     $(wildcard include/config/cfm.h) \
   drivers/net/wireless/scsc/utils.h \
     $(wildcard include/config/scsc/wlan/skb/tracking.h) \
   drivers/net/wireless/scsc/netif.h \
   drivers/net/wireless/scsc/wakelock.h \
-    $(wildcard include/config/wakelock.h) \
   include/linux/wakelock.h \
   drivers/net/wireless/scsc/const.h \
   drivers/net/wireless/scsc/hip.h \
@@ -1160,7 +1177,9 @@ deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/scsc/wlan/debug.h) \
   drivers/net/wireless/scsc/mbulk_def.h \
   drivers/net/wireless/scsc/nl80211_vendor.h \
+    $(wildcard include/config/ndo.h) \
   drivers/net/wireless/scsc/nl80211_vendor_nan.h \
+    $(wildcard include/config/nan/data/path.h) \
     $(wildcard include/config/param/sid/beacon.h) \
     $(wildcard include/config/param/2/4/rssi/close.h) \
     $(wildcard include/config/param/2/4/rssi/middle.h) \
@@ -1180,7 +1199,10 @@ deps_drivers/net/wireless/scsc/dev.o := \
     $(wildcard include/config/param/addr/random/interval.h) \
     $(wildcard include/config/flags.h) \
   drivers/net/wireless/scsc/mgt.h \
+    $(wildcard include/config/scsc/wlan/set/preferred/antenna.h) \
+    $(wildcard include/config/scsc/wlan/low/latency/mode.h) \
     $(wildcard include/config/scsc/wlan/hang/test.h) \
+    $(wildcard include/config/scsc/wlan/set/num/antennas.h) \
   drivers/net/wireless/scsc/debug.h \
     $(wildcard include/config/scsc/debug/compatibility.h) \
   include/scsc/scsc_logring.h \

@@ -14,7 +14,6 @@ config SDFAT_FS
 
 	  To compile this as a module, choose M here: the module will be called
 	  sdfat_core and sdfat_fs.
-	  
 
 config SDFAT_USE_FOR_EXFAT
 	bool "Register sdFAT as exFAT"
@@ -22,7 +21,6 @@ config SDFAT_USE_FOR_EXFAT
 	depends on SDFAT_FS && !EXFAT_FS
 	help
 	  If you want to register sdFAT as available for exFAT, say Y.
-
 
 config SDFAT_DELAYED_META_DIRTY
 	bool "Enable delayed metadata dirty"
@@ -108,5 +106,10 @@ config SDFAT_DBG_BUGON
 
 config SDFAT_STATISTICS
 	bool "enable statistics for bigdata"
+	depends on SDFAT_FS
+	default y
+
+config SDFAT_UEVENT
+	bool "enable uevent"
 	depends on SDFAT_FS
 	default y

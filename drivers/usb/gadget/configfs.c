@@ -158,6 +158,7 @@ struct gadget_info {
 	struct device *dev;
 	struct list_head linked_func;
 	char *prev_func_list;
+	bool	gsi_boot;
 #endif
 };
 
@@ -380,6 +381,12 @@ static ssize_t gadget_dev_desc_UDC_store(struct config_item *item,
 	struct gadget_info *gi = to_gadget_info(item);
 	char *name;
 	int ret;
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
+	struct usb_composite_dev *cdev;
+	struct usb_configuration *c;
+	struct config_usb_cfg *cfg;
+	struct usb_function *f, *tmp;
+#endif
 
 	/* HACK: ffs_ep0_write must be called before UDC store in adb,
 	 * but sometimes UDC store was executed before ffs_ep0_write.
@@ -393,6 +400,14 @@ static ssize_t gadget_dev_desc_UDC_store(struct config_item *item,
 	if (name[len - 1] == '\n')
 		name[len - 1] = '\0';
 
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
+	cdev = &gi->cdev;
+	if (!cdev) {
+		printk("usb: %s : cdev is null, name = %s \n",__func__, name);
+		return -ENODEV;
+	}
+#endif
+
 	mutex_lock(&gi->lock);
 
 	if (!strlen(name) || strcmp(name, "none") == 0) {
@@ -401,6 +416,21 @@ static ssize_t gadget_dev_desc_UDC_store(struct config_item *item,
 			goto err;
 		/* prevent memory leak */
 		kfree(name);
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
+		if (gi->gsi_boot) {
+			printk("usb: %s: GSI_image : Clear cfg->func_list \n",__func__);
+			if ( cdev != NULL ) {
+				list_for_each_entry(c, &cdev->configs, list) {
+					cfg = container_of(c, struct config_usb_cfg, c);
+					list_for_each_entry_safe(f, tmp, &cfg->func_list, list) {
+						list_move_tail(&f->list, &gi->linked_func);
+					}
+					c->next_interface_id = 0;
+				//	memset(c->interface, 0, sizeof(c->interface));
+				}
+			}
+		}
+#endif
 	} else {
 		if (gi->udc_name) {
 			ret = -EBUSY;
@@ -410,12 +440,19 @@ static ssize_t gadget_dev_desc_UDC_store(struct config_item *item,
 		if (ret)
 			goto err;
 		gi->udc_name = name;
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
+		if (gi->gsi_boot) {
+			printk("usb: %s : gi->gsi_boot = %d \n",__func__,gi->gsi_boot);
+			usb_gadget_connect(gi->cdev.gadget);
+		}
+#endif
 	}
 	mutex_unlock(&gi->lock);
 	pr_info("%s: ---\n", __func__);
 
 	return len;
 err:
+	pr_info("%s: err return ---\n", __func__);
 	kfree(name);
 	mutex_unlock(&gi->lock);
 	return ret;
@@ -508,6 +545,11 @@ static int config_usb_cfg_link(
 	char *src;
 	struct gadget_strings *gs;
 #endif
+
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
+	struct usb_configuration	*c;
+	struct usb_function *tmp;
+#endif
 	int ret;
 
 	mutex_lock(&gi->lock);
@@ -555,6 +597,36 @@ static int config_usb_cfg_link(
 	}
 #endif
 
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
+	/* Go through all configs, attach all functions */
+	list_for_each_entry(c, &gi->cdev.configs, list) {
+		struct config_usb_cfg *cfg;
+		struct gadget_config_name *cn;
+
+		cfg = container_of(c, struct config_usb_cfg, c);
+		if (!list_empty(&cfg->string_list)) {
+			i = 0;
+			list_for_each_entry(cn, &cfg->string_list, list) {
+				i++;
+				if (strcmp(cn->configuration, "Conf 1")!= 0) {			
+					if (strcmp(cn->configuration, "adb") == 0) {				
+						list_for_each_entry_safe(f, tmp, &gi->linked_func, list) {
+							if (strcmp(f->name , "adb") == 0) {
+								printk("usb: %s: GSI adb works(%s)\n",__func__, f->name);
+								list_move_tail(&f->list, &cfg->func_list);
+							}
+						}
+					}
+					gi->gsi_boot=1;
+					ret = 0;
+					goto out;
+				} else {
+					gi->gsi_boot=0;
+				}
+			}
+		}
+	}
+#endif
 	f = usb_get_function(fi);
 	if (f == NULL) {
 		/* Are we trying to symlink PTP without MTP function? */
@@ -604,8 +676,17 @@ static int config_usb_cfg_unlink(
 
 	list_for_each_entry(f, &cfg->func_list, list) {
 		if (f->fi == fi) {
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
+			if (gi->gsi_boot)
+				list_move_tail(&f->list, &gi->linked_func);
+			else {
+				list_del(&f->list);
+				usb_put_function(f);
+			}
+#else
 			list_del(&f->list);
 			usb_put_function(f);
+#endif
 			mutex_unlock(&gi->lock);
 			return 0;
 		}

@@ -1,8 +1,9 @@
-cmd_security/sdp/pub_crypto_emul.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,security/sdp/.pub_crypto_emul.o.d  -nostdinc -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -Werror -std=gnu89 -fno-PIE -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=2048 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(pub_crypto_emul)"  -D"KBUILD_MODNAME=KBUILD_STR(pub_crypto_emul)" -c -o security/sdp/.tmp_pub_crypto_emul.o security/sdp/pub_crypto_emul.c
+cmd_security/sdp/pub_crypto_emul.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-gcc -Wp,-MD,security/sdp/.pub_crypto_emul.o.d  -nostdinc -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include -I./arch/arm64/include -Iarch/arm64/include/generated/uapi -Iarch/arm64/include/generated  -Iinclude -I./arch/arm64/include/uapi -Iarch/arm64/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -DANDROID_VERSION=990000 -mgeneral-regs-only -DCONFIG_AS_LSE=1 -fno-pic -fno-asynchronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -Wno-maybe-uninitialized -Os --param=allow-store-data-races=0 -DCC_HAVE_ASM_GOTO -Wframe-larger-than=4096 -fstack-protector-strong -Wno-unused-but-set-variable -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -g -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fno-stack-check -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -Idrivers/gud/gud-exynos7885/MobiCoreDriver/mci/    -D"KBUILD_STR(s)=$(pound)s" -D"KBUILD_BASENAME=KBUILD_STR(pub_crypto_emul)"  -D"KBUILD_MODNAME=KBUILD_STR(pub_crypto_emul)" -c -o security/sdp/.tmp_pub_crypto_emul.o security/sdp/pub_crypto_emul.c
 
 source_security/sdp/pub_crypto_emul.o := security/sdp/pub_crypto_emul.c
 
 deps_security/sdp/pub_crypto_emul.o := \
+    $(wildcard include/config/sdp/enhanced.h) \
   include/crypto/internal/hash.h \
   include/crypto/algapi.h \
   include/linux/crypto.h \
@@ -50,6 +51,7 @@ deps_security/sdp/pub_crypto_emul.o := \
   arch/arm64/include/asm/cmpxchg.h \
   include/linux/bug.h \
     $(wildcard include/config/generic/bug.h) \
+    $(wildcard include/config/bug/on/data/corruption.h) \
   arch/arm64/include/asm/bug.h \
     $(wildcard include/config/debug/bugverbose.h) \
   arch/arm64/include/asm/brk-imm.h \
@@ -65,7 +67,7 @@ deps_security/sdp/pub_crypto_emul.o := \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/tracing.h) \
     $(wildcard include/config/ftrace/mcount/record.h) \
-  /home/joshwiles/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
+  /home/joshwiles/projects/aarch64-linux-android-4.9/lib/gcc/aarch64-linux-android/4.9.x/include/stdarg.h \
   include/linux/linkage.h \
     $(wildcard include/config/uh/rkp.h) \
     $(wildcard include/config/rkp/kdp.h) \
@@ -208,7 +210,6 @@ deps_security/sdp/pub_crypto_emul.o := \
   include/asm-generic/preempt.h \
   include/linux/thread_info.h \
     $(wildcard include/config/thread/info/in/task.h) \
-    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/have/arch/within/stack/frames.h) \
     $(wildcard include/config/hardened/usercopy.h) \
   include/linux/restart_block.h \
@@ -462,6 +463,7 @@ deps_security/sdp/pub_crypto_emul.o := \
     $(wildcard include/config/compat/brk.h) \
     $(wildcard include/config/cgroups.h) \
     $(wildcard include/config/cc/stackprotector.h) \
+    $(wildcard include/config/cpu/freq/times.h) \
     $(wildcard include/config/virt/cpu/accounting/gen.h) \
     $(wildcard include/config/sysvipc.h) \
     $(wildcard include/config/auditsyscall.h) \
@@ -485,6 +487,8 @@ deps_security/sdp/pub_crypto_emul.o := \
     $(wildcard include/config/proc/fs.h) \
     $(wildcard include/config/stack/growsup.h) \
     $(wildcard include/config/have/copy/thread/tls.h) \
+    $(wildcard include/config/have/exit/thread.h) \
+    $(wildcard include/config/debug/stack/usage.h) \
     $(wildcard include/config/sched/hp/event.h) \
   include/uapi/linux/sched.h \
   include/linux/sched/prio.h \
@@ -509,6 +513,7 @@ deps_security/sdp/pub_crypto_emul.o := \
   include/linux/uprobes.h \
   arch/arm64/include/asm/mmu.h \
     $(wildcard include/config/unmap/kernel/at/el0.h) \
+    $(wildcard include/config/harden/branch/predictor.h) \
   include/linux/cputime.h \
   arch/arm64/include/generated/asm/cputime.h \
   include/asm-generic/cputime.h \
@@ -613,6 +618,12 @@ deps_security/sdp/pub_crypto_emul.o := \
     $(wildcard include/config/tima/lkmauth/code/prot.h) \
     $(wildcard include/config/have/rcu/table/free.h) \
   arch/arm64/include/asm/proc-fns.h \
+  include/linux/uh.h \
+    $(wildcard include/config/knox/kap.h) \
+  include/linux/rkp.h \
+    $(wildcard include/config/rkp/test.h) \
+    $(wildcard include/config/rkp/ns/prot.h) \
+    $(wildcard include/config/rkp/dmap/prot.h) \
   arch/arm64/include/asm/fixmap.h \
     $(wildcard include/config/uh.h) \
   arch/arm64/include/asm/boot.h \
@@ -666,6 +677,7 @@ deps_security/sdp/pub_crypto_emul.o := \
   include/uapi/linux/fcntl.h \
     $(wildcard include/config/five/pa/feature.h) \
     $(wildcard include/config/proca.h) \
+    $(wildcard include/config/five/debug.h) \
   arch/arm64/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/uapi/linux/net.h \
@@ -972,6 +984,9 @@ deps_security/sdp/pub_crypto_emul.o := \
     $(wildcard include/config/ip/mroute.h) \
     $(wildcard include/config/ip/mroute/multiple/tables.h) \
   include/net/inet_frag.h \
+  include/linux/rhashtable.h \
+  include/linux/jhash.h \
+  include/linux/unaligned/packed_struct.h \
   include/net/netns/ipv6.h \
     $(wildcard include/config/ipv6/multiple/tables.h) \
     $(wildcard include/config/ipv6/mroute.h) \
@@ -1080,6 +1095,23 @@ deps_security/sdp/pub_crypto_emul.o := \
   include/uapi/linux/ptrace.h \
   include/uapi/linux/audit.h \
     $(wildcard include/config/change.h) \
+  include/linux/tty.h \
+    $(wildcard include/config/tty.h) \
+  include/uapi/linux/major.h \
+  include/uapi/linux/termios.h \
+  arch/arm64/include/generated/asm/termios.h \
+  include/asm-generic/termios.h \
+  include/uapi/asm-generic/termios.h \
+  arch/arm64/include/generated/asm/termbits.h \
+  include/uapi/asm-generic/termbits.h \
+  arch/arm64/include/generated/asm/ioctls.h \
+  include/uapi/asm-generic/ioctls.h \
+  include/linux/tty_driver.h \
+    $(wildcard include/config/console/poll.h) \
+  include/linux/cdev.h \
+  include/linux/tty_ldisc.h \
+  include/uapi/linux/tty_flags.h \
+  include/uapi/linux/tty.h \
   arch/arm64/include/asm/syscall.h \
   include/generated/uapi/linux/version.h \
   include/sdp/pub_crypto_emul.h \

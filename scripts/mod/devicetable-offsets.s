@@ -9,26 +9,26 @@
 // -I arch/arm64/include/generated/uapi -I ./include/uapi
 // -I include/generated/uapi
 // -I drivers/gud/gud-exynos7885/MobiCoreDriver/mci/
-// -iprefix /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/
+// -iprefix /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/
 // -D __KERNEL__ -D ANDROID_VERSION=990000 -D CONFIG_AS_LSE=1
 // -D CC_HAVE_ASM_GOTO -D KBUILD_STR(s)=#s
 // -D KBUILD_BASENAME=KBUILD_STR(devicetable_offsets)
 // -D KBUILD_MODNAME=KBUILD_STR(devicetable_offsets)
-// -isystem /home/joshwiles/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include
+// -isystem /home/joshwiles/projects/aarch64-linux-android-4.9/bin/../lib/gcc/aarch64-linux-android/4.9.x/include
 // -include ./include/linux/kconfig.h
 // -MD scripts/mod/.devicetable-offsets.s.d
 // scripts/mod/devicetable-offsets.c -mbionic -mlittle-endian
 // -mgeneral-regs-only -mabi=lp64
 // -auxbase-strip scripts/mod/devicetable-offsets.s -g -Os -Wall -Wundef
-// -Wstrict-prototypes -Wno-trigraphs -Werror=implicit-function-declaration
-// -Wno-format-security -Werror -Wno-maybe-uninitialized
-// -Wframe-larger-than=2048 -Wno-unused-but-set-variable
+// -Wstrict-prototypes -Wno-trigraphs -Wno-maybe-uninitialized
+// -Wframe-larger-than=4096 -Wno-unused-but-set-variable
 // -Wdeclaration-after-statement -Wno-pointer-sign -Werror=implicit-int
-// -Werror=strict-prototypes -Werror=date-time -std=gnu90
-// -fno-strict-aliasing -fno-common -fno-asynchronous-unwind-tables
-// -fno-pic -fno-delete-null-pointer-checks -fstack-protector-strong
+// -Werror=strict-prototypes -Werror=date-time -fno-strict-aliasing
+// -fno-common -fno-asynchronous-unwind-tables -fno-pic
+// -fno-delete-null-pointer-checks -fstack-protector-strong
 // -fno-omit-frame-pointer -fno-optimize-sibling-calls
-// -fno-var-tracking-assignments -fno-strict-overflow -fstack-check=no
+// -fno-var-tracking-assignments -fno-strict-overflow
+// -fno-merge-all-constants -fmerge-constants -fstack-check=no
 // -fconserve-stack -fverbose-asm --param allow-store-data-races=0
 // options enabled:  -faggressive-loop-optimizations -fauto-inc-dec
 // -fbranch-count-reg -fcaller-saves -fcombine-stack-adjustments
@@ -1044,8 +1044,8 @@ main:
 	.section	.debug_str,"MS",%progbits,1
 .LASF5:
 	.string	"long long int"
-.LASF4:
-	.string	"unsigned int"
+.LASF14:
+	.string	"/home/joshwiles/projects/gta3xlwifi-infinity-3"
 .LASF15:
 	.string	"main"
 .LASF7:
@@ -1056,8 +1056,6 @@ main:
 	.string	"unsigned char"
 .LASF9:
 	.string	"char"
-.LASF14:
-	.string	"/home/joshwiles/gta3xlwifi-infinity-kernel"
 .LASF10:
 	.string	"long int"
 .LASF11:
@@ -1066,15 +1064,18 @@ main:
 	.string	"short unsigned int"
 .LASF0:
 	.string	"signed char"
+.LASF12:
+	.ascii	"GNU C 4.9.x 20150123 (prerelease) -mbionic -mlittle-endian -"
+	.ascii	"mgeneral-regs-only -mabi=lp64 -g -Os -fno-strict-aliasing -f"
+	.ascii	"no-common -fno-asynchronous-unwind-tables -fno-pic -fno-dele"
+	.ascii	"te-n"
+	.string	"ull-pointer-checks -fstack-protector-strong -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -fno-strict-overflow -fno-merge-all-constants -fmerge-constants -fstack-check=no -fconserve-stack --param allow-store-data-races=0"
 .LASF13:
 	.string	"scripts/mod/devicetable-offsets.c"
 .LASF2:
 	.string	"short int"
-.LASF12:
-	.ascii	"GNU C 4.9.x 20150123 (prerelease) -mbionic -mlittle-endian -"
-	.ascii	"mgeneral-regs-only -mabi=lp64 -g -Os -std=gnu90 -fno-strict-"
-	.ascii	"aliasing -fno-common -fno-asynch"
-	.string	"ronous-unwind-tables -fno-pic -fno-delete-null-pointer-checks -fstack-protector-strong -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-var-tracking-assignments -fno-strict-overflow -fstack-check=no -fconserve-stack --param allow-store-data-races=0"
+.LASF4:
+	.string	"unsigned int"
 .LASF8:
 	.string	"sizetype"
 	.ident	"GCC: (GNU) 4.9.x 20150123 (prerelease)"
