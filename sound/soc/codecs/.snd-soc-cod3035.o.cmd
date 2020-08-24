@@ -1,1 +1,0 @@
-cmd_sound/soc/codecs/snd-soc-cod3035.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o sound/soc/codecs/snd-soc-cod3035.o sound/soc/codecs/cod3035x.o sound/soc/codecs/codec_speedy.o 

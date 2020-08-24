@@ -1,1 +1,0 @@
-cmd_security/keys/encrypted-keys/encrypted-keys.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o security/keys/encrypted-keys/encrypted-keys.o security/keys/encrypted-keys/encrypted.o security/keys/encrypted-keys/ecryptfs_format.o 

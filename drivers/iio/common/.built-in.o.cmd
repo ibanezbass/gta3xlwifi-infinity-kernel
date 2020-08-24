@@ -1,1 +1,0 @@
-cmd_drivers/iio/common/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/iio/common/built-in.o drivers/iio/common/hid-sensors/built-in.o drivers/iio/common/ms_sensors/built-in.o drivers/iio/common/ssp_sensors/built-in.o drivers/iio/common/st_sensors/built-in.o 

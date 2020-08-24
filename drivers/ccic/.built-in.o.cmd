@@ -1,1 +1,0 @@
-cmd_drivers/ccic/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/ccic/built-in.o drivers/ccic/s2mm005_fw.o drivers/ccic/s2mm005_cc.o drivers/ccic/s2mm005_pd.o drivers/ccic/s2mm005.o drivers/ccic/ccic_notifier.o drivers/ccic/ccic_sysfs.o drivers/ccic/ccic_alternate.o drivers/ccic/ccic_misc.o 

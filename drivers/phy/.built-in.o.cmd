@@ -1,1 +1,0 @@
-cmd_drivers/phy/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/phy/built-in.o drivers/phy/phy-core.o drivers/phy/phy-exynos-mipi.o drivers/phy/phy-exynos5-usbdrd.o drivers/phy/phy-exynos-usbdrd3.o drivers/phy/phy-samsung-usb3-cal.o drivers/phy/phy-exynos-usb3p1.o drivers/phy/phy-exynos-usbdp.o 

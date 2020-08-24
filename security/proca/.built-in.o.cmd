@@ -1,1 +1,0 @@
-cmd_security/proca/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o security/proca/built-in.o security/proca/proca_identity.o security/proca/proca_lsm.o security/proca/proca_fcntl.o security/proca/proca_task_descr.o security/proca/proca_certificate-asn1.o security/proca/proca_certificate.o security/proca/proca_table.o 

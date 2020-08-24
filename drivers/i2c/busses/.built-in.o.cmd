@@ -1,1 +1,0 @@
-cmd_drivers/i2c/busses/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/i2c/busses/built-in.o drivers/i2c/busses/i2c-exynos5.o drivers/i2c/busses/i2c-speedy.o drivers/i2c/busses/i2c-gpio.o drivers/i2c/busses/i2c-s3c2410.o 

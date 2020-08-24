@@ -1,1 +1,0 @@
-cmd_drivers/devfreq/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/devfreq/built-in.o drivers/devfreq/devfreq.o drivers/devfreq/governor_simpleinteractive.o drivers/devfreq/exynos/built-in.o 

@@ -1,1 +1,0 @@
-cmd_drivers/five/five_tee_driver/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/five/five_tee_driver/built-in.o drivers/five/five_tee_driver/itee_driver.o drivers/five/five_tee_driver/multibuild/source/gp-api/client/teec_common_tbase.o 

@@ -1,1 +1,0 @@
-cmd_drivers/video/fbdev/exynos/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/video/fbdev/exynos/built-in.o drivers/video/fbdev/exynos/dpu_7885/built-in.o 

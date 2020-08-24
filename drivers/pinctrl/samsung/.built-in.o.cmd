@@ -1,1 +1,0 @@
-cmd_drivers/pinctrl/samsung/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/pinctrl/samsung/built-in.o drivers/pinctrl/samsung/pinctrl-samsung.o drivers/pinctrl/samsung/pinctrl-exynos.o 

@@ -1,3 +1,0 @@
-kernel/drivers/usb/serial/usbserial.ko
-kernel/drivers/usb/serial/ftdi_sio.ko
-kernel/drivers/usb/serial/pl2303.ko

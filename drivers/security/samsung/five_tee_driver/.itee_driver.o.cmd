@@ -1,1 +1,0 @@
-cmd_drivers/security/samsung/five_tee_driver/itee_driver.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/security/samsung/five_tee_driver/itee_driver.o drivers/security/samsung/five_tee_driver/five_tee_driver.o 

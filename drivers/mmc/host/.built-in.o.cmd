@@ -1,1 +1,0 @@
-cmd_drivers/mmc/host/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/mmc/host/built-in.o drivers/mmc/host/dw_mmc.o drivers/mmc/host/dw_mmc-pltfm.o drivers/mmc/host/dw_mmc-exynos.o drivers/mmc/host/cmdq_hci.o drivers/mmc/host/dw_mmc-srpmb.o drivers/mmc/host/dw_mmc-exynos-fmp.o drivers/mmc/host/dw_mmc-exynos-smu.o 

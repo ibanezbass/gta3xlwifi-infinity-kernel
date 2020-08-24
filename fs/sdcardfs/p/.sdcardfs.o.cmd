@@ -1,1 +1,0 @@
-cmd_fs/sdcardfs/q/sdcardfs.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o fs/sdcardfs/q/sdcardfs.o fs/sdcardfs/q/dentry.o fs/sdcardfs/q/file.o fs/sdcardfs/q/inode.o fs/sdcardfs/q/main.o fs/sdcardfs/q/super.o fs/sdcardfs/q/lookup.o fs/sdcardfs/q/mmap.o fs/sdcardfs/q/packagelist.o fs/sdcardfs/q/derived_perm.o 

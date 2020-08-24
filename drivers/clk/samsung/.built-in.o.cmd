@@ -1,1 +1,0 @@
-cmd_drivers/clk/samsung/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/clk/samsung/built-in.o drivers/clk/samsung/composite.o drivers/clk/samsung/clk-exynos7885.o drivers/clk/samsung/clk-exynos-audss.o drivers/clk/samsung/clk-exynos-clkout.o drivers/clk/samsung/clk-exynos-pwm.o 

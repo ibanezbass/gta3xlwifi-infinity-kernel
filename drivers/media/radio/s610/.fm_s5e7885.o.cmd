@@ -1,1 +1,0 @@
-cmd_drivers/media/radio/s610/fm_s5e7885.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/media/radio/s610/fm_s5e7885.o drivers/media/radio/s610/radio-s610.o drivers/media/radio/s610/fm_low.o drivers/media/radio/s610/fm_ctrl.o drivers/media/radio/s610/fm_rds.o 

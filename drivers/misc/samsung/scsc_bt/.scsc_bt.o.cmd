@@ -1,1 +1,0 @@
-cmd_drivers/misc/samsung/scsc_bt/scsc_bt.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/misc/samsung/scsc_bt/scsc_bt.o drivers/misc/samsung/scsc_bt/scsc_bt_module.o drivers/misc/samsung/scsc_bt/scsc_shm.o drivers/misc/samsung/scsc_bt/scsc_avdtp_detect.o drivers/misc/samsung/scsc_bt/scsc_ant.o 

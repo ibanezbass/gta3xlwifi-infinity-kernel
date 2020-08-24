@@ -1,1 +1,0 @@
-cmd_drivers/iommu/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/iommu/built-in.o drivers/iommu/iommu.o drivers/iommu/iommu-traces.o drivers/iommu/iommu-sysfs.o drivers/iommu/dma-iommu.o drivers/iommu/iova.o drivers/iommu/of_iommu.o drivers/iommu/exynos-iovmm.o drivers/iommu/exynos-iommu.o 

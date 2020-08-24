@@ -1,3 +1,0 @@
-kernel/drivers/input/keyboard/atkbd.ko
-kernel/drivers/input/keyboard/gpio_keys.ko
-kernel/drivers/input/keyboard/samsung-keypad.ko

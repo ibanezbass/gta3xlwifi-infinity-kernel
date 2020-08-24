@@ -1,1 +1,0 @@
-cmd_drivers/misc/samsung/scsc/scsc_logring.o := ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/misc/samsung/scsc/scsc_logring.o drivers/misc/samsung/scsc/scsc_logring_main.o drivers/misc/samsung/scsc/scsc_logring_ring.o drivers/misc/samsung/scsc/scsc_logring_debugfs.o 

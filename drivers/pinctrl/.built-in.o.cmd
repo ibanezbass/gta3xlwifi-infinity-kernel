@@ -1,1 +1,0 @@
-cmd_drivers/pinctrl/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/pinctrl/built-in.o drivers/pinctrl/core.o drivers/pinctrl/pinctrl-utils.o drivers/pinctrl/pinmux.o drivers/pinctrl/pinconf.o drivers/pinctrl/devicetree.o drivers/pinctrl/freescale/built-in.o drivers/pinctrl/nomadik/built-in.o drivers/pinctrl/samsung/built-in.o 

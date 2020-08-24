@@ -1,1 +1,0 @@
-cmd_drivers/net/built-in.o :=  ../aarch64-linux-android-4.9/bin/aarch64-linux-android-ld -EL    -r -o drivers/net/built-in.o drivers/net/mii.o drivers/net/Space.o drivers/net/loopback.o drivers/net/phy/built-in.o drivers/net/tun.o drivers/net/ethernet/built-in.o drivers/net/ppp/built-in.o drivers/net/slip/built-in.o drivers/net/wireless/built-in.o drivers/net/usb/built-in.o 
