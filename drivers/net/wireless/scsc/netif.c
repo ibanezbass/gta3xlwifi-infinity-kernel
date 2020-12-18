@@ -255,7 +255,7 @@ static int slsi_net_open(struct net_device *dev)
 	/* 2511 measn unifiForceActive and 1 means active */
 	if (slsi_is_rf_test_mode_enabled()) {
 		SLSI_NET_ERR(dev, "*#rf# rf test mode set is enabled.\n");
-		slsi_set_mib_roam(sdev, NULL, 2511, 1);
+		slsi_set_mib_roam(sdev, NULL, SLSI_PSID_UNIFI_DEBUG_FORCE_ACTIVE, 0);
 		slsi_set_mib_roam(sdev, NULL, SLSI_PSID_UNIFI_TPC_MAX_POWER_RSSI_THRESHOLD, 0);
 	}
 

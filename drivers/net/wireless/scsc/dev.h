@@ -324,6 +324,11 @@ struct slsi_ssid_map {
 	int band;
 };
 
+struct slsi_ioctl_args {
+	int arg_count;
+	u8  *args[];
+};
+
 #ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
 struct slsi_enhanced_arp_counters {
 	u16 arp_req_count_from_netdev;
@@ -550,13 +555,14 @@ struct slsi_vif_sta {
 	u8                      regd_mc_addr_count;
 	u8                      regd_mc_addr[SLSI_MC_ADDR_ENTRY_MAX][ETH_ALEN];
 	bool                    group_key_set;
+	bool			wep_key_set;
 	struct sk_buff          *mlme_scan_ind_skb;
 	bool                    roam_in_progress;
 	int                     tdls_peer_sta_records;
 	bool                    tdls_enabled;
 	struct cfg80211_bss     *sta_bss;
 	u8                      *assoc_req_add_info_elem;
-	u8                      assoc_req_add_info_elem_len;
+	int                     assoc_req_add_info_elem_len;
 
 	/* List of seen ESS and Freq associated with them */
 	struct list_head        network_map;
@@ -573,6 +579,9 @@ struct slsi_vif_sta {
 	atomic_t                drop_roamed_ind;
 	u8                      *vendor_disconnect_ies;
 	int                     vendor_disconnect_ies_len;
+	u8                      bssid[ETH_ALEN];
+	u8                      ssid[IEEE80211_MAX_SSID_LEN];
+	u8                      ssid_len;
 };
 
 struct slsi_vif_unsync {
